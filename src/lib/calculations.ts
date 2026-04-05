@@ -98,20 +98,20 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
 
   let b1 = params.buckets.b1
   let b2 = params.buckets.b2
-  let b3 = params.buckets.b3   // principal only — stays flat unless emergency
+  let b3 = params.buckets.b3
+  const b3Principal = params.buckets.b3  // original principal — tracks the floor; gains above this can be harvested
   let annualWithdrawal = monthlyWithdrawal * 12
 
   const r1 = 1 + returnAssumptions.b1 / 100
   const r2 = 1 + returnAssumptions.b2 / 100
-  const b3ReturnPct = returnAssumptions.b3
+  const r3 = 1 + returnAssumptions.b3 / 100
   const inflation = 1 + inflationRate / 100
 
   for (let year = 1; year <= SWP_YEARS; year++) {
-    // Step 1 — Harvest B3 profits into B2 (principal untouched)
-    const b3Harvested = b3ProfitHarvest(b3, b3ReturnPct)
-    b2 += b3Harvested
+    // Step 1 — B3 compounds at full rate (equity grows — no forced annual harvest)
+    b3 = b3 * r3
 
-    // Step 2 — B2 earns its own return on current balance
+    // Step 2 — B2 earns its return
     const b2Before = b2
     b2 = b2 * r2
     const b2GrowthEarned = b2 - b2Before
@@ -127,14 +127,24 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
     // Step 5 — Refill B1 from B2 if B1 < 1yr of expenses
     let b1RefillFromB2 = 0
     if (b1 < annualWithdrawal && b2 > 0) {
-      const target = annualWithdrawal * 2   // top up to 2yr buffer
+      const target = annualWithdrawal * 2
       const needed = Math.min(Math.max(0, target - b1), b2)
       b1 += needed
       b2 -= needed
       b1RefillFromB2 = needed
     }
 
-    // Step 6 — Emergency: B2 critically low → liquidate B3 principal
+    // Step 6 — Harvest B3 accumulated gains into B2 when B2 needs replenishment
+    // (B2 has dropped below 1 year of expenses AND B3 has gains above original principal)
+    let b3Harvested = 0
+    const b3Gain = b3 - b3Principal
+    if (b2 < annualWithdrawal && b3Gain > 0) {
+      b2 += b3Gain
+      b3 = b3Principal   // reset to principal; gains moved to B2
+      b3Harvested = b3Gain
+    }
+
+    // Step 7 — Emergency: B2 still critically low → liquidate B3 principal
     let b2EmergencyFromB3 = 0
     if (b2 < annualWithdrawal * 0.5 && b3 > 0) {
       const needed = Math.min(annualWithdrawal * 4, b3)

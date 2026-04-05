@@ -132,6 +132,9 @@ export function YearSimulator({
   const prevB2 = prevRow?.b2 ?? buckets.b2
   const prevB3 = prevRow?.b3 ?? buckets.b3
 
+  // B3 growth this year: if harvested, all gains moved to B2; otherwise B3 itself grew
+  const b3GrowthThisYear = row.b3Harvested > 0 ? row.b3Harvested : row.b3 - prevB3
+
   const maxCorpus = rows[0]?.totalCorpus ?? 1
 
   // Auto-play
@@ -295,22 +298,34 @@ export function YearSimulator({
             What happened in {calYear}
           </p>
           <div className="divide-y divide-gray-100">
-            <EventStep
-              icon="🌱"
-              label="B3 profit harvested → B2"
-              amount={row.b3Harvested}
-              note={`${returnAssumptions.b3}% on ${CR(row.b3 + row.b3Harvested)} principal`}
-              variant="positive"
-            />
+            {/* B3 growth (always) */}
             <EventStep
               icon="📈"
+              label="B3 compounded (equity growth)"
+              amount={b3GrowthThisYear}
+              note={row.b3Harvested > 0
+                ? `B2 needed replenishment — all accumulated gains (${CR(row.b3Harvested)}) harvested`
+                : `${returnAssumptions.b3}% — gains stay in B3, compounding further`}
+              variant="positive"
+            />
+            {row.b3Harvested > 0 && (
+              <EventStep
+                icon="🌾"
+                label="B3 gains transferred → B2"
+                amount={row.b3Harvested}
+                note="B3 resets to principal; all accumulated gains moved to buffer"
+                variant="positive"
+              />
+            )}
+            <EventStep
+              icon="📊"
               label="B2 grew on its own balance"
               amount={row.b2GrowthEarned}
               note={`${returnAssumptions.b2}% return`}
               variant="positive"
             />
             <EventStep
-              icon="📈"
+              icon="💰"
               label="B1 earned return"
               amount={row.b1GrowthEarned}
               note={`${returnAssumptions.b1}% return`}
