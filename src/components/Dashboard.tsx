@@ -9,6 +9,7 @@ import { MarketPanel } from './MarketPanel'
 import { AIPanel } from './AIPanel'
 import { TaxOverlay } from './TaxOverlay'
 import { Sliders } from './Sliders'
+import { YearSimulator } from './YearSimulator'
 import { Button } from './ui/Button'
 import { exportPDF } from '../lib/pdf'
 import { simulateSWP } from '../lib/calculations'
@@ -120,6 +121,14 @@ export function Dashboard({
           returnAssumptions={returnAssumptions}
           onProfileChange={onProfileUpdate}
           onReturnsChange={onReturnsUpdate}
+        />
+
+        {/* Year-by-Year Bucket Flow Simulator */}
+        <YearSimulator
+          buckets={buckets}
+          monthlyWithdrawal={profile.monthlyWithdrawal}
+          inflationRate={profile.inflationRate}
+          returnAssumptions={returnAssumptions}
         />
 
         {/* SWP Simulator */}

@@ -112,27 +112,35 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
     b2 += b3Harvested
 
     // Step 2 — B2 earns its own return on current balance
+    const b2Before = b2
     b2 = b2 * r2
+    const b2GrowthEarned = b2 - b2Before
 
     // Step 3 — B1 earns its return
+    const b1Before = b1
     b1 = b1 * r1
+    const b1GrowthEarned = b1 - b1Before
 
     // Step 4 — Withdraw from B1
     b1 = Math.max(0, b1 - annualWithdrawal)
 
     // Step 5 — Refill B1 from B2 if B1 < 1yr of expenses
+    let b1RefillFromB2 = 0
     if (b1 < annualWithdrawal && b2 > 0) {
       const target = annualWithdrawal * 2   // top up to 2yr buffer
       const needed = Math.min(Math.max(0, target - b1), b2)
       b1 += needed
       b2 -= needed
+      b1RefillFromB2 = needed
     }
 
     // Step 6 — Emergency: B2 critically low → liquidate B3 principal
+    let b2EmergencyFromB3 = 0
     if (b2 < annualWithdrawal * 0.5 && b3 > 0) {
       const needed = Math.min(annualWithdrawal * 4, b3)
       b2 += needed
       b3 -= needed
+      b2EmergencyFromB3 = needed
     }
 
     const total = b1 + b2 + b3
@@ -144,6 +152,10 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
       b2: Math.round(b2),
       b3: Math.round(b3),
       b3Harvested: Math.round(b3Harvested),
+      b1GrowthEarned: Math.round(b1GrowthEarned),
+      b2GrowthEarned: Math.round(b2GrowthEarned),
+      b1RefillFromB2: Math.round(b1RefillFromB2),
+      b2EmergencyFromB3: Math.round(b2EmergencyFromB3),
       totalCorpus: Math.round(total),
       isLegacyYear: LEGACY_YEARS.includes(year),
     })

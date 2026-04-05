@@ -46,8 +46,12 @@ export interface SWPYearRow {
   annualWithdrawal: number
   b1: number
   b2: number
-  b3: number           // principal only — gains are harvested each year
-  b3Harvested: number  // profit moved from B3 → B2 this year
+  b3: number              // principal only — gains are harvested each year
+  b3Harvested: number     // profit moved from B3 → B2 this year
+  b1GrowthEarned: number  // return B1 earned before withdrawal
+  b2GrowthEarned: number  // return B2 earned (after receiving B3 profit)
+  b1RefillFromB2: number  // amount topped up B1 from B2 this year
+  b2EmergencyFromB3: number // emergency: B3 principal → B2
   totalCorpus: number
   isLegacyYear: boolean
 }
