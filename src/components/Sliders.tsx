@@ -24,7 +24,6 @@ interface SliderRowProps {
 function SliderRow({ label, value, min, max, step, color, unit = '%', onChange }: SliderRowProps) {
   const [localText, setLocalText] = useState(String(value))
 
-  // Keep text in sync when value changes externally (e.g. reset)
   useEffect(() => {
     setLocalText(String(value))
   }, [value])
@@ -36,7 +35,7 @@ function SliderRow({ label, value, min, max, step, color, unit = '%', onChange }
       onChange(clamped)
       setLocalText(String(clamped))
     } else {
-      setLocalText(String(value)) // revert invalid input
+      setLocalText(String(value))
     }
   }
 
@@ -172,7 +171,7 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
       <CardHeader>
         <CardTitle>Assumption Sliders</CardTitle>
         <p className="text-xs text-gray-400 mt-0.5">
-          Drag the slider or type a value directly — charts update live
+          Drag or type — charts update live
         </p>
       </CardHeader>
 
@@ -196,10 +195,8 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
             color="text-blue-700"
             onChange={(v) => updateReturns('b1', v)}
           />
-        </div>
-        <div className="space-y-5">
           <SliderRow
-            label="B2 Return (Debt MF / BAF)"
+            label="B2 Return (Short Debt / Corp Bond)"
             value={returnAssumptions.b2}
             min={6}
             max={10}
@@ -207,14 +204,25 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
             color="text-amber-700"
             onChange={(v) => updateReturns('b2', v)}
           />
+        </div>
+        <div className="space-y-5">
           <SliderRow
-            label="B3 Return (Equity / Gold)"
+            label="B3 Return (BAF / Hybrid / Multi-Asset)"
             value={returnAssumptions.b3}
-            min={8}
-            max={15}
+            min={7}
+            max={12}
             step={0.5}
-            color="text-green-700"
+            color="text-emerald-700"
             onChange={(v) => updateReturns('b3', v)}
+          />
+          <SliderRow
+            label="B4 Return (Equity / Flexi Cap)"
+            value={returnAssumptions.b4}
+            min={8}
+            max={18}
+            step={0.5}
+            color="text-purple-700"
+            onChange={(v) => updateReturns('b4', v)}
           />
         </div>
         <div className="md:col-span-2">

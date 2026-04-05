@@ -19,7 +19,7 @@ function buildPrompt(profile: UserProfile, market: MarketData | null): string {
         .join('\n')
     : 'No MF NAV data available'
 
-  return `You are a knowledgeable Indian financial planner (not SEBI-registered). Provide specific mutual fund and instrument recommendations for an Indian retiree using the 3-bucket drawdown strategy.
+  return `You are a knowledgeable Indian financial planner (not SEBI-registered). Provide specific mutual fund and instrument recommendations for an Indian retiree using the 4-bucket drawdown strategy (as per HDFC Fund's model).
 
 User profile:
 - Risk appetite: ${profile.riskAppetite}/5 (${profile.riskAppetite <= 2 ? 'Conservative' : profile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'})
@@ -34,15 +34,16 @@ Current market context:
 Current MF NAVs being tracked:
 ${navStr}
 
-Bucket strategy:
-- B1 (0–3yr, 21%): SCSS, Senior FD, Liquid MF — funds SWP
-- B2 (3–10yr, 32%): Debt MF, BAF, Corporate Bonds — refills B1
-- B3 (10–20yr, 47%): Equity MF, Gold ETF — refills B2
+4-Bucket strategy (cascade: B4 → B3 → B2 → B1 → withdrawal):
+- B1 (0–1yr, 10%): SCSS, Senior FD, Liquid MF, Money Market — funds monthly SWP
+- B2 (1–5yr, 20%): Short-term Debt MF, Corporate Bond, Equity Savings — refills B1
+- B3 (5–10yr, 30%): BAF, Aggressive Hybrid, Multi-Asset, Balanced Advantage — the growth engine that refills B1 & B2
+- B4 (10yr+, 40%): Flexi Cap, Large Cap, Multi-Cap, Gold ETF — long-term equity, compounds freely, profits harvested to B3 when needed
 
 Provide specific fund recommendations for each bucket. For each recommendation, respond in this exact format (one per line):
-FUND: [fund name] | BUCKET: [B1/B2/B3] | NAV: [current NAV or "see mfapi.in"] | 1YR: [1yr return % or "N/A"] | ALLOC: [suggested % within bucket] | REASON: [1-sentence rationale]
+FUND: [fund name] | BUCKET: [B1/B2/B3/B4] | NAV: [current NAV or "see mfapi.in"] | 1YR: [1yr return % or "N/A"] | ALLOC: [suggested % within bucket] | REASON: [1-sentence rationale]
 
-Give 2-3 recommendations per bucket (6-9 total). Focus on real AMFI-registered funds. End with a one-paragraph overall note on market timing if relevant (e.g. whether to tilt equity/gold given Nifty levels).`
+Give 2 recommendations per bucket (8 total). Focus on real AMFI-registered funds. End with a one-paragraph note on whether to tilt equity/gold in B3 or B4 given current Nifty levels.`
 }
 
 function parseSuggestions(text: string): AISuggestion[] {
@@ -55,7 +56,7 @@ function parseSuggestions(text: string): AISuggestion[] {
     })
     return {
       fund: parts['FUND'] || 'Unknown',
-      bucket: (parts['BUCKET'] as 'B1' | 'B2' | 'B3') || 'B1',
+      bucket: (parts['BUCKET'] as 'B1' | 'B2' | 'B3' | 'B4') || 'B1',
       nav: parts['NAV'] || '—',
       oneYearReturn: parts['1YR'] || '—',
       suggestedAllocation: parts['ALLOC'] || '—',
@@ -64,8 +65,8 @@ function parseSuggestions(text: string): AISuggestion[] {
   })
 }
 
-const BUCKET_BADGE: Record<string, 'blue' | 'amber' | 'green'> = {
-  B1: 'blue', B2: 'amber', B3: 'green',
+const BUCKET_BADGE: Record<string, 'blue' | 'amber' | 'green' | 'purple'> = {
+  B1: 'blue', B2: 'amber', B3: 'green', B4: 'purple',
 }
 
 export function AIPanel({ profile, marketData }: Props) {
@@ -77,7 +78,7 @@ export function AIPanel({ profile, marketData }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [lastFetched, setLastFetched] = useState<string | null>(() => storage.getAILastFetched())
 
-  const hasKey = !!profile.claudeApiKey
+  const hasKey = !!profile.groqApiKey
 
   async function fetchSuggestions() {
     if (!hasKey) return
@@ -86,16 +87,14 @@ export function AIPanel({ profile, marketData }: Props) {
 
     try {
       const prompt = buildPrompt(profile, marketData)
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': profile.claudeApiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
+          'Authorization': `Bearer ${profile.groqApiKey}`,
         },
         body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
+          model: 'llama-3.3-70b-versatile',
           max_tokens: 1500,
           messages: [{ role: 'user', content: prompt }],
         }),
@@ -106,8 +105,8 @@ export function AIPanel({ profile, marketData }: Props) {
         throw new Error((err as { error?: { message?: string } }).error?.message ?? `HTTP ${res.status}`)
       }
 
-      const json = await res.json() as { content: Array<{ type: string; text: string }> }
-      const text = json.content.find((c) => c.type === 'text')?.text ?? ''
+      const json = await res.json() as { choices: Array<{ message: { content: string } }> }
+      const text = json.choices[0]?.message?.content ?? ''
 
       const parsed = parseSuggestions(text)
       // Extract note paragraph (lines not starting with FUND:)
@@ -133,7 +132,7 @@ export function AIPanel({ profile, marketData }: Props) {
           <div>
             <CardTitle>AI Fund Recommendations</CardTitle>
             <p className="text-xs text-gray-400 mt-0.5">
-              Powered by Claude · Not SEBI-registered advice
+              Powered by Groq (Llama 3.3 70B) · Not SEBI-registered advice
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -157,8 +156,8 @@ export function AIPanel({ profile, marketData }: Props) {
       {!hasKey && (
         <div className="text-center py-8 text-gray-400">
           <p className="text-2xl mb-2">🔑</p>
-          <p className="text-sm">Add your Claude API key in onboarding to enable AI recommendations.</p>
-          <p className="text-xs mt-1">Settings → Reset → re-enter profile with API key</p>
+          <p className="text-sm">Add your Groq API key in onboarding to enable AI recommendations.</p>
+          <p className="text-xs mt-1">Settings → Reset → re-enter profile with Groq API key</p>
         </div>
       )}
 

@@ -17,6 +17,13 @@ const TAX_OPTIONS: Array<{ label: string; value: 0 | 5 | 20 | 30 }> = [
 
 const INR = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN')
 
+const BUCKET_PREVIEW_CONFIG = [
+  { key: 'b1' as const, pct: '10%', horizon: '0–1yr', label: 'B1 — Emergency', color: 'text-blue-600', bg: 'bg-blue-50', desc: 'Liquid · SCSS · FD' },
+  { key: 'b2' as const, pct: '20%', horizon: '1–5yr', label: 'B2 — Short Term', color: 'text-amber-600', bg: 'bg-amber-50', desc: 'Short Debt · Corp Bond' },
+  { key: 'b3' as const, pct: '30%', horizon: '5–10yr', label: 'B3 — Growth Engine', color: 'text-emerald-600', bg: 'bg-emerald-50', desc: 'BAF · Hybrid · Multi-Asset' },
+  { key: 'b4' as const, pct: '40%', horizon: '10yr+', label: 'B4 — Legacy Equity', color: 'text-purple-600', bg: 'bg-purple-50', desc: 'Flexi Cap · Large Cap' },
+]
+
 export function Onboarding({ onComplete }: Props) {
   const [corpus, setCorpus] = useState('')
   const [withdrawal, setWithdrawal] = useState('')
@@ -24,7 +31,7 @@ export function Onboarding({ onComplete }: Props) {
   const [risk, setRisk] = useState<1 | 2 | 3 | 4 | 5>(3)
   const [taxBracket, setTaxBracket] = useState<0 | 5 | 20 | 30>(20)
   const [refreshInterval, setRefreshInterval] = useState<1 | 6>(6)
-  const [claudeKey, setClaudeKey] = useState('')
+  const [groqKey, setGroqKey] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const corpusNum = parseFloat(corpus.replace(/,/g, '')) || 0
@@ -54,7 +61,7 @@ export function Onboarding({ onComplete }: Props) {
       riskAppetite: risk,
       taxBracket,
       refreshInterval,
-      claudeApiKey: claudeKey.trim(),
+      groqApiKey: groqKey.trim(),
     }
 
     storage.setProfile(profile)
@@ -70,7 +77,7 @@ export function Onboarding({ onComplete }: Props) {
             🪣
           </div>
           <h1 className="text-3xl font-bold text-gray-900">Retirement Planner</h1>
-          <p className="text-gray-500 mt-2">3-Bucket Strategy for Indian Retirees</p>
+          <p className="text-gray-500 mt-2">4-Bucket Strategy · HDFC Model · Indian Retirees</p>
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 space-y-6">
@@ -187,44 +194,43 @@ export function Onboarding({ onComplete }: Props) {
             </div>
           </div>
 
-          {/* Claude API Key */}
+          {/* Groq API Key */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Claude API Key{' '}
-              <span className="text-gray-400 font-normal">(optional — for AI fund recommendations)</span>
+              Groq API Key{' '}
+              <span className="text-gray-400 font-normal">(optional — free AI fund recommendations)</span>
             </label>
             <input
               type="password"
-              placeholder="sk-ant-..."
-              value={claudeKey}
-              onChange={(e) => setClaudeKey(e.target.value)}
+              placeholder="gsk_..."
+              value={groqKey}
+              onChange={(e) => setGroqKey(e.target.value)}
               className="w-full border rounded-lg px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <p className="text-xs text-gray-400 mt-1">
-              Stored only in your browser's localStorage. Never sent anywhere except Anthropic's API.
+              Stored only in your browser's localStorage. Sent only to api.groq.com.
             </p>
           </div>
 
-          {/* Bucket preview */}
+          {/* 4-Bucket preview */}
           {bucketPreview && (
-            <div className="bg-slate-50 rounded-xl p-4 space-y-2">
+            <div className="bg-slate-50 rounded-xl p-4">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-                Your corpus will be split as:
+                Your corpus will be split across 4 buckets:
               </p>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="text-center">
-                  <div className="text-blue-600 font-bold text-lg">{INR(bucketPreview.b1)}</div>
-                  <div className="text-xs text-gray-500">B1 — 21% — 0–3yr</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-amber-500 font-bold text-lg">{INR(bucketPreview.b2)}</div>
-                  <div className="text-xs text-gray-500">B2 — 32% — 3–10yr</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-green-600 font-bold text-lg">{INR(bucketPreview.b3)}</div>
-                  <div className="text-xs text-gray-500">B3 — 47% — 10–20yr</div>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {BUCKET_PREVIEW_CONFIG.map(({ key, pct, horizon, label, color, bg, desc }) => (
+                  <div key={key} className={`rounded-lg p-3 ${bg}`}>
+                    <div className={`font-bold text-base ${color}`}>{INR(bucketPreview[key])}</div>
+                    <div className={`text-xs font-semibold ${color} mt-0.5`}>{label}</div>
+                    <div className="text-xs text-gray-500">{pct} · {horizon}</div>
+                    <div className="text-xs text-gray-400 mt-1">{desc}</div>
+                  </div>
+                ))}
               </div>
+              <p className="text-xs text-gray-400 mt-3 text-center">
+                B4 (equity) compounds freely → feeds B3 (hybrid) → feeds B2 (debt) → feeds B1 (liquid) → you
+              </p>
             </div>
           )}
 

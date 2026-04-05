@@ -1,5 +1,5 @@
 import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggestion } from '../types'
-import { DEFAULT_RETURN_ASSUMPTIONS } from '../constants'
+import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
 const KEYS = {
   PROFILE: 'rp_profile',
@@ -33,14 +33,32 @@ export const storage = {
   getProfile: () => get<UserProfile>(KEYS.PROFILE),
   setProfile: (p: UserProfile) => set(KEYS.PROFILE, p),
 
-  getBuckets: () => get<BucketState>(KEYS.BUCKETS),
+  getBuckets: (): BucketState | null => {
+    const stored = get<BucketState>(KEYS.BUCKETS)
+    if (!stored) return null
+    // Migrate 3-bucket → 4-bucket: if b4 is missing, derive it from remaining corpus
+    if (stored.b4 === undefined) {
+      const total = stored.b1 + stored.b2 + stored.b3
+      return {
+        b1: Math.round(total * BUCKET_ALLOCATION.b1),
+        b2: Math.round(total * BUCKET_ALLOCATION.b2),
+        b3: Math.round(total * BUCKET_ALLOCATION.b3),
+        b4: Math.round(total * BUCKET_ALLOCATION.b4),
+      }
+    }
+    return stored
+  },
   setBuckets: (b: BucketState) => set(KEYS.BUCKETS, b),
 
   getMarket: () => get<MarketData>(KEYS.MARKET),
   setMarket: (m: MarketData) => set(KEYS.MARKET, m),
 
-  getReturnAssumptions: (): ReturnAssumptions =>
-    get<ReturnAssumptions>(KEYS.RETURNS) ?? DEFAULT_RETURN_ASSUMPTIONS,
+  getReturnAssumptions: (): ReturnAssumptions => {
+    const stored = get<ReturnAssumptions>(KEYS.RETURNS)
+    if (!stored) return DEFAULT_RETURN_ASSUMPTIONS
+    // Migrate 3-bucket → 4-bucket: merge so b4 is always present
+    return { ...DEFAULT_RETURN_ASSUMPTIONS, ...stored }
+  },
   setReturnAssumptions: (r: ReturnAssumptions) => set(KEYS.RETURNS, r),
 
   getAISuggestions: () => get<AISuggestion[]>(KEYS.AI_SUGGESTIONS),

@@ -3,7 +3,7 @@ import { Card } from './ui/Card'
 import { BUCKET_INSTRUMENTS, BUCKET_HORIZON } from '../constants'
 
 interface Props {
-  id: 'b1' | 'b2' | 'b3'
+  id: 'b1' | 'b2' | 'b3' | 'b4'
   value: number
   total: number
   returnAssumption: number
@@ -13,8 +13,7 @@ interface Props {
 const CONFIG = {
   b1: {
     label: 'Bucket 1',
-    subtitle: 'Short Term · 0–3 Years',
-    color: 'blue',
+    subtitle: 'Emergency · 0–1 Year',
     bg: 'bg-blue-50',
     border: 'border-blue-200',
     bar: 'bg-blue-500',
@@ -23,8 +22,7 @@ const CONFIG = {
   },
   b2: {
     label: 'Bucket 2',
-    subtitle: 'Mid Term · 3–10 Years',
-    color: 'amber',
+    subtitle: 'Short Term · 1–5 Years',
     bg: 'bg-amber-50',
     border: 'border-amber-200',
     bar: 'bg-amber-500',
@@ -33,13 +31,21 @@ const CONFIG = {
   },
   b3: {
     label: 'Bucket 3',
-    subtitle: 'Long Term · 10–20 Years',
-    color: 'green',
-    bg: 'bg-green-50',
-    border: 'border-green-200',
-    bar: 'bg-green-500',
-    text: 'text-green-700',
+    subtitle: 'Growth Engine · 5–10 Years',
+    bg: 'bg-emerald-50',
+    border: 'border-emerald-200',
+    bar: 'bg-emerald-500',
+    text: 'text-emerald-700',
     badge: 'green' as const,
+  },
+  b4: {
+    label: 'Bucket 4',
+    subtitle: 'Legacy Equity · 10+ Years',
+    bg: 'bg-purple-50',
+    border: 'border-purple-200',
+    bar: 'bg-purple-500',
+    text: 'text-purple-700',
+    badge: 'purple' as const,
   },
 }
 

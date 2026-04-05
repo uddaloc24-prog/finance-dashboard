@@ -60,7 +60,7 @@ export function Dashboard({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">🪣</span>
-            <span className="font-bold text-gray-800">3-Bucket Retirement Planner</span>
+            <span className="font-bold text-gray-800">4-Bucket Retirement Planner</span>
           </div>
           <div className="flex items-center gap-3">
             <Button variant="secondary" size="sm" onClick={handleExportPDF}>
@@ -108,11 +108,12 @@ export function Dashboard({
           onBucketsUpdate={onBucketsUpdate}
         />
 
-        {/* Bucket cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 4 Bucket cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <BucketCard id="b1" value={buckets.b1} total={total} returnAssumption={returnAssumptions.b1} runway={runway} />
           <BucketCard id="b2" value={buckets.b2} total={total} returnAssumption={returnAssumptions.b2} />
           <BucketCard id="b3" value={buckets.b3} total={total} returnAssumption={returnAssumptions.b3} />
+          <BucketCard id="b4" value={buckets.b4} total={total} returnAssumption={returnAssumptions.b4} />
         </div>
 
         {/* Assumption sliders */}

@@ -59,9 +59,9 @@ function BucketBar({
   return (
     <div className={`rounded-xl border p-4 ${bgColor}`}>
       <div className="flex items-center justify-between mb-2">
-        <span className={`text-sm font-bold ${textColor}`}>{label}</span>
+        <span className={`text-xs font-bold ${textColor}`}>{label}</span>
         <div className="text-right">
-          <p className={`text-lg font-bold ${textColor}`}>{CR(value)}</p>
+          <p className={`text-base font-bold ${textColor}`}>{CR(value)}</p>
           {delta !== 0 && (
             <p className={`text-xs font-medium ${delta > 0 ? 'text-green-600' : 'text-red-500'}`}>
               {delta > 0 ? '+' : ''}{CR(delta)}
@@ -122,7 +122,7 @@ export function YearSimulator({
   const rows: SWPYearRow[] = simulateSWP({ buckets, monthlyWithdrawal, inflationRate, returnAssumptions })
   const [idx, setIdx] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [speedIdx, setSpeedIdx] = useState(1) // default 1× = 1000ms
+  const [speedIdx, setSpeedIdx] = useState(1)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const row = rows[idx]
@@ -131,21 +131,20 @@ export function YearSimulator({
   const prevB1 = prevRow?.b1 ?? buckets.b1
   const prevB2 = prevRow?.b2 ?? buckets.b2
   const prevB3 = prevRow?.b3 ?? buckets.b3
+  const prevB4 = prevRow?.b4 ?? buckets.b4
 
-  // B3 growth this year: if harvested, all gains moved to B2; otherwise B3 itself grew
-  const b3GrowthThisYear = row.b3Harvested > 0 ? row.b3Harvested : row.b3 - prevB3
+  // B4 growth this year
+  const b4GrowthThisYear = row.b4Harvested > 0 ? row.b4Harvested : row.b4 - prevB4
 
   const maxCorpus = rows[0]?.totalCorpus ?? 1
+  const calYear = startYear + row.year - 1
+  const depleted = row.totalCorpus <= 0
 
-  // Auto-play
   useEffect(() => {
     if (playing) {
       intervalRef.current = setInterval(() => {
         setIdx((i) => {
-          if (i >= rows.length - 1) {
-            setPlaying(false)
-            return i
-          }
+          if (i >= rows.length - 1) { setPlaying(false); return i }
           return i + 1
         })
       }, SPEEDS[speedIdx].ms)
@@ -155,17 +154,13 @@ export function YearSimulator({
     return () => { if (intervalRef.current) clearInterval(intervalRef.current) }
   }, [playing, speedIdx, rows.length])
 
-  const calYear = startYear + row.year - 1
-
-  // Chart data: all rows up to current idx (inclusive) for the sparkline
   const chartData = rows.slice(0, idx + 1).map((r) => ({
     year: startYear + r.year - 1,
     B1: r.b1,
     B2: r.b2,
     B3: r.b3,
+    B4: r.b4,
   }))
-
-  const depleted = row.totalCorpus <= 0
 
   return (
     <Card>
@@ -174,7 +169,7 @@ export function YearSimulator({
           <div>
             <CardTitle>Year-by-Year Bucket Flow</CardTitle>
             <p className="text-xs text-gray-400 mt-0.5">
-              Step through each year to see how money flows between buckets
+              Step through each year — see the 4-bucket cascade in action
             </p>
           </div>
           {depleted && (
@@ -187,7 +182,6 @@ export function YearSimulator({
 
       {/* ── Year control ── */}
       <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
-        {/* Scrubber */}
         <div className="flex-1 min-w-[200px]">
           <input
             type="range"
@@ -203,92 +197,49 @@ export function YearSimulator({
           </div>
         </div>
 
-        {/* Prev / display / Next */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => { setPlaying(false); setIdx((i) => Math.max(0, i - 1)) }}
-            disabled={idx === 0}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 text-gray-600 font-bold"
-          >
-            ‹
-          </button>
+          <button onClick={() => { setPlaying(false); setIdx((i) => Math.max(0, i - 1)) }} disabled={idx === 0}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 text-gray-600 font-bold">‹</button>
           <div className="text-center min-w-[90px]">
             <p className="text-xl font-bold text-gray-900">{calYear}</p>
             <p className="text-xs text-gray-400">Year {row.year} of {rows.length}</p>
           </div>
-          <button
-            onClick={() => { setPlaying(false); setIdx((i) => Math.min(rows.length - 1, i + 1)) }}
-            disabled={idx === rows.length - 1}
-            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 text-gray-600 font-bold"
-          >
-            ›
-          </button>
+          <button onClick={() => { setPlaying(false); setIdx((i) => Math.min(rows.length - 1, i + 1)) }} disabled={idx === rows.length - 1}
+            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-30 text-gray-600 font-bold">›</button>
         </div>
 
-        {/* Play / speed */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setPlaying((p) => !p)}
-            disabled={idx === rows.length - 1}
-            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 min-w-[72px]"
-          >
+          <button onClick={() => setPlaying((p) => !p)} disabled={idx === rows.length - 1}
+            className="px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-40 min-w-[72px]">
             {playing ? '⏸ Pause' : '▶ Play'}
           </button>
           <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
             {SPEEDS.map((s, i) => (
-              <button
-                key={s.label}
-                onClick={() => setSpeedIdx(i)}
-                className={`px-2.5 py-1.5 font-medium transition-colors ${
-                  i === speedIdx
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
+              <button key={s.label} onClick={() => setSpeedIdx(i)}
+                className={`px-2.5 py-1.5 font-medium transition-colors ${i === speedIdx ? 'bg-indigo-600 text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
                 {s.label}
               </button>
             ))}
           </div>
           {idx > 0 && (
-            <button
-              onClick={() => { setPlaying(false); setIdx(0) }}
-              className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50"
-            >
+            <button onClick={() => { setPlaying(false); setIdx(0) }}
+              className="px-2.5 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50">
               ↺ Reset
             </button>
           )}
         </div>
       </div>
 
-      {/* ── Bucket bars ── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-        <BucketBar
-          label="B1 — Short Term (Liquid)"
-          value={row.b1}
-          prevValue={prevB1}
-          max={maxCorpus}
-          color="bg-blue-500"
-          bgColor="bg-blue-50 border-blue-200"
-          textColor="text-blue-700"
-        />
-        <BucketBar
-          label="B2 — Medium Term (Buffer)"
-          value={row.b2}
-          prevValue={prevB2}
-          max={maxCorpus}
-          color="bg-amber-500"
-          bgColor="bg-amber-50 border-amber-200"
-          textColor="text-amber-700"
-        />
-        <BucketBar
-          label="B3 — Long Term (Growth)"
-          value={row.b3}
-          prevValue={prevB3}
-          max={maxCorpus}
-          color="bg-green-500"
-          bgColor="bg-green-50 border-green-200"
-          textColor="text-green-700"
-        />
+      {/* ── 4 Bucket bars ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <BucketBar label="B1 — Liquid" value={row.b1} prevValue={prevB1} max={maxCorpus}
+          color="bg-blue-500" bgColor="bg-blue-50 border-blue-200" textColor="text-blue-700" />
+        <BucketBar label="B2 — Short Debt" value={row.b2} prevValue={prevB2} max={maxCorpus}
+          color="bg-amber-500" bgColor="bg-amber-50 border-amber-200" textColor="text-amber-700" />
+        <BucketBar label="B3 — Hybrid/BAF" value={row.b3} prevValue={prevB3} max={maxCorpus}
+          color="bg-emerald-500" bgColor="bg-emerald-50 border-emerald-200" textColor="text-emerald-700" />
+        <BucketBar label="B4 — Equity" value={row.b4} prevValue={prevB4} max={maxCorpus}
+          color="bg-purple-500" bgColor="bg-purple-50 border-purple-200" textColor="text-purple-700" />
       </div>
 
       {/* ── Cascade events ── */}
@@ -298,73 +249,64 @@ export function YearSimulator({
             What happened in {calYear}
           </p>
           <div className="divide-y divide-gray-100">
-            {/* B3 growth (always) */}
-            <EventStep
-              icon="📈"
-              label="B3 compounded (equity growth)"
-              amount={b3GrowthThisYear}
-              note={row.b3Harvested > 0
-                ? `B2 needed replenishment — all accumulated gains (${CR(row.b3Harvested)}) harvested`
-                : `${returnAssumptions.b3}% — gains stay in B3, compounding further`}
-              variant="positive"
-            />
-            {row.b3Harvested > 0 && (
-              <EventStep
-                icon="🌾"
-                label="B3 gains transferred → B2"
-                amount={row.b3Harvested}
-                note="B3 resets to principal; all accumulated gains moved to buffer"
-                variant="positive"
-              />
+            <EventStep icon="📈" label="B4 (equity) compounded"
+              amount={b4GrowthThisYear}
+              note={row.b4Harvested > 0
+                ? `B3 needed replenishment — ${CR(row.b4Harvested)} accumulated gains moved to B3`
+                : `${returnAssumptions.b4}% — gains compounding in B4`}
+              variant="positive" />
+            {row.b4Harvested > 0 && (
+              <EventStep icon="🌾" label="B4 gains harvested → B3"
+                amount={row.b4Harvested}
+                note="B4 resets to principal; gains fund the hybrid engine"
+                variant="positive" />
             )}
-            <EventStep
-              icon="📊"
-              label="B2 grew on its own balance"
+            <EventStep icon="📊" label="B3 (hybrid/BAF) grew"
+              amount={row.b3GrowthEarned}
+              note={`${returnAssumptions.b3}% return on balance`}
+              variant="positive" />
+            <EventStep icon="💼" label="B2 (debt) grew"
               amount={row.b2GrowthEarned}
               note={`${returnAssumptions.b2}% return`}
-              variant="positive"
-            />
-            <EventStep
-              icon="💰"
-              label="B1 earned return"
+              variant="positive" />
+            <EventStep icon="💰" label="B1 (liquid) earned return"
               amount={row.b1GrowthEarned}
               note={`${returnAssumptions.b1}% return`}
-              variant="positive"
-            />
-            <EventStep
-              icon="💸"
-              label="Annual withdrawal from B1"
+              variant="positive" />
+            <EventStep icon="💸" label="Annual withdrawal from B1"
               amount={row.annualWithdrawal}
-              note={`₹${Math.round(row.annualWithdrawal / 12).toLocaleString('en-IN')}/month (inflation-adjusted)`}
-              variant="warning"
-            />
+              note={`${INR(row.annualWithdrawal / 12)}/month (inflation-adjusted)`}
+              variant="warning" />
             {row.b1RefillFromB2 > 0 && (
-              <EventStep
-                icon="🔄"
-                label="B2 → B1 top-up (auto-refill)"
+              <EventStep icon="🔄" label="B2 → B1 top-up"
                 amount={row.b1RefillFromB2}
-                note="B1 dropped below 1yr expenses — refilled to 2yr buffer"
-                variant="default"
-              />
+                note="B1 dropped below 1yr — refilled from B2 to 2yr buffer"
+                variant="default" />
             )}
-            {row.b2EmergencyFromB3 > 0 && (
-              <EventStep
-                icon="🚨"
-                label="Emergency: B3 principal → B2"
-                amount={row.b2EmergencyFromB3}
-                note="B2 critically low — last-resort liquidation"
-                variant="danger"
-              />
+            {row.b2RefillFromB3 > 0 && (
+              <EventStep icon="🔄" label="B3 → B2 top-up"
+                amount={row.b2RefillFromB3}
+                note="B2 dropped below 1yr — refilled from B3 (hybrid)"
+                variant="default" />
+            )}
+            {row.b3HarvestFromB4 > 0 && row.b4Harvested === 0 && (
+              <EventStep icon="🌾" label="B4 gains → B3 harvest"
+                amount={row.b3HarvestFromB4}
+                note="B3 needed replenishment — B4 accumulated gains transferred"
+                variant="positive" />
+            )}
+            {row.b4EmergencyToB3 > 0 && (
+              <EventStep icon="🚨" label="Emergency: B4 principal → B3"
+                amount={row.b4EmergencyToB3}
+                note="B3 critically low — last-resort B4 principal liquidation"
+                variant="danger" />
             )}
           </div>
         </div>
 
-        {/* Summary stats */}
         <div className="space-y-3">
           <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
-              End of Year Summary
-            </p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">End of Year Summary</p>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Total corpus</span>
@@ -390,23 +332,25 @@ export function YearSimulator({
           </div>
 
           <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4">
-            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-2">
-              B1 Runway
-            </p>
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-2">B1 Runway</p>
             <p className="text-2xl font-bold text-indigo-700">
-              {row.annualWithdrawal > 0
-                ? Math.floor((row.b1 / row.annualWithdrawal) * 12)
-                : '∞'}{' '}
+              {row.annualWithdrawal > 0 ? Math.floor((row.b1 / row.annualWithdrawal) * 12) : '∞'}{' '}
               <span className="text-sm font-medium">months</span>
             </p>
-            <p className="text-xs text-indigo-400 mt-0.5">
-              {CR(row.b1)} in B1 at current withdrawal rate
+            <p className="text-xs text-indigo-400 mt-0.5">{CR(row.b1)} in B1 at current withdrawal rate</p>
+          </div>
+
+          <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+            <p className="text-xs font-semibold text-purple-500 uppercase tracking-wide mb-2">B4 Equity Growth</p>
+            <p className="text-2xl font-bold text-purple-700">{CR(row.b4)}</p>
+            <p className="text-xs text-purple-400 mt-0.5">
+              {row.b4Harvested > 0 ? `↓ Harvested ${CR(row.b4Harvested)} to B3 this year` : `↑ ${CR(b4GrowthThisYear)} compounded this year`}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ── Sparkline chart ── */}
+      {/* ── Sparkline ── */}
       {chartData.length > 1 && (
         <div>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
@@ -421,7 +365,8 @@ export function YearSimulator({
                 <Tooltip formatter={(v: number) => CR(v)} labelFormatter={(l) => `Year: ${l}`} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <ReferenceLine x={calYear} stroke="#6366f1" strokeDasharray="4 4" />
-                <Line type="monotone" dataKey="B3" stroke="#22c55e" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="B4" stroke="#a855f7" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="B3" stroke="#10b981" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="B2" stroke="#f59e0b" strokeWidth={2} dot={false} />
                 <Line type="monotone" dataKey="B1" stroke="#3b82f6" strokeWidth={2} dot={false} />
               </LineChart>

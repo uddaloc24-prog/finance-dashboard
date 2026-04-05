@@ -11,13 +11,14 @@ interface Props {
   annualCorpus: number
 }
 
-const BUCKET_BADGE: Record<string, 'blue' | 'amber' | 'green'> = {
-  B1: 'blue', B2: 'amber', B3: 'green',
+const BUCKET_BADGE: Record<string, 'blue' | 'amber' | 'green' | 'purple'> = {
+  B1: 'blue', B2: 'amber', B3: 'green', B4: 'purple',
 }
 
 export function TaxOverlay({ returnAssumptions, taxBracket, scssRate, fdRates, annualCorpus }: Props) {
-  const annualB3Gains = annualCorpus * 0.47 * (returnAssumptions.b3 / 100)
-  const rows = computeTaxRows(returnAssumptions, taxBracket, scssRate, fdRates, annualB3Gains)
+  // B4 is now equity (40% allocation)
+  const annualB4Gains = annualCorpus * 0.40 * (returnAssumptions.b4 / 100)
+  const rows = computeTaxRows(returnAssumptions, taxBracket, scssRate, fdRates, annualB4Gains)
 
   return (
     <Card>

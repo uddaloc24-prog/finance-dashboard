@@ -59,9 +59,10 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
 
   const chartData = rows.map((r) => ({
     year: r.year,
-    'B1 (Short)': r.b1,
-    'B2 (Mid)': r.b2,
-    'B3 (Long)': r.b3,
+    'B4 (Equity)': r.b4,
+    'B3 (Hybrid)': r.b3,
+    'B2 (Debt)': r.b2,
+    'B1 (Liquid)': r.b1,
   }))
 
   const legacyRows = rows.filter((r) => LEGACY_YEARS.includes(r.year))
@@ -78,7 +79,7 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
           )}
         </div>
         <p className="text-xs text-gray-400 mt-1">
-          Withdrawal steps up {inflationRate}% annually. Buckets auto-refill in sequence.
+          Withdrawal steps up {inflationRate}% annually. 4-bucket cascade: B4 → B3 → B2 → B1 → you.
         </p>
       </CardHeader>
 
@@ -87,9 +88,13 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
             <defs>
+              <linearGradient id="gB4" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+              </linearGradient>
               <linearGradient id="gB3" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="gB2" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.4} />
@@ -108,9 +113,10 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
             {LEGACY_YEARS.map((yr) => (
               <ReferenceLine key={yr} x={yr} stroke="#94a3b8" strokeDasharray="4 4" label={{ value: `Yr ${yr}`, position: 'top', fontSize: 10, fill: '#94a3b8' }} />
             ))}
-            <Area type="monotone" dataKey="B3 (Long)" stackId="1" stroke="#22c55e" fill="url(#gB3)" strokeWidth={2} />
-            <Area type="monotone" dataKey="B2 (Mid)" stackId="1" stroke="#f59e0b" fill="url(#gB2)" strokeWidth={2} />
-            <Area type="monotone" dataKey="B1 (Short)" stackId="1" stroke="#3b82f6" fill="url(#gB1)" strokeWidth={2} />
+            <Area type="monotone" dataKey="B4 (Equity)" stackId="1" stroke="#a855f7" fill="url(#gB4)" strokeWidth={2} />
+            <Area type="monotone" dataKey="B3 (Hybrid)" stackId="1" stroke="#10b981" fill="url(#gB3)" strokeWidth={2} />
+            <Area type="monotone" dataKey="B2 (Debt)" stackId="1" stroke="#f59e0b" fill="url(#gB2)" strokeWidth={2} />
+            <Area type="monotone" dataKey="B1 (Liquid)" stackId="1" stroke="#3b82f6" fill="url(#gB1)" strokeWidth={2} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -124,11 +130,12 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
               <tr className="text-left text-xs text-gray-500 border-b">
                 <th className="pb-2 font-medium">Year</th>
                 <th className="pb-2 font-medium">Annual Withdrawal</th>
-                <th className="pb-2 font-medium">B1</th>
-                <th className="pb-2 font-medium">B2</th>
-                <th className="pb-2 font-medium">B3 Principal</th>
-                <th className="pb-2 font-medium">B3 Harvested</th>
-                <th className="pb-2 font-medium">Total Legacy Corpus</th>
+                <th className="pb-2 font-medium">B1 (Liquid)</th>
+                <th className="pb-2 font-medium">B2 (Debt)</th>
+                <th className="pb-2 font-medium">B3 (Hybrid)</th>
+                <th className="pb-2 font-medium">B4 (Equity)</th>
+                <th className="pb-2 font-medium">B4 Harvested</th>
+                <th className="pb-2 font-medium">Total Corpus</th>
               </tr>
             </thead>
             <tbody>
@@ -138,8 +145,9 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
                   <td className="py-2.5 text-gray-600">{INR(row.annualWithdrawal)}</td>
                   <td className="py-2.5 text-blue-600">{CR(row.b1)}</td>
                   <td className="py-2.5 text-amber-600">{CR(row.b2)}</td>
-                  <td className="py-2.5 text-green-600">{CR(row.b3)}</td>
-                  <td className="py-2.5 text-green-400 text-xs">{CR(row.b3Harvested)}</td>
+                  <td className="py-2.5 text-emerald-600">{CR(row.b3)}</td>
+                  <td className="py-2.5 text-purple-600">{CR(row.b4)}</td>
+                  <td className="py-2.5 text-purple-400 text-xs">{CR(row.b4Harvested)}</td>
                   <td className="py-2.5 font-bold text-gray-900">{CR(row.totalCorpus)}</td>
                 </tr>
               ))}
