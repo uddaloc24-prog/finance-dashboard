@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { ReturnAssumptions, UserProfile } from '../types'
 import { Card, CardHeader, CardTitle } from './ui/Card'
 import { storage } from '../lib/storage'
@@ -16,15 +17,53 @@ interface SliderRowProps {
   max: number
   step: number
   color: string
+  unit?: string
   onChange: (v: number) => void
 }
 
-function SliderRow({ label, value, min, max, step, color, onChange }: SliderRowProps) {
+function SliderRow({ label, value, min, max, step, color, unit = '%', onChange }: SliderRowProps) {
+  const [localText, setLocalText] = useState(String(value))
+
+  // Keep text in sync when value changes externally (e.g. reset)
+  useEffect(() => {
+    setLocalText(String(value))
+  }, [value])
+
+  function commitText() {
+    const parsed = parseFloat(localText)
+    if (!isNaN(parsed)) {
+      const clamped = Math.min(max, Math.max(min, parsed))
+      onChange(clamped)
+      setLocalText(String(clamped))
+    } else {
+      setLocalText(String(value)) // revert invalid input
+    }
+  }
+
+  function handleSlider(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseFloat(e.target.value)
+    onChange(v)
+    setLocalText(String(v))
+  }
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-600 font-medium">{label}</span>
-        <span className={`font-bold ${color}`}>{value}%</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-gray-600">{label}</span>
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={localText}
+            min={min}
+            max={max}
+            step={step}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={commitText}
+            onKeyDown={(e) => e.key === 'Enter' && commitText()}
+            className={`w-20 text-right border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-blue-400 ${color}`}
+          />
+          <span className={`text-sm font-bold ${color}`}>{unit}</span>
+        </div>
       </div>
       <input
         type="range"
@@ -32,42 +71,82 @@ function SliderRow({ label, value, min, max, step, color, onChange }: SliderRowP
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(parseFloat(e.target.value))}
-        className="w-full accent-blue-600"
+        onChange={handleSlider}
+        className="w-full accent-blue-600 cursor-pointer"
       />
       <div className="flex justify-between text-xs text-gray-400">
-        <span>{min}%</span>
-        <span>{max}%</span>
+        <span>{min}{unit}</span>
+        <span>{max}{unit}</span>
       </div>
     </div>
   )
 }
 
-function WithdrawalSlider({ profile, onProfileChange }: { profile: UserProfile; onProfileChange: (p: UserProfile) => void }) {
-  const base = profile.monthlyWithdrawal
-  const min = Math.round(base * 0.5)
-  const max = Math.round(base * 1.5)
+interface WithdrawalSliderProps {
+  profile: UserProfile
+  onProfileChange: (p: UserProfile) => void
+}
+
+function WithdrawalSlider({ profile, onProfileChange }: WithdrawalSliderProps) {
+  const min = 10_000
+  const max = Math.max(500_000, Math.round(profile.corpus / 100))
+  const step = 1_000
+
+  const [localText, setLocalText] = useState(String(profile.monthlyWithdrawal))
+
+  useEffect(() => {
+    setLocalText(String(profile.monthlyWithdrawal))
+  }, [profile.monthlyWithdrawal])
 
   const INR = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN')
 
+  function commit(raw: string) {
+    const parsed = parseInt(raw.replace(/[^0-9]/g, ''), 10)
+    if (!isNaN(parsed) && parsed > 0) {
+      const clamped = Math.min(max, Math.max(min, parsed))
+      const updated = { ...profile, monthlyWithdrawal: clamped }
+      storage.setProfile(updated)
+      onProfileChange(updated)
+      setLocalText(String(clamped))
+    } else {
+      setLocalText(String(profile.monthlyWithdrawal))
+    }
+  }
+
+  function handleSlider(e: React.ChangeEvent<HTMLInputElement>) {
+    const v = parseInt(e.target.value, 10)
+    const updated = { ...profile, monthlyWithdrawal: v }
+    storage.setProfile(updated)
+    onProfileChange(updated)
+    setLocalText(String(v))
+  }
+
   return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-sm">
-        <span className="text-gray-600 font-medium">Monthly Withdrawal</span>
-        <span className="font-bold text-purple-700">{INR(profile.monthlyWithdrawal)}</span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-gray-600">Monthly Withdrawal</span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm font-bold text-purple-700">₹</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={localText}
+            onChange={(e) => setLocalText(e.target.value)}
+            onBlur={(e) => commit(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && commit(localText)}
+            placeholder="e.g. 100000"
+            className="w-28 text-right border border-gray-200 rounded-lg px-2 py-1 text-sm font-bold text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
+          />
+        </div>
       </div>
       <input
         type="range"
         min={min}
         max={max}
-        step={1000}
+        step={step}
         value={profile.monthlyWithdrawal}
-        onChange={(e) => {
-          const updated = { ...profile, monthlyWithdrawal: parseInt(e.target.value) }
-          storage.setProfile(updated)
-          onProfileChange(updated)
-        }}
-        className="w-full accent-purple-600"
+        onChange={handleSlider}
+        className="w-full accent-purple-600 cursor-pointer"
       />
       <div className="flex justify-between text-xs text-gray-400">
         <span>{INR(min)}</span>
@@ -79,8 +158,7 @@ function WithdrawalSlider({ profile, onProfileChange }: { profile: UserProfile; 
 
 export function Sliders({ profile, returnAssumptions, onProfileChange, onReturnsChange }: Props) {
   function updateReturns(key: keyof ReturnAssumptions, val: number) {
-    const updated = { ...returnAssumptions, [key]: val }
-    onReturnsChange(updated)
+    onReturnsChange({ ...returnAssumptions, [key]: val })
   }
 
   function updateInflation(val: number) {
@@ -93,7 +171,9 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
     <Card>
       <CardHeader>
         <CardTitle>Assumption Sliders</CardTitle>
-        <p className="text-xs text-gray-400 mt-0.5">Adjust to see real-time impact on SWP projections</p>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Drag the slider or type a value directly — charts update live
+        </p>
       </CardHeader>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -108,7 +188,7 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
             onChange={updateInflation}
           />
           <SliderRow
-            label="B1 Return (Liquid/SCSS/FD)"
+            label="B1 Return (Liquid / SCSS / FD)"
             value={returnAssumptions.b1}
             min={5}
             max={9}
@@ -119,7 +199,7 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
         </div>
         <div className="space-y-5">
           <SliderRow
-            label="B2 Return (Debt MF/BAF)"
+            label="B2 Return (Debt MF / BAF)"
             value={returnAssumptions.b2}
             min={6}
             max={10}
@@ -128,7 +208,7 @@ export function Sliders({ profile, returnAssumptions, onProfileChange, onReturns
             onChange={(v) => updateReturns('b2', v)}
           />
           <SliderRow
-            label="B3 Return (Equity/Gold)"
+            label="B3 Return (Equity / Gold)"
             value={returnAssumptions.b3}
             min={8}
             max={15}

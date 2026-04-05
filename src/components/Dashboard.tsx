@@ -103,6 +103,7 @@ export function Dashboard({
         <RefillAlert
           buckets={buckets}
           monthlyWithdrawal={profile.monthlyWithdrawal}
+          returnAssumptions={returnAssumptions}
           onBucketsUpdate={onBucketsUpdate}
         />
 

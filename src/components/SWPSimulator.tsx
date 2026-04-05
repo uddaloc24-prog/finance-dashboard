@@ -126,7 +126,8 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
                 <th className="pb-2 font-medium">Annual Withdrawal</th>
                 <th className="pb-2 font-medium">B1</th>
                 <th className="pb-2 font-medium">B2</th>
-                <th className="pb-2 font-medium">B3</th>
+                <th className="pb-2 font-medium">B3 Principal</th>
+                <th className="pb-2 font-medium">B3 Harvested</th>
                 <th className="pb-2 font-medium">Total Legacy Corpus</th>
               </tr>
             </thead>
@@ -138,6 +139,7 @@ export function SWPSimulator({ buckets, monthlyWithdrawal, inflationRate, return
                   <td className="py-2.5 text-blue-600">{CR(row.b1)}</td>
                   <td className="py-2.5 text-amber-600">{CR(row.b2)}</td>
                   <td className="py-2.5 text-green-600">{CR(row.b3)}</td>
+                  <td className="py-2.5 text-green-400 text-xs">{CR(row.b3Harvested)}</td>
                   <td className="py-2.5 font-bold text-gray-900">{CR(row.totalCorpus)}</td>
                 </tr>
               ))}

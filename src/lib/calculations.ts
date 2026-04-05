@@ -18,7 +18,8 @@ export function b1RunwayMonths(b1Value: number, monthlyWithdrawal: number): numb
   return Math.floor(b1Value / monthlyWithdrawal)
 }
 
-export function shouldRefillB1(runway: number, thresholdMonths: number = 6): boolean {
+// Alert when B1 has less than 12 months of expenses remaining
+export function shouldRefillB1(runway: number, thresholdMonths: number = 12): boolean {
   return runway < thresholdMonths
 }
 
@@ -31,19 +32,35 @@ export function refillB1Amount(
   return Math.max(0, target - b1Value)
 }
 
-export function shouldRefillB2(
-  b2Value: number,
-  corpus: number,
-  thresholdRatio: number = 0.15
-): boolean {
-  return b2Value < corpus * thresholdRatio
+// Emergency only: B2 critically low (< 6 months of expenses). Normal flow is B3 profits → B2.
+export function shouldRefillB2Emergency(b2Value: number, monthlyWithdrawal: number): boolean {
+  return b2Value < monthlyWithdrawal * 6
 }
 
-export function refillB2Amount(b2Value: number, corpus: number): number {
+export function refillB2EmergencyAmount(b2Value: number, corpus: number): number {
   const target = corpus * BUCKET_ALLOCATION.b2
   return Math.max(0, target - b2Value)
 }
 
+// ── B3 profit harvesting ──────────────────────────────────────────
+// B3 principal is never touched in normal operation.
+// Only the annual investment gain is harvested and banked into B2.
+
+export function b3ProfitHarvest(b3Value: number, annualReturnPct: number): number {
+  return Math.round(b3Value * (annualReturnPct / 100))
+}
+
+// Move B3 annual profit to B2. B3 principal stays intact.
+export function harvestB3ToB2(buckets: BucketState, b3ReturnPct: number): BucketState {
+  const profit = b3ProfitHarvest(buckets.b3, b3ReturnPct)
+  return {
+    ...buckets,
+    b2: buckets.b2 + profit,
+    // b3 unchanged — principal preserved
+  }
+}
+
+// Transfer from one bucket to another (immutable). Used for manual refills.
 export function transferBucket(
   buckets: BucketState,
   from: 'b2' | 'b3',
@@ -58,11 +75,21 @@ export function transferBucket(
   }
 }
 
+// ── SWP Simulation ────────────────────────────────────────────────
+//
+// B3 principal is preserved throughout. Each year:
+//   1. Harvest B3 profit → add to B2
+//   2. B2 earns its own return on its full balance (principal + accumulated profits)
+//   3. B1 earns its return
+//   4. Withdraw from B1
+//   5. If B1 < 1yr of expenses → top up from B2 (target: 2yr buffer)
+//   6. Emergency: if B2 < 6mo expenses → liquidate B3 principal into B2
+
 export interface SWPSimParams {
   buckets: BucketState
   monthlyWithdrawal: number
-  inflationRate: number          // percent
-  returnAssumptions: ReturnAssumptions  // percent
+  inflationRate: number
+  returnAssumptions: ReturnAssumptions
 }
 
 export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
@@ -71,33 +98,38 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
 
   let b1 = params.buckets.b1
   let b2 = params.buckets.b2
-  let b3 = params.buckets.b3
+  let b3 = params.buckets.b3   // principal only — stays flat unless emergency
   let annualWithdrawal = monthlyWithdrawal * 12
 
   const r1 = 1 + returnAssumptions.b1 / 100
   const r2 = 1 + returnAssumptions.b2 / 100
-  const r3 = 1 + returnAssumptions.b3 / 100
+  const b3ReturnPct = returnAssumptions.b3
   const inflation = 1 + inflationRate / 100
 
   for (let year = 1; year <= SWP_YEARS; year++) {
-    // Grow buckets at their assumed returns first
-    b1 = b1 * r1
-    b2 = b2 * r2
-    b3 = b3 * r3
+    // Step 1 — Harvest B3 profits into B2 (principal untouched)
+    const b3Harvested = b3ProfitHarvest(b3, b3ReturnPct)
+    b2 += b3Harvested
 
-    // Withdraw from B1
+    // Step 2 — B2 earns its own return on current balance
+    b2 = b2 * r2
+
+    // Step 3 — B1 earns its return
+    b1 = b1 * r1
+
+    // Step 4 — Withdraw from B1
     b1 = Math.max(0, b1 - annualWithdrawal)
 
-    // Refill B1 from B2 if needed
-    const b1Target = annualWithdrawal * 2  // keep ~2yr buffer
+    // Step 5 — Refill B1 from B2 if B1 < 1yr of expenses
     if (b1 < annualWithdrawal && b2 > 0) {
-      const needed = Math.min(b1Target - b1, b2)
+      const target = annualWithdrawal * 2   // top up to 2yr buffer
+      const needed = Math.min(Math.max(0, target - b1), b2)
       b1 += needed
       b2 -= needed
     }
 
-    // Refill B2 from B3 if B2 falls below 12mo of original withdrawal
-    if (b2 < annualWithdrawal * 2 && b3 > 0) {
+    // Step 6 — Emergency: B2 critically low → liquidate B3 principal
+    if (b2 < annualWithdrawal * 0.5 && b3 > 0) {
       const needed = Math.min(annualWithdrawal * 4, b3)
       b2 += needed
       b3 -= needed
@@ -111,11 +143,11 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
       b1: Math.round(b1),
       b2: Math.round(b2),
       b3: Math.round(b3),
+      b3Harvested: Math.round(b3Harvested),
       totalCorpus: Math.round(total),
       isLegacyYear: LEGACY_YEARS.includes(year),
     })
 
-    // Step up withdrawal by inflation
     annualWithdrawal = annualWithdrawal * inflation
   }
 
@@ -127,9 +159,9 @@ export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
 export interface TaxRow {
   instrument: string
   bucket: string
-  preTaxReturn: number   // percent
-  taxRate: number        // percent
-  postTaxReturn: number  // percent
+  preTaxReturn: number
+  taxRate: number
+  postTaxReturn: number
   notes: string
 }
 

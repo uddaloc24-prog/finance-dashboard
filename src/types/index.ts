@@ -5,7 +5,7 @@ export interface UserProfile {
   riskAppetite: 1 | 2 | 3 | 4 | 5
   taxBracket: 0 | 5 | 20 | 30  // percent
   refreshInterval: 1 | 6       // hours
-  claudeApiKey: string
+  groqApiKey: string
 }
 
 export interface ReturnAssumptions {
@@ -46,7 +46,8 @@ export interface SWPYearRow {
   annualWithdrawal: number
   b1: number
   b2: number
-  b3: number
+  b3: number           // principal only — gains are harvested each year
+  b3Harvested: number  // profit moved from B3 → B2 this year
   totalCorpus: number
   isLegacyYear: boolean
 }
