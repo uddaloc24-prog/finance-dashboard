@@ -10,6 +10,7 @@ import { AIPanel } from './AIPanel'
 import { TaxOverlay } from './TaxOverlay'
 import { Sliders } from './Sliders'
 import { YearSimulator } from './YearSimulator'
+import { CascadeExplainer } from './CascadeExplainer'
 import { Button } from './ui/Button'
 import { exportPDF } from '../lib/pdf'
 import { simulateSWP } from '../lib/calculations'
@@ -99,6 +100,9 @@ export function Dashboard({
             </p>
           </div>
         </div>
+
+        {/* How it works */}
+        <CascadeExplainer />
 
         {/* Refill alerts */}
         <RefillAlert
