@@ -34,11 +34,12 @@ Current market context:
 Current MF NAVs being tracked:
 ${navStr}
 
-4-Bucket strategy (cascade: B4 → B3 → B2 → B1 → withdrawal):
-- B1 (0–1yr, 10%): SCSS, Senior FD, Liquid MF, Money Market — funds monthly SWP
-- B2 (1–5yr, 20%): Short-term Debt MF, Corporate Bond, Equity Savings — refills B1
-- B3 (5–10yr, 30%): BAF, Aggressive Hybrid, Multi-Asset, Balanced Advantage — the growth engine that refills B1 & B2
-- B4 (10yr+, 40%): Flexi Cap, Large Cap, Multi-Cap, Gold ETF — long-term equity, compounds freely, profits harvested to B3 when needed
+4-Bucket strategy — interest-only SWP cascade (B4 → B3 → B2 → B1 → withdrawal):
+Each bucket earns returns on its LOCKED principal. Only interest flows down each year. Principals never deplete in normal operation.
+- B1 (0–1yr, 10%): Liquid MF, Money Market MF, Overnight MF — pure liquidity, T+1 redemption, funds monthly withdrawal. Receives cascaded interest from B2/B3/B4 annually.
+- B2 (1–5yr, 20%): SCSS (8.2%), Senior Citizen FD (SBI/HDFC/ICICI ~7.5%), Short Duration MF, Corporate Bond MF — fixed income, principal locked in SCSS/FD, quarterly/monthly interest flows to B1
+- B3 (5–10yr, 30%): Balanced Advantage Fund (BAF), Aggressive Hybrid, Multi-Asset MF — auto-rebalances equity/debt, earns ~9.5%, interest cascades to B2
+- B4 (10yr+, 40%): Flexi Cap MF, Large Cap Index (Nifty 50), Mid Cap MF (aggressive only), Gold ETF — equity growth engine, earns ~12%, annual returns flow to B3 as regular SWP
 
 Provide specific fund recommendations for each bucket. For each recommendation, respond in this exact format (one per line):
 FUND: [fund name] | BUCKET: [B1/B2/B3/B4] | NAV: [current NAV or "see mfapi.in"] | 1YR: [1yr return % or "N/A"] | ALLOC: [suggested % within bucket] | REASON: [1-sentence rationale]

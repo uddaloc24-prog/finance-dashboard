@@ -1,11 +1,43 @@
+export type PaymentFrequency = 'monthly' | 'quarterly' | 'half-yearly' | 'yearly'
+
+export type CityTier = 'metro' | 'tier1' | 'tier2' | 'rural'
+
+export interface Demographics {
+  currentAge: number           // default 55
+  retirementAge: number        // default 60
+  lifeExpectancy: number       // default 90
+  spouseAge?: number
+  spouseLifeExpectancy?: number
+  city: CityTier
+}
+
+export interface ExpenseProfile {
+  essential: number            // monthly ₹
+  lifestyle: number
+  healthcare: number
+  education: number
+  generalInflation: number     // percent, default 6
+  healthcareInflation: number  // percent, default 10
+  educationInflation: number   // percent, default 12
+}
+
 export interface UserProfile {
   corpus: number
-  monthlyWithdrawal: number
+  monthlyWithdrawal: number    // always stored as monthly equivalent
+  withdrawalFrequency: PaymentFrequency
+  withdrawalAmount: number     // the raw amount at the chosen frequency
+  sipAmount: number            // SIP/passive income amount at chosen frequency (0 = none)
+  sipFrequency: PaymentFrequency
   inflationRate: number        // percent, e.g. 6.5
   riskAppetite: 1 | 2 | 3 | 4 | 5
   taxBracket: 0 | 5 | 20 | 30  // percent
   refreshInterval: 1 | 6       // hours
   groqApiKey: string
+  bucketAllocation?: { b1: number; b2: number; b3: number; b4: number }
+  // fractions summing to 1.0 — e.g. { b1: 0.10, b2: 0.20, b3: 0.30, b4: 0.40 }
+  // if absent, defaults to BUCKET_ALLOCATION from constants
+  demographics?: Demographics
+  expenses?: ExpenseProfile
 }
 
 export interface ReturnAssumptions {
@@ -57,9 +89,14 @@ export interface SWPYearRow {
   b1RefillFromB2: number   // B2 → B1 transfer
   b2RefillFromB3: number   // B3 → B2 transfer
   b3HarvestFromB4: number  // B4 gains → B3 (same as b4Harvested, kept for clarity)
-  b4EmergencyToB3: number  // emergency: B4 principal → B3
+  b4EmergencyToB3: number  // kept for backward compat, always 0 in new model
+  b2EmergencyToB1: number  // emergency: B2 (SCSS/FD) principal → B1 (last resort)
   totalCorpus: number
   isLegacyYear: boolean
+  corpusBelowInitial: boolean   // true if totalCorpus < initialCorpus this year
+  totalReturnsEarned: number    // gross returns from all 4 buckets before withdrawals
+  shortfall?: number            // unmet demand for this year (₹), 0 if fully paid (refill strategy only)
+  b1RefillFromB3?: number       // B3 → B1 top-up at year end (refill strategy only)
 }
 
 export interface AISuggestion {

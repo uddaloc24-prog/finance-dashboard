@@ -1,4 +1,6 @@
 import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggestion } from '../types'
+import type { Goal, PlanResult, InterviewSession } from '../types/v2'
+import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
 const KEYS = {
@@ -10,7 +12,46 @@ const KEYS = {
   AI_LAST_FETCHED: 'rp_ai_ts',
   SCSS_OVERRIDE: 'rp_scss',
   FD_OVERRIDE: 'rp_fd',
+  GOALS: 'rp_v2_goals',
+  ACTIVE_PLAN: 'rp_v2_plan',
+  INTERVIEW: 'rp_v2_interview',
+  SCHEMA_VERSION: 'rp_schema_version',
 } as const
+
+export function migrateV1toV2(profile: UserProfile): { goals: Goal[] } {
+  const storedVersion = (() => {
+    try {
+      const raw = localStorage.getItem(KEYS.SCHEMA_VERSION)
+      return raw ? (JSON.parse(raw) as number) : null
+    } catch { return null }
+  })()
+
+  if (storedVersion === SCHEMA_VERSION) {
+    const existing = (() => {
+      try {
+        const raw = localStorage.getItem(KEYS.GOALS)
+        return raw ? (JSON.parse(raw) as Goal[]) : []
+      } catch { return [] }
+    })()
+    return { goals: existing }
+  }
+
+  const goals: Goal[] = []
+  if (profile.monthlyWithdrawal > 0) {
+    goals.push({
+      id: 'default-income',
+      label: 'Monthly retirement income',
+      kind: 'income',
+      amount: profile.monthlyWithdrawal,
+      priority: 'must-have',
+      inflationCategory: 'general',
+      notes: 'Migrated from v1 monthlyWithdrawal',
+    })
+  }
+  localStorage.setItem(KEYS.GOALS, JSON.stringify(goals))
+  localStorage.setItem(KEYS.SCHEMA_VERSION, JSON.stringify(SCHEMA_VERSION))
+  return { goals }
+}
 
 function get<T>(key: string): T | null {
   try {
@@ -72,6 +113,20 @@ export const storage = {
 
   getFdOverride: () => get<{ SBI: number; HDFC: number; ICICI: number }>(KEYS.FD_OVERRIDE),
   setFdOverride: (r: { SBI: number; HDFC: number; ICICI: number }) => set(KEYS.FD_OVERRIDE, r),
+
+  getSchemaVersion: () => get<number>(KEYS.SCHEMA_VERSION),
+  setSchemaVersion: (v: number) => set(KEYS.SCHEMA_VERSION, v),
+
+  getGoals: (): Goal[] => get<Goal[]>(KEYS.GOALS) ?? [],
+  setGoals: (g: Goal[]) => set(KEYS.GOALS, g),
+
+  getActivePlan: () => get<PlanResult>(KEYS.ACTIVE_PLAN),
+  setActivePlan: (p: PlanResult) => set(KEYS.ACTIVE_PLAN, p),
+  clearActivePlan: () => remove(KEYS.ACTIVE_PLAN),
+
+  getInterviewSession: () => get<InterviewSession>(KEYS.INTERVIEW),
+  setInterviewSession: (s: InterviewSession) => set(KEYS.INTERVIEW, s),
+  clearInterviewSession: () => remove(KEYS.INTERVIEW),
 
   clearAll: () => Object.values(KEYS).forEach(remove),
 }

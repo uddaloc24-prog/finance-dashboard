@@ -37,12 +37,12 @@ const STEPS = [
     border: 'border-amber-200',
     text: 'text-amber-700',
     label: 'Bucket 2',
-    sub: 'Short-term Debt',
+    sub: 'SCSS · Senior FD · Short Debt',
     pct: '20%',
-    icon: '🔄',
-    headline: 'Buffer between growth and spending',
-    why: "B2 holds short-term debt funds and corporate bonds — safe, stable ~8% returns. It's the go-between: B3 refills it, and it refills B1. This separation protects your spending money (B1) from having to depend directly on equity markets.",
-    doesnt_deplete: "B2 earns ~8% on its own, receives top-ups from B3, and only moves money to B1 when B1 drops below 1 year of expenses.",
+    icon: '🏦',
+    headline: 'Fixed income — interest flows to B1',
+    why: "B2 holds SCSS (8.2%), Senior Citizen FDs (7.25–7.5%), and short-duration debt MFs. These are fixed-term instruments — your principal stays locked in, but the interest they earn (quarterly/monthly) is sent directly to B1 every year as a regular payment. Think of it like a pension that pays your B1 account.",
+    doesnt_deplete: "B2's principal (the FD/SCSS amount) never shrinks in normal operation — only the interest leaves. The principal is only touched in a last-resort emergency if B1 runs completely dry.",
   },
   {
     id: 'b1',
@@ -51,12 +51,12 @@ const STEPS = [
     border: 'border-blue-200',
     text: 'text-blue-700',
     label: 'Bucket 1',
-    sub: 'Liquid / SCSS / FD',
+    sub: 'Liquid MF · Money Market · Overnight',
     pct: '10%',
     icon: '💵',
     headline: 'Your monthly spending account',
-    why: "B1 is your 'salary account' in retirement. It holds liquid funds, SCSS, and senior FDs — safe, instantly accessible. You withdraw from B1 every month. When it drops below 1 year of expenses, B2 automatically tops it back up to 2 years.",
-    doesnt_deplete: "B2 keeps B1 topped up to a 2-year buffer. B1 drains slowly month by month, but gets refilled before it runs out.",
+    why: "B1 is your 'salary account' in retirement. It holds only fully liquid instruments — Liquid MFs, Money Market MFs, Overnight Funds — that can be redeemed in T+1 day. Every year, B2's interest payment lands here, along with cascaded interest from B3 and B4. You withdraw from B1 every month.",
+    doesnt_deplete: "B1 receives all cascaded interest from B2, B3, and B4 every year. As long as those interest payments cover your withdrawals, B1 stays healthy. The interest income from your entire ₹X Cr corpus is pooled here annually to fund your lifestyle.",
   },
 ]
 
@@ -103,7 +103,7 @@ export function CascadeExplainer() {
                   <svg className="w-3 h-2 text-gray-400" fill="currentColor" viewBox="0 0 12 8">
                     <path d="M6 8L0 0h12z" />
                   </svg>
-                  <p className="text-xs text-gray-400 text-center leading-tight">profits flow</p>
+                  <p className="text-xs text-gray-400 text-center leading-tight">interest flows</p>
                 </div>
                 <div className="hidden sm:flex flex-col items-center">
                   <div className="flex items-center gap-0.5">
@@ -112,7 +112,7 @@ export function CascadeExplainer() {
                       <path d="M8 6L0 0v12z" />
                     </svg>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1 text-center leading-tight whitespace-nowrap">profits<br/>flow</p>
+                  <p className="text-xs text-gray-400 mt-1 text-center leading-tight whitespace-nowrap">interest<br/>flows</p>
                 </div>
               </div>
             )}
@@ -164,7 +164,7 @@ export function CascadeExplainer() {
 
       {/* Summary */}
       <p className="text-xs text-gray-400 mt-4 text-center">
-        Market crashes hurt B4 short-term, but B1 + B2 cover 3+ years of spending — giving B4 time to recover without forced selling.
+        Each year: B4 equity earns returns → sends interest to B3 → B3 adds its own interest and passes all to B2 → B2 adds SCSS/FD interest and sends all to B1 → B1 funds your monthly withdrawals. Principals stay locked.
       </p>
     </Card>
   )

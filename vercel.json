@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "functions": {
+    "api/interview.ts": { "maxDuration": 60, "memory": 512 },
+    "api/plan.ts": { "maxDuration": 120, "memory": 1024 },
+    "api/funds.ts": { "maxDuration": 30, "memory": 256 }
+  },
+  "crons": [
+    { "path": "/api/funds?refresh=1", "schedule": "0 6 * * *" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}

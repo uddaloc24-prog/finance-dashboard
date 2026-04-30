@@ -1,12 +1,15 @@
-import type { BucketState, SWPYearRow, ReturnAssumptions } from '../types'
-import { BUCKET_ALLOCATION, LEGACY_YEARS, SWP_YEARS, LTCG_THRESHOLD, LTCG_RATE } from '../constants'
+import type { BucketState, SWPYearRow, ReturnAssumptions, Demographics, ExpenseProfile } from '../types'
+import { BUCKET_ALLOCATION, LEGACY_YEARS, SWP_YEARS, PRESERVATION_YEARS, LTCG_THRESHOLD, LTCG_RATE, DEFAULT_DEMOGRAPHICS, DEFAULT_EXPENSES } from '../constants'
 
-export function allocateBuckets(corpus: number): BucketState {
+export function allocateBuckets(
+  corpus: number,
+  allocation: { b1: number; b2: number; b3: number; b4: number } = BUCKET_ALLOCATION
+): BucketState {
   return {
-    b1: Math.round(corpus * BUCKET_ALLOCATION.b1),
-    b2: Math.round(corpus * BUCKET_ALLOCATION.b2),
-    b3: Math.round(corpus * BUCKET_ALLOCATION.b3),
-    b4: Math.round(corpus * BUCKET_ALLOCATION.b4),
+    b1: Math.round(corpus * allocation.b1),
+    b2: Math.round(corpus * allocation.b2),
+    b3: Math.round(corpus * allocation.b3),
+    b4: Math.round(corpus * allocation.b4),
   }
 }
 
@@ -89,118 +92,198 @@ export function transferBucket(
 //   8. If B3 < 1yr expenses AND B4 has gains above principal → harvest B4 gains → B3
 //   9. Emergency: if B3 still critically low → liquidate B4 principal into B3
 
+export interface GoalEvent {
+  year: number
+  amount: number
+}
+
 export interface SWPSimParams {
   buckets: BucketState
   monthlyWithdrawal: number
   inflationRate: number
   returnAssumptions: ReturnAssumptions
+  initialCorpus?: number
+  withdrawalSchedule?: number[]       // per-year monthly withdrawal override
+  allowDrawdownAfterYear?: number     // after this year, B3 then B4 principal may be tapped
+  goalEvents?: GoalEvent[]            // lump-sum outflows: B1 → B2 → B3 → B4
+  horizonYears?: number               // override SWP_YEARS
 }
 
 export function simulateSWP(params: SWPSimParams): SWPYearRow[] {
-  const { monthlyWithdrawal, inflationRate, returnAssumptions } = params
+  const { monthlyWithdrawal, inflationRate, returnAssumptions, withdrawalSchedule, allowDrawdownAfterYear, goalEvents, horizonYears } = params
   const rows: SWPYearRow[] = []
 
-  let b1 = params.buckets.b1
-  let b2 = params.buckets.b2
-  let b3 = params.buckets.b3
-  let b4 = params.buckets.b4
-  const b4Principal = params.buckets.b4   // original principal — only gains above this are harvested
+  let b4Current = params.buckets.b4
+  let b3Current = params.buckets.b3
+  let b2Current = params.buckets.b2
+  let b1Pool = params.buckets.b1
+
+  const rate1 = returnAssumptions.b1 / 100
+  const rate2 = returnAssumptions.b2 / 100
+  const rate3 = returnAssumptions.b3 / 100
+  const rate4 = returnAssumptions.b4 / 100
+  const inflation = 1 + inflationRate / 100
+
+  const totalYears = horizonYears ?? SWP_YEARS
+  const goalsByYear = new Map<number, number>()
+  if (goalEvents) {
+    for (const g of goalEvents) {
+      goalsByYear.set(g.year, (goalsByYear.get(g.year) ?? 0) + g.amount)
+    }
+  }
 
   let annualWithdrawal = monthlyWithdrawal * 12
 
-  const r1 = 1 + returnAssumptions.b1 / 100
-  const r2 = 1 + returnAssumptions.b2 / 100
-  const r3 = 1 + returnAssumptions.b3 / 100
-  const r4 = 1 + returnAssumptions.b4 / 100
-  const inflation = 1 + inflationRate / 100
-
-  for (let year = 1; year <= SWP_YEARS; year++) {
-    // Step 1 — B4 compounds at full rate (equity — not harvested unless B3 needs it)
-    b4 = b4 * r4
-
-    // Step 2 — B3 (hybrid/BAF) earns its return
-    const b3Before = b3
-    b3 = b3 * r3
-    const b3GrowthEarned = b3 - b3Before
-
-    // Step 3 — B2 earns its return
-    const b2Before = b2
-    b2 = b2 * r2
-    const b2GrowthEarned = b2 - b2Before
-
-    // Step 4 — B1 earns its return
-    const b1Before = b1
-    b1 = b1 * r1
-    const b1GrowthEarned = b1 - b1Before
-
-    // Step 5 — Withdraw from B1
-    b1 = Math.max(0, b1 - annualWithdrawal)
-
-    // Step 6 — Refill B1 from B2 if B1 < 1yr expenses
-    let b1RefillFromB2 = 0
-    if (b1 < annualWithdrawal && b2 > 0) {
-      const target = annualWithdrawal * 2
-      const needed = Math.min(Math.max(0, target - b1), b2)
-      b1 += needed
-      b2 -= needed
-      b1RefillFromB2 = needed
+  for (let year = 1; year <= totalYears; year++) {
+    if (withdrawalSchedule && withdrawalSchedule[year - 1] != null) {
+      annualWithdrawal = withdrawalSchedule[year - 1] * 12
     }
 
-    // Step 7 — Refill B2 from B3 if B2 < 1yr expenses
-    let b2RefillFromB3 = 0
-    if (b2 < annualWithdrawal && b3 > 0) {
-      const target = annualWithdrawal * 2
-      const needed = Math.min(Math.max(0, target - b2), b3)
-      b2 += needed
-      b3 -= needed
-      b2RefillFromB3 = needed
+    const b4Interest = b4Current * rate4
+    const b3Interest = b3Current * rate3
+    const b2Interest = b2Current * rate2
+    const b1InterestEarned = b1Pool * rate1
+
+    const b4ToB3 = b4Interest
+    const b3ToB2 = b3Interest + b4ToB3
+    const b2ToB1 = b2Interest + b3ToB2
+
+    b1Pool += b1InterestEarned + b2ToB1
+
+    const actualWithdrawal = Math.min(b1Pool, annualWithdrawal)
+    b1Pool -= actualWithdrawal
+
+    let b2EmergencyToB1 = 0
+    if (b1Pool < annualWithdrawal * 0.5 && b2Current > 0) {
+      const needed = Math.min(annualWithdrawal * 2, b2Current)
+      b1Pool += needed
+      b2Current -= needed
+      b2EmergencyToB1 = needed
     }
 
-    // Step 8 — Harvest B4 accumulated gains into B3 when B3 needs replenishment
-    // (B3 has dropped below 1 year of expenses AND B4 has gains above original principal)
-    let b4Harvested = 0
-    let b3HarvestFromB4 = 0
-    const b4Gain = b4 - b4Principal
-    if (b3 < annualWithdrawal && b4Gain > 0) {
-      b3 += b4Gain
-      b4 = b4Principal   // reset to principal; gains moved to B3
-      b4Harvested = b4Gain
-      b3HarvestFromB4 = b4Gain
+    // Drawdown mode (v2 strategies): after threshold, tap B3 then B4 principals
+    const drawdownActive = allowDrawdownAfterYear != null && year > allowDrawdownAfterYear
+    if (drawdownActive) {
+      let shortfall = Math.max(0, annualWithdrawal - actualWithdrawal - b2EmergencyToB1)
+      if (shortfall > 0 && b3Current > 0) {
+        const take = Math.min(shortfall, b3Current)
+        b3Current -= take
+        b1Pool += take
+        shortfall -= take
+      }
+      if (shortfall > 0 && b4Current > 0) {
+        const take = Math.min(shortfall, b4Current)
+        b4Current -= take
+        b1Pool += take
+      }
     }
 
-    // Step 9 — Emergency: B3 still critically low → liquidate B4 principal into B3
-    let b4EmergencyToB3 = 0
-    if (b3 < annualWithdrawal * 0.5 && b4 > 0) {
-      const needed = Math.min(annualWithdrawal * 4, b4)
-      b3 += needed
-      b4 -= needed
-      b4EmergencyToB3 = needed
+    // Goal events: lump-sum outflows
+    const goalAmount = goalsByYear.get(year) ?? 0
+    if (goalAmount > 0) {
+      let remaining = goalAmount
+      const fromB1 = Math.min(remaining, b1Pool); b1Pool -= fromB1; remaining -= fromB1
+      if (remaining > 0) { const fromB2 = Math.min(remaining, b2Current); b2Current -= fromB2; remaining -= fromB2 }
+      if (remaining > 0) { const fromB3 = Math.min(remaining, b3Current); b3Current -= fromB3; remaining -= fromB3 }
+      if (remaining > 0) { const fromB4 = Math.min(remaining, b4Current); b4Current -= fromB4 }
     }
 
-    const total = b1 + b2 + b3 + b4
+    const total = b1Pool + b2Current + b3Current + b4Current
+    const totalReturnsEarned = b4Interest + b3Interest + b2Interest + b1InterestEarned
 
     rows.push({
       year,
-      annualWithdrawal,
-      b1: Math.round(b1),
-      b2: Math.round(b2),
-      b3: Math.round(b3),
-      b4: Math.round(b4),
-      b4Harvested: Math.round(b4Harvested),
-      b1GrowthEarned: Math.round(b1GrowthEarned),
-      b2GrowthEarned: Math.round(b2GrowthEarned),
-      b3GrowthEarned: Math.round(b3GrowthEarned),
-      b1RefillFromB2: Math.round(b1RefillFromB2),
-      b2RefillFromB3: Math.round(b2RefillFromB3),
-      b3HarvestFromB4: Math.round(b3HarvestFromB4),
-      b4EmergencyToB3: Math.round(b4EmergencyToB3),
+      annualWithdrawal: Math.round(actualWithdrawal),
+      b1: Math.round(b1Pool),
+      b2: Math.round(b2Current),
+      b3: Math.round(b3Current),
+      b4: Math.round(b4Current),
+      b4Harvested: Math.round(b4ToB3),
+      b1GrowthEarned: Math.round(b1InterestEarned),
+      b2GrowthEarned: Math.round(b2Interest),
+      b3GrowthEarned: Math.round(b3Interest),
+      b1RefillFromB2: Math.round(b2ToB1),
+      b2RefillFromB3: Math.round(b3ToB2),
+      b3HarvestFromB4: Math.round(b4ToB3),
+      b4EmergencyToB3: 0,
+      b2EmergencyToB1: Math.round(b2EmergencyToB1),
       totalCorpus: Math.round(total),
       isLegacyYear: LEGACY_YEARS.includes(year),
+      corpusBelowInitial: params.initialCorpus != null ? total < params.initialCorpus : false,
+      totalReturnsEarned: Math.round(totalReturnsEarned),
     })
 
-    annualWithdrawal = annualWithdrawal * inflation
+    if (!withdrawalSchedule || withdrawalSchedule[year] == null) {
+      annualWithdrawal = annualWithdrawal * inflation
+    }
   }
 
+  return rows
+}
+
+// ── Corpus Preservation ──────────────────────────────────────────
+// Binary-searches for the highest monthly withdrawal where corpus stays >= initialCorpus
+// for every year in the PRESERVATION_YEARS window (default 20 years).
+
+export function computeMaxSustainableWithdrawal(
+  corpus: number,
+  returnAssumptions: ReturnAssumptions,
+  inflationRate: number,
+  allocation: { b1: number; b2: number; b3: number; b4: number } = BUCKET_ALLOCATION,
+): number {
+  const buckets = allocateBuckets(corpus, allocation)
+  let lo = 0
+  let hi = corpus / 60   // upper bound: 1/60 of corpus per month (very aggressive)
+  for (let i = 0; i < 60; i++) {
+    const mid = (lo + hi) / 2
+    const rows = simulateSWP({ buckets, monthlyWithdrawal: mid, inflationRate, returnAssumptions, initialCorpus: corpus })
+    const breached = rows.slice(0, PRESERVATION_YEARS).some(r => r.corpusBelowInitial)
+    if (breached) hi = mid
+    else lo = mid
+  }
+  return Math.floor(lo / 500) * 500  // round down to nearest ₹500
+}
+
+// ── Demographics & Expense Projections ────────────────────────────
+
+export function retirementHorizonYears(demo: Demographics = DEFAULT_DEMOGRAPHICS): number {
+  return Math.max(0, demo.lifeExpectancy - demo.currentAge)
+}
+
+export function yearsToRetirement(demo: Demographics = DEFAULT_DEMOGRAPHICS): number {
+  return Math.max(0, demo.retirementAge - demo.currentAge)
+}
+
+export function isRetired(demo: Demographics = DEFAULT_DEMOGRAPHICS): boolean {
+  return demo.currentAge >= demo.retirementAge
+}
+
+/** Project total monthly expenses at a future year using dual inflation rates. */
+export function projectExpensesAtYear(
+  expenses: ExpenseProfile = DEFAULT_EXPENSES,
+  years: number,
+): number {
+  const gen = 1 + expenses.generalInflation / 100
+  const hc = 1 + expenses.healthcareInflation / 100
+  const ed = 1 + expenses.educationInflation / 100
+  return (
+    expenses.essential * Math.pow(gen, years) +
+    expenses.lifestyle * Math.pow(gen, years) +
+    expenses.healthcare * Math.pow(hc, years) +
+    expenses.education * Math.pow(ed, years)
+  )
+}
+
+/** Annual expenses over the full retirement horizon. */
+export function projectAnnualExpenses(
+  expenses: ExpenseProfile = DEFAULT_EXPENSES,
+  horizonYears: number,
+): Array<{ year: number; monthly: number; annual: number }> {
+  const rows: Array<{ year: number; monthly: number; annual: number }> = []
+  for (let y = 1; y <= horizonYears; y++) {
+    const monthly = projectExpensesAtYear(expenses, y)
+    rows.push({ year: y, monthly: Math.round(monthly), annual: Math.round(monthly * 12) })
+  }
   return rows
 }
 

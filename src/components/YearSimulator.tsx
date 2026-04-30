@@ -112,6 +112,129 @@ function EventStep({
   )
 }
 
+interface BucketLine {
+  icon: string
+  text: string
+  amount: number
+  sign: '+' | '-' | '='
+  color: string
+  bold?: boolean
+}
+
+function MathLine({ icon, text, amount, sign, color, bold }: BucketLine) {
+  return (
+    <div className={`flex items-center justify-between py-1 ${bold ? 'border-t border-gray-200 mt-1 pt-2' : ''}`}>
+      <span className="flex items-center gap-1.5 text-xs text-gray-600">
+        <span>{icon}</span>
+        <span>{text}</span>
+      </span>
+      <span className={`text-xs font-${bold ? 'bold' : 'medium'} tabular-nums ${color}`}>
+        {sign === '=' ? '' : sign}{CR(amount)}
+      </span>
+    </div>
+  )
+}
+
+function BucketExplainer({
+  calYear, row, prevB1, prevB2, prevB3, prevB4, returnAssumptions,
+}: {
+  calYear: number
+  row: SWPYearRow
+  prevB1: number; prevB2: number; prevB3: number; prevB4: number
+  returnAssumptions: ReturnAssumptions
+}) {
+  const b4GrowthBeforeHarvest = row.b4Harvested  // interest-only model: B4 principal constant
+
+  // In the interest-only model, all transfers are regular annual SWP flows, not events.
+  // The only "event" worth calling out is an emergency B2 principal draw.
+  const emergencyReason = row.b2EmergencyToB1 > 0
+    ? `B1's pool ran dry — the cascaded interest from all buckets wasn't enough to cover your inflation-adjusted withdrawal. As a last resort, ${CR(row.b2EmergencyToB1)} of B2's SCSS/FD principal was broken into to top up B1. This is rare and only happens when withdrawals significantly exceed total investment returns over several years.`
+    : null
+
+  return (
+    <div className="mb-6">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+        How Each Bucket Changed in {calYear}
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 mb-4">
+        {/* B1 — liquid pool */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+          <p className="text-xs font-bold text-blue-700 mb-2">B1 — Liquid MF / Money Market</p>
+          <MathLine icon="▸" text="Pool at start of year" amount={prevB1} sign="=" color="text-gray-500" />
+          <MathLine icon="✓" text={`Earned ${returnAssumptions.b1}% on pool`} amount={row.b1GrowthEarned} sign="+" color="text-green-600" />
+          <MathLine icon="⬇️" text="Received from B2 cascade" amount={row.b1RefillFromB2} sign="+" color="text-blue-600" />
+          <MathLine icon="✗" text="You withdrew (12 months)" amount={row.annualWithdrawal} sign="-" color="text-red-500" />
+          {row.b2EmergencyToB1 > 0 && (
+            <MathLine icon="🚨" text="Emergency B2 principal drawn" amount={row.b2EmergencyToB1} sign="+" color="text-red-600" />
+          )}
+          <MathLine icon="=" text="Pool at end of year" amount={row.b1} sign="=" color="text-blue-700" bold />
+          <p className="text-xs text-blue-500 mt-2 leading-snug">
+            B1 is your spending pool. It receives all cascaded interest from B2/B3/B4 each year, then pays your withdrawals. The pool rises when interest &gt; withdrawals, falls when withdrawals &gt; interest.
+          </p>
+        </div>
+
+        {/* B2 — SCSS/FD fixed income */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p className="text-xs font-bold text-amber-700 mb-2">B2 — SCSS · FD · Short Debt</p>
+          <MathLine icon="▸" text="Principal (locked)" amount={prevB2} sign="=" color="text-gray-500" />
+          <MathLine icon="✓" text={`${returnAssumptions.b2}% interest earned`} amount={row.b2GrowthEarned} sign="+" color="text-green-600" />
+          <MathLine icon="⬇️" text="Received from B3 cascade" amount={row.b2RefillFromB3 - row.b2GrowthEarned > 0 ? row.b2RefillFromB3 - row.b2GrowthEarned : 0} sign="+" color="text-amber-600" />
+          <MathLine icon="↓" text="Sent entire cascade to B1" amount={row.b1RefillFromB2} sign="-" color="text-amber-700" />
+          {row.b2EmergencyToB1 > 0 && (
+            <MathLine icon="🚨" text="Emergency principal drawn" amount={row.b2EmergencyToB1} sign="-" color="text-red-600" />
+          )}
+          <MathLine icon="=" text="Principal at end of year" amount={row.b2} sign="=" color="text-amber-700" bold />
+          <p className="text-xs text-amber-600 mt-2 leading-snug">
+            {row.b2EmergencyToB1 > 0
+              ? `B2's principal was partially broken into — an emergency. In normal years, only interest leaves; the ₹${(prevB2/1e5).toFixed(0)}L SCSS/FD principal stays intact.`
+              : `B2's principal stayed locked at ${CR(prevB2)}. Only the interest it earned (plus B3/B4 cascade) was sent to B1. SCSS/FD works exactly like this in real life.`}
+          </p>
+        </div>
+
+        {/* B3 — hybrid/BAF */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+          <p className="text-xs font-bold text-emerald-700 mb-2">B3 — Hybrid / BAF</p>
+          <MathLine icon="▸" text="Principal (locked)" amount={prevB3} sign="=" color="text-gray-500" />
+          <MathLine icon="✓" text={`${returnAssumptions.b3}% interest earned`} amount={row.b3GrowthEarned} sign="+" color="text-green-600" />
+          <MathLine icon="⬇️" text="Received from B4 interest" amount={row.b4Harvested} sign="+" color="text-emerald-500" />
+          <MathLine icon="↓" text="Sent entire cascade to B2" amount={row.b2RefillFromB3} sign="-" color="text-emerald-700" />
+          <MathLine icon="=" text="Principal at end of year" amount={row.b3} sign="=" color="text-emerald-700" bold />
+          <p className="text-xs text-emerald-600 mt-2 leading-snug">
+            B3's ₹{(prevB3/1e5).toFixed(0)}L principal stays locked. It earned {CR(row.b3GrowthEarned)} at {returnAssumptions.b3}%, received {CR(row.b4Harvested)} from B4, and passed all {CR(row.b2RefillFromB3)} to B2. Pure pass-through with preserved principal.
+          </p>
+        </div>
+
+        {/* B4 — equity */}
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-3">
+          <p className="text-xs font-bold text-purple-700 mb-2">B4 — Equity (Flexi Cap / Index)</p>
+          <MathLine icon="▸" text="Principal (permanently locked)" amount={prevB4} sign="=" color="text-gray-500" />
+          <MathLine icon="✓" text={`${returnAssumptions.b4}% equity return earned`} amount={b4GrowthBeforeHarvest} sign="+" color="text-green-600" />
+          <MathLine icon="↓" text="Sent interest to B3 (annual SWP)" amount={row.b4Harvested} sign="-" color="text-purple-500" />
+          <MathLine icon="=" text="Principal at end of year" amount={row.b4} sign="=" color="text-purple-700" bold />
+          <p className="text-xs text-purple-500 mt-2 leading-snug">
+            B4's ₹{(prevB4/1e5).toFixed(0)}L principal never changes. Every year it earns {CR(b4GrowthBeforeHarvest)} at {returnAssumptions.b4}% — all of that goes to B3 as interest income. The principal stays permanently invested.
+          </p>
+        </div>
+      </div>
+
+      {/* Normal flow note + emergency callout */}
+      {emergencyReason ? (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-1">🚨 Emergency This Year</p>
+          <p className="text-xs text-red-700 leading-relaxed">{emergencyReason}</p>
+        </div>
+      ) : (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-xs text-green-700">
+          <p className="font-semibold mb-1">✓ Normal year — interest-only cascade</p>
+          <p className="text-green-600 leading-relaxed">
+            B4 sent {CR(row.b4Harvested)} interest to B3 · B3 cascaded {CR(row.b2RefillFromB3)} to B2 · B2 sent {CR(row.b1RefillFromB2)} to B1 · B1 paid your {CR(row.annualWithdrawal)} withdrawal. All principals stayed intact.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function YearSimulator({
   buckets,
   monthlyWithdrawal,
@@ -242,63 +365,45 @@ export function YearSimulator({
           color="bg-purple-500" bgColor="bg-purple-50 border-purple-200" textColor="text-purple-700" />
       </div>
 
-      {/* ── Cascade events ── */}
+      {/* ── Cascade events + quick stats ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
         <div className="bg-gray-50 rounded-xl p-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
             What happened in {calYear}
           </p>
           <div className="divide-y divide-gray-100">
-            <EventStep icon="📈" label="B4 (equity) compounded"
-              amount={b4GrowthThisYear}
-              note={row.b4Harvested > 0
-                ? `B3 needed replenishment — ${CR(row.b4Harvested)} accumulated gains moved to B3`
-                : `${returnAssumptions.b4}% — gains compounding in B4`}
+            {/* Interest earned per bucket */}
+            <EventStep icon="📈" label="B4 equity earned interest"
+              amount={row.b4Harvested}
+              note={`${returnAssumptions.b4}% on locked B4 principal → sent to B3`}
               variant="positive" />
-            {row.b4Harvested > 0 && (
-              <EventStep icon="🌾" label="B4 gains harvested → B3"
-                amount={row.b4Harvested}
-                note="B4 resets to principal; gains fund the hybrid engine"
-                variant="positive" />
-            )}
-            <EventStep icon="📊" label="B3 (hybrid/BAF) grew"
+            <EventStep icon="📊" label="B3 hybrid earned interest"
               amount={row.b3GrowthEarned}
-              note={`${returnAssumptions.b3}% return on balance`}
+              note={`${returnAssumptions.b3}% on locked B3 principal → passed to B2`}
               variant="positive" />
-            <EventStep icon="💼" label="B2 (debt) grew"
+            <EventStep icon="🏦" label="B2 SCSS/FD earned interest"
               amount={row.b2GrowthEarned}
-              note={`${returnAssumptions.b2}% return`}
+              note={`${returnAssumptions.b2}% on B2 principal — SCSS/FD payout → sent to B1`}
               variant="positive" />
-            <EventStep icon="💰" label="B1 (liquid) earned return"
+            <EventStep icon="💧" label="B1 liquid earned interest"
               amount={row.b1GrowthEarned}
-              note={`${returnAssumptions.b1}% return`}
+              note={`${returnAssumptions.b1}% on B1 pool`}
               variant="positive" />
-            <EventStep icon="💸" label="Annual withdrawal from B1"
+            {/* Total cascade arriving at B1 */}
+            <EventStep icon="⬇️" label="Total interest cascade into B1"
+              amount={row.b1RefillFromB2}
+              note="B2 interest + B3 interest + B4 interest — all lands in B1 pool"
+              variant="positive" />
+            {/* Withdrawal */}
+            <EventStep icon="💸" label="You withdrew from B1"
               amount={row.annualWithdrawal}
               note={`${INR(row.annualWithdrawal / 12)}/month (inflation-adjusted)`}
               variant="warning" />
-            {row.b1RefillFromB2 > 0 && (
-              <EventStep icon="🔄" label="B2 → B1 top-up"
-                amount={row.b1RefillFromB2}
-                note="B1 dropped below 1yr — refilled from B2 to 2yr buffer"
-                variant="default" />
-            )}
-            {row.b2RefillFromB3 > 0 && (
-              <EventStep icon="🔄" label="B3 → B2 top-up"
-                amount={row.b2RefillFromB3}
-                note="B2 dropped below 1yr — refilled from B3 (hybrid)"
-                variant="default" />
-            )}
-            {row.b3HarvestFromB4 > 0 && row.b4Harvested === 0 && (
-              <EventStep icon="🌾" label="B4 gains → B3 harvest"
-                amount={row.b3HarvestFromB4}
-                note="B3 needed replenishment — B4 accumulated gains transferred"
-                variant="positive" />
-            )}
-            {row.b4EmergencyToB3 > 0 && (
-              <EventStep icon="🚨" label="Emergency: B4 principal → B3"
-                amount={row.b4EmergencyToB3}
-                note="B3 critically low — last-resort B4 principal liquidation"
+            {/* Emergency only */}
+            {row.b2EmergencyToB1 > 0 && (
+              <EventStep icon="🚨" label="Emergency: B2 principal → B1"
+                amount={row.b2EmergencyToB1}
+                note="B1 pool ran dry — breaking into SCSS/FD principal (last resort)"
                 variant="danger" />
             )}
           </div>
@@ -306,15 +411,11 @@ export function YearSimulator({
 
         <div className="space-y-3">
           <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">End of Year Summary</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Totals</p>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Total corpus</span>
                 <span className="font-bold text-gray-900">{CR(row.totalCorpus)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-500">Annual withdrawal</span>
-                <span className="font-medium text-amber-700">{INR(row.annualWithdrawal)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Monthly withdrawal</span>
@@ -322,7 +423,7 @@ export function YearSimulator({
               </div>
               {prevRow && (
                 <div className="flex justify-between text-sm pt-1 border-t border-gray-200">
-                  <span className="text-gray-500">Corpus change</span>
+                  <span className="text-gray-500">Corpus change vs last year</span>
                   <span className={`font-bold ${row.totalCorpus >= prevRow.totalCorpus ? 'text-green-600' : 'text-red-500'}`}>
                     {row.totalCorpus >= prevRow.totalCorpus ? '+' : ''}{CR(row.totalCorpus - prevRow.totalCorpus)}
                   </span>
@@ -349,6 +450,14 @@ export function YearSimulator({
           </div>
         </div>
       </div>
+
+      {/* ── Detailed per-bucket explanation ── */}
+      <BucketExplainer
+        calYear={calYear}
+        row={row}
+        prevB1={prevB1} prevB2={prevB2} prevB3={prevB3} prevB4={prevB4}
+        returnAssumptions={returnAssumptions}
+      />
 
       {/* ── Sparkline ── */}
       {chartData.length > 1 && (

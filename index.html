@@ -1,13 +1,120 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-IN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Retirement Planner — 3-Bucket Strategy</title>
+
+    <!-- Primary Meta -->
+    <title>Indian Retirement Planner — 4-Bucket SWP Strategy Calculator</title>
+    <meta name="description" content="Free Indian retirement calculator using the HDFC 4-bucket SWP strategy. Plan corpus drawdown, optimise tax (Old vs New regime), simulate 25-year projections with inflation-adjusted withdrawals." />
+    <meta name="keywords" content="retirement calculator india, SWP calculator, 4 bucket strategy, HDFC retirement plan, corpus preservation, SCSS, senior citizen FD, mutual fund SWP, retirement planning india" />
+    <meta name="author" content="Retirement Planner" />
+
+    <!-- Canonical -->
+    <link rel="canonical" href="https://finance-liart-nine.vercel.app/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://finance-liart-nine.vercel.app/" />
+    <meta property="og:title" content="Indian Retirement Planner — 4-Bucket SWP Strategy" />
+    <meta property="og:description" content="Free retirement calculator for Indian retirees. 4-bucket corpus strategy, SWP simulator, tax optimiser, and AI portfolio recommendations." />
+    <meta property="og:image" content="https://finance-liart-nine.vercel.app/og-image.png" />
+    <meta property="og:locale" content="en_IN" />
+    <meta property="og:site_name" content="Retirement Planner" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Indian Retirement Planner — 4-Bucket SWP Strategy" />
+    <meta name="twitter:description" content="Free retirement calculator for Indian retirees. 4-bucket corpus strategy, SWP simulator, tax optimiser, and AI portfolio recommendations." />
+    <meta name="twitter:image" content="https://finance-liart-nine.vercel.app/og-image.png" />
+
+    <!-- PWA & Mobile -->
+    <meta name="theme-color" content="#2563eb" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Retirement Planner" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Indian Retirement Planner",
+      "url": "https://finance-liart-nine.vercel.app/",
+      "description": "Free Indian retirement calculator using the HDFC 4-bucket SWP strategy. Plan corpus drawdown, optimise tax, and simulate 25-year projections.",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      },
+      "featureList": [
+        "4-Bucket SWP Strategy Simulator",
+        "25-Year Corpus Projection",
+        "Inflation-Adjusted Withdrawals",
+        "Tax Bracket Optimization",
+        "AI Portfolio Recommendations",
+        "Risk Profiler Assessment",
+        "PDF Export"
+      ],
+      "screenshot": "https://finance-liart-nine.vercel.app/og-image.png",
+      "author": {
+        "@type": "Organization",
+        "name": "Retirement Planner"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is the 4-bucket retirement strategy?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The 4-bucket strategy splits your retirement corpus into: Bucket 1 (Emergency, 0-1 year, liquid funds), Bucket 2 (Short-term, 1-5 years, SCSS/FDs), Bucket 3 (Growth engine, 5-10 years, hybrid/BAF funds), and Bucket 4 (Legacy equity, 10+ years, flexi cap/index funds). Interest cascades from B4 down to B1 to fund withdrawals while preserving principal."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How much can I withdraw monthly without depleting my corpus?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The sustainable withdrawal amount depends on your corpus size, asset allocation, expected returns, and inflation rate. Use the Corpus Preservation calculator to find the maximum monthly withdrawal that keeps your corpus intact for 20+ years."
+          }
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="max-width:600px;margin:40px auto;padding:20px;font-family:system-ui,sans-serif;text-align:center">
+        <h1>Indian Retirement Planner</h1>
+        <p>A free retirement calculator for Indian retirees using the HDFC 4-bucket SWP strategy.</p>
+        <p>Plan your corpus drawdown across 4 buckets: Emergency (liquid), Short-term (SCSS/FD), Growth (hybrid/BAF), and Legacy (equity). Simulate 25-year projections with inflation-adjusted withdrawals, optimise your tax bracket, and get AI portfolio recommendations.</p>
+        <p><strong>Please enable JavaScript to use this application.</strong></p>
+        <ul style="text-align:left;display:inline-block">
+          <li>4-Bucket SWP Strategy Simulator</li>
+          <li>25-Year Corpus Preservation Calculator</li>
+          <li>Inflation-Adjusted Withdrawal Projections</li>
+          <li>Tax Bracket Optimisation (Old vs New Regime)</li>
+          <li>15-Question Risk Profiler</li>
+          <li>AI Portfolio Recommendations</li>
+          <li>PDF Report Export</li>
+        </ul>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
