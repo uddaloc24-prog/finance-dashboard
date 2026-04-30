@@ -21,13 +21,22 @@ export interface ExpenseProfile {
   educationInflation: number   // percent, default 12
 }
 
+export interface FrequencySchedule {
+  monthly: number       // INR received/paid monthly
+  quarterly: number     // INR received/paid quarterly
+  halfYearly: number    // INR received/paid half-yearly
+  yearly: number        // INR received/paid yearly
+}
+
 export interface UserProfile {
   corpus: number
-  monthlyWithdrawal: number    // always stored as monthly equivalent
-  withdrawalFrequency: PaymentFrequency
-  withdrawalAmount: number     // the raw amount at the chosen frequency
-  sipAmount: number            // SIP/passive income amount at chosen frequency (0 = none)
-  sipFrequency: PaymentFrequency
+  monthlyWithdrawal: number    // always stored as monthly equivalent (sum of withdrawalSchedule)
+  withdrawalFrequency: PaymentFrequency  // legacy — kept for header KPI label
+  withdrawalAmount: number     // legacy — stored as the same value as monthlyWithdrawal
+  withdrawalSchedule?: FrequencySchedule  // V3 — 4 simultaneous frequency slots
+  sipAmount: number            // monthly equivalent of total SIP/passive income (0 = none)
+  sipFrequency: PaymentFrequency  // legacy — kept for header KPI label
+  sipSchedule?: FrequencySchedule  // V3 — 4 simultaneous frequency slots
   inflationRate: number        // percent, e.g. 6.5
   riskAppetite: 1 | 2 | 3 | 4 | 5
   taxBracket: 0 | 5 | 20 | 30  // percent

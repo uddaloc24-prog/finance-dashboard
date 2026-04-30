@@ -1,6 +1,7 @@
 import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggestion } from '../types'
 import type { Goal, PlanResult, InterviewSession } from '../types/v2'
 import type { QuizState, RiskProfileId } from '../types/profiles'
+import type { UserIdentity } from '../types/identity'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
@@ -21,6 +22,7 @@ const KEYS = {
   RISK_PROFILE: 'rp_risk_profile',
   HAS_LAUNCHED: 'rp_has_launched',
   LAST_WELCOMED: 'rp_last_welcomed',  // ISO timestamp of last welcome view
+  IDENTITY: 'rp_identity',
 } as const
 
 export function migrateV1toV2(profile: UserProfile): { goals: Goal[] } {
@@ -144,6 +146,9 @@ export const storage = {
 
   getLastWelcomed: () => get<string>(KEYS.LAST_WELCOMED),
   setLastWelcomed: (iso: string) => set(KEYS.LAST_WELCOMED, iso),
+
+  getIdentity: () => get<UserIdentity>(KEYS.IDENTITY),
+  setIdentity: (i: UserIdentity) => set(KEYS.IDENTITY, i),
 
   clearAll: () => Object.values(KEYS).forEach(remove),
 }

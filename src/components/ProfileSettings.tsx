@@ -1,21 +1,23 @@
 import { useState, useEffect } from 'react'
-import type { UserProfile, PaymentFrequency } from '../types'
+import type { UserProfile, FrequencySchedule } from '../types'
 import { storage } from '../lib/storage'
 import { allocateBuckets, totalCorpus } from '../lib/calculations'
 import type { BucketState } from '../types'
 import { RiskProfiler, type RiskResult } from './RiskProfiler'
 import { Card } from './ui/Card'
 
-const FREQ_OPTIONS: Array<{ label: string; value: PaymentFrequency; months: number }> = [
-  { label: 'Monthly', value: 'monthly', months: 1 },
-  { label: 'Quarterly', value: 'quarterly', months: 3 },
-  { label: 'Half-Yearly', value: 'half-yearly', months: 6 },
-  { label: 'Yearly', value: 'yearly', months: 12 },
+const SLOTS: Array<{ key: keyof FrequencySchedule; label: string; months: number; helper: string }> = [
+  { key: 'monthly',    label: 'Monthly',     months: 1,  helper: 'Pension, rent, salary' },
+  { key: 'quarterly',  label: 'Quarterly',   months: 3,  helper: 'SCSS, dividend' },
+  { key: 'halfYearly', label: 'Half-Yearly', months: 6,  helper: 'Bond coupon' },
+  { key: 'yearly',     label: 'Yearly',      months: 12, helper: 'FD interest, bonus' },
 ]
 
-function toMonthly(amount: number, freq: PaymentFrequency): number {
-  const opt = FREQ_OPTIONS.find(f => f.value === freq)!
-  return amount / opt.months
+const EMPTY_SCHEDULE: FrequencySchedule = { monthly: 0, quarterly: 0, halfYearly: 0, yearly: 0 }
+
+function totalMonthly(s?: FrequencySchedule): number {
+  if (!s) return 0
+  return s.monthly + s.quarterly / 3 + s.halfYearly / 6 + s.yearly / 12
 }
 
 const TAX_OPTIONS: Array<{ label: string; value: 0 | 5 | 20 | 30 }> = [
@@ -27,23 +29,83 @@ const TAX_OPTIONS: Array<{ label: string; value: 0 | 5 | 20 | 30 }> = [
 
 const INR = (n: number) => '₹' + Math.round(n).toLocaleString('en-IN')
 
-function FreqTabs({ value, onChange }: { value: PaymentFrequency; onChange: (f: PaymentFrequency) => void }) {
+interface ScheduleEditorProps {
+  label: string
+  helper?: string
+  schedule: FrequencySchedule
+  onChange: (next: FrequencySchedule) => void
+  accentText: string   // tailwind text class for accent (e.g., 'text-purple-700')
+  accentRing: string   // tailwind focus ring class
+}
+
+function ScheduleEditor({ label, helper, schedule, onChange, accentText, accentRing }: ScheduleEditorProps) {
+  // Local text state per slot — persists typing UX while parsing on blur
+  const [text, setText] = useState<Record<keyof FrequencySchedule, string>>(() => ({
+    monthly:    String(schedule.monthly || ''),
+    quarterly:  String(schedule.quarterly || ''),
+    halfYearly: String(schedule.halfYearly || ''),
+    yearly:     String(schedule.yearly || ''),
+  }))
+
+  useEffect(() => {
+    setText({
+      monthly:    String(schedule.monthly || ''),
+      quarterly:  String(schedule.quarterly || ''),
+      halfYearly: String(schedule.halfYearly || ''),
+      yearly:     String(schedule.yearly || ''),
+    })
+  }, [schedule.monthly, schedule.quarterly, schedule.halfYearly, schedule.yearly])
+
+  const total = totalMonthly(schedule)
+
+  const commit = (key: keyof FrequencySchedule) => () => {
+    const parsed = parseInt((text[key] || '0').replace(/[^0-9]/g, ''), 10)
+    const v = !isNaN(parsed) && parsed >= 0 ? parsed : 0
+    if (v !== schedule[key]) {
+      onChange({ ...schedule, [key]: v })
+    } else {
+      // Re-sync local text in case user typed garbage
+      setText((t) => ({ ...t, [key]: String(v || '') }))
+    }
+  }
+
   return (
-    <div className="flex gap-1 mb-1.5">
-      {FREQ_OPTIONS.map(opt => (
-        <button
-          key={opt.value}
-          type="button"
-          onClick={() => onChange(opt.value)}
-          className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-            value === opt.value
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-          }`}
-        >
-          {opt.label}
-        </button>
-      ))}
+    <div>
+      <div className="flex items-baseline justify-between mb-2">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</label>
+          {helper && <p className="text-[11px] text-gray-400 mt-0.5">{helper}</p>}
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] text-gray-400 uppercase tracking-wide">Combined</div>
+          <div className={`text-sm font-bold tabular-nums ${accentText}`}>{INR(total)}/mo</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {SLOTS.map((slot) => (
+          <div key={slot.key} className="bg-white border border-gray-200 rounded-lg p-2.5 hover:border-gray-300 transition-colors focus-within:border-blue-400 focus-within:ring-1 focus-within:ring-blue-200">
+            <div className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide leading-tight">
+              {slot.label}
+            </div>
+            <div className="flex items-center gap-1 mt-1">
+              <span className="text-xs font-bold text-gray-400">₹</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={text[slot.key]}
+                placeholder="0"
+                onChange={(e) => setText((t) => ({ ...t, [slot.key]: e.target.value }))}
+                onBlur={commit(slot.key)}
+                onKeyDown={(e) => e.key === 'Enter' && commit(slot.key)()}
+                className={`flex-1 min-w-0 bg-transparent text-sm font-semibold ${accentText} outline-none focus:${accentRing} tabular-nums`}
+              />
+            </div>
+            <div className="text-[9px] text-gray-400 mt-1 leading-tight truncate">
+              {slot.helper}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -62,24 +124,40 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
 
   // Local state for editable fields
   const [corpusText, setCorpusText] = useState(String(profile.corpus))
-  const [withdrawalText, setWithdrawalText] = useState(String(profile.withdrawalAmount ?? profile.monthlyWithdrawal))
-  const [withdrawalFreq, setWithdrawalFreq] = useState<PaymentFrequency>(profile.withdrawalFrequency ?? 'monthly')
-  const [sipText, setSipText] = useState(String(profile.sipAmount ?? 0))
-  const [sipFreq, setSipFreq] = useState<PaymentFrequency>(profile.sipFrequency ?? 'monthly')
   const [groqKey, setGroqKey] = useState(profile.groqApiKey ?? '')
 
-  // Sync local state when profile changes externally (e.g. from Sliders)
+  const withdrawalSchedule = profile.withdrawalSchedule ?? EMPTY_SCHEDULE
+  const sipSchedule = profile.sipSchedule ?? EMPTY_SCHEDULE
+
+  // Track corpus changes from elsewhere (e.g. Sliders)
   useEffect(() => {
-    setWithdrawalText(String(profile.withdrawalAmount ?? profile.monthlyWithdrawal))
-    setWithdrawalFreq(profile.withdrawalFrequency ?? 'monthly')
-    setSipText(String(profile.sipAmount ?? 0))
-    setSipFreq(profile.sipFrequency ?? 'monthly')
-  }, [profile.withdrawalAmount, profile.monthlyWithdrawal, profile.withdrawalFrequency, profile.sipAmount, profile.sipFrequency])
+    setCorpusText(String(profile.corpus))
+  }, [profile.corpus])
 
   function update(partial: Partial<UserProfile>) {
     const updated = { ...profile, ...partial }
     storage.setProfile(updated)
     onProfileUpdate(updated)
+  }
+
+  function handleWithdrawalChange(next: FrequencySchedule) {
+    const monthly = totalMonthly(next)
+    update({
+      withdrawalSchedule: next,
+      monthlyWithdrawal: monthly,
+      // Keep legacy fields populated as monthly equivalents for backward-compat
+      withdrawalAmount: Math.round(monthly),
+      withdrawalFrequency: 'monthly',
+    })
+  }
+
+  function handleSipChange(next: FrequencySchedule) {
+    const monthly = totalMonthly(next)
+    update({
+      sipSchedule: next,
+      sipAmount: Math.round(monthly),
+      sipFrequency: 'monthly',
+    })
   }
 
   function commitCorpus() {
@@ -94,45 +172,6 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
     } else {
       setCorpusText(String(profile.corpus))
     }
-  }
-
-  function commitWithdrawal() {
-    const parsed = parseInt(withdrawalText.replace(/[^0-9]/g, ''), 10)
-    if (!isNaN(parsed) && parsed > 0) {
-      const monthly = toMonthly(parsed, withdrawalFreq)
-      update({ withdrawalAmount: parsed, withdrawalFrequency: withdrawalFreq, monthlyWithdrawal: monthly })
-      setWithdrawalText(String(parsed))
-    } else {
-      setWithdrawalText(String(profile.withdrawalAmount ?? profile.monthlyWithdrawal))
-    }
-  }
-
-  function handleWithdrawalFreqChange(f: PaymentFrequency) {
-    const currentMonthly = profile.monthlyWithdrawal
-    const newMonths = FREQ_OPTIONS.find(o => o.value === f)!.months
-    const newAmount = Math.round(currentMonthly * newMonths)
-    setWithdrawalFreq(f)
-    setWithdrawalText(String(newAmount))
-    update({ withdrawalAmount: newAmount, withdrawalFrequency: f, monthlyWithdrawal: currentMonthly })
-  }
-
-  function commitSip() {
-    const parsed = parseInt(sipText.replace(/[^0-9]/g, ''), 10)
-    if (!isNaN(parsed) && parsed >= 0) {
-      update({ sipAmount: parsed, sipFrequency: sipFreq })
-      setSipText(String(parsed))
-    } else {
-      setSipText(String(profile.sipAmount ?? 0))
-    }
-  }
-
-  function handleSipFreqChange(f: PaymentFrequency) {
-    const currentMonthly = toMonthly(profile.sipAmount ?? 0, sipFreq)
-    const newMonths = FREQ_OPTIONS.find(o => o.value === f)!.months
-    const newAmount = Math.round(currentMonthly * newMonths)
-    setSipFreq(f)
-    setSipText(String(newAmount))
-    update({ sipAmount: newAmount, sipFrequency: f })
   }
 
   function commitGroq() {
@@ -211,51 +250,30 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
               </div>
             </div>
 
-            {/* Withdrawal */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                Withdrawal
-              </label>
-              <FreqTabs value={withdrawalFreq} onChange={handleWithdrawalFreqChange} />
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-purple-600">₹</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={withdrawalText}
-                  onChange={e => setWithdrawalText(e.target.value)}
-                  onBlur={commitWithdrawal}
-                  onKeyDown={e => e.key === 'Enter' && commitWithdrawal()}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-400"
-                />
-              </div>
-              {withdrawalFreq !== 'monthly' && (
-                <p className="text-xs text-gray-400 mt-1">= {INR(profile.monthlyWithdrawal)}/month</p>
-              )}
-            </div>
+          </div>
 
-            {/* SIP / Passive Income */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                SIP / Passive Income
-              </label>
-              <FreqTabs value={sipFreq} onChange={handleSipFreqChange} />
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-teal-600">₹</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={sipText}
-                  onChange={e => setSipText(e.target.value)}
-                  onBlur={commitSip}
-                  onKeyDown={e => e.key === 'Enter' && commitSip()}
-                  className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-400"
-                />
-              </div>
-              {(profile.sipAmount ?? 0) > 0 && sipFreq !== 'monthly' && (
-                <p className="text-xs text-gray-400 mt-1">= {INR(toMonthly(profile.sipAmount ?? 0, sipFreq))}/month</p>
-              )}
-            </div>
+          {/* Withdrawal — 4 simultaneous frequency slots */}
+          <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-100">
+            <ScheduleEditor
+              label="Withdrawal"
+              helper="Enter amounts in any of the four frequency slots — they all combine"
+              schedule={withdrawalSchedule}
+              onChange={handleWithdrawalChange}
+              accentText="text-purple-700"
+              accentRing="ring-purple-300"
+            />
+          </div>
+
+          {/* SIP / Passive Income — 4 simultaneous frequency slots */}
+          <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-100">
+            <ScheduleEditor
+              label="SIP / Passive income"
+              helper="Pension, rental, dividend, interest — combined and netted against withdrawals"
+              schedule={sipSchedule}
+              onChange={handleSipChange}
+              accentText="text-teal-700"
+              accentRing="ring-teal-300"
+            />
           </div>
 
           {/* Risk Assessment */}

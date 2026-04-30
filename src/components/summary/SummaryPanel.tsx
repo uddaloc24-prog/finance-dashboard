@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions } from '../../types'
 import type { TaxSlab } from '../../lib/calculations/taxEngine'
 import { runAllStrategies } from '../../lib/calculations/strategyEngine'
@@ -242,12 +242,73 @@ export function SummaryPanel({ profile, buckets, returnAssumptions, onChangeTab 
         </div>
       </section>
 
+      {/* Download CTA — prominent at the bottom of Summary */}
+      <DownloadCTA profile={profile} buckets={buckets} returnAssumptions={returnAssumptions} />
+
       {/* Disclaimer */}
       <section className="rounded-xl bg-slate-50 border border-slate-200 p-4 text-[11px] text-slate-600 leading-relaxed">
         This summary updates live as you change any input on the Plan, Buckets, or Tax tabs. Figures are projections based on stated assumptions — not guarantees. The Monte Carlo success rate samples 200 random paths each time you visit this tab; small variations between visits are normal.
         Always validate any major action with a SEBI-registered investment advisor or a Chartered Accountant.
       </section>
     </div>
+  )
+}
+
+function DownloadCTA({ profile, buckets, returnAssumptions }: { profile: UserProfile; buckets: BucketState; returnAssumptions: ReturnAssumptions }) {
+  const [busy, setBusy] = useState(false)
+  const [done, setDone] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const identity = storage.getIdentity()
+  const userName = identity?.fullName?.trim() || 'your'
+  const filename = `${(identity?.fullName || 'user').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'user'}-retirement-plan-${new Date().toISOString().slice(0, 10)}.pdf`
+
+  const handleDownload = async () => {
+    setBusy(true)
+    setErr(null)
+    try {
+      const { exportComprehensiveReport } = await import('../../lib/comprehensiveReport')
+      await exportComprehensiveReport({ identity, profile, buckets, returnAssumptions })
+      setDone(true)
+      setTimeout(() => setDone(false), 4000)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Could not generate report')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section className="rounded-xl border-2 border-blue-600 bg-gradient-to-br from-blue-50 to-white p-5 sm:p-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex-1">
+          <h3 className="text-base font-bold text-slate-900">
+            Download {userName === 'your' ? 'your' : `${userName.split(/\s+/)[0]}'s`} full retirement plan
+          </h3>
+          <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+            A 10-page personalised PDF: cover, personal details, inputs, risk profile, 10-strategy comparison, Monte Carlo, tax analysis, 25-year projection, action plan, and methodology. Saves to your device's Downloads folder as <code className="text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded">{filename}</code>
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={busy}
+          className={`shrink-0 px-5 py-3 rounded-lg text-sm font-semibold transition-colors ${
+            busy
+              ? 'bg-slate-300 text-slate-600 cursor-wait'
+              : done
+                ? 'bg-green-600 text-white'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+          }`}
+        >
+          {busy ? 'Generating…' : done ? 'Downloaded ✓' : 'Download PDF →'}
+        </button>
+      </div>
+      {err && (
+        <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2">
+          {err}
+        </div>
+      )}
+    </section>
   )
 }
 

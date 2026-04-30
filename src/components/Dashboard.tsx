@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions } from '../types'
 import type { TabId } from '../constants'
-import { totalCorpus, b1RunwayMonths, simulateSWP } from '../lib/calculations'
+import { totalCorpus, b1RunwayMonths } from '../lib/calculations'
 import { useMarketData } from '../hooks/useMarketData'
 import { BucketCard } from './BucketCard'
 import { RefillAlert } from './RefillAlert'
@@ -13,6 +13,7 @@ import { TabNav } from './TabNav'
 import { TabNavFooter } from './TabNavFooter'
 import { Button } from './ui/Button'
 import { TAB_ITEMS } from '../constants'
+import { storage } from '../lib/storage'
 
 // Lazy-load heavy components (Recharts, AI)
 const CorpusPreservation = lazy(() => import('./CorpusPreservation').then(m => ({ default: m.CorpusPreservation })))
@@ -72,9 +73,14 @@ export function Dashboard({
   const total = totalCorpus(buckets)
 
   async function handleExportPDF() {
-    const { exportPDF } = await import('../lib/pdf')
-    const rows = simulateSWP({ buckets, monthlyWithdrawal: profile.monthlyWithdrawal, inflationRate: profile.inflationRate, returnAssumptions })
-    await exportPDF(profile, buckets, returnAssumptions, rows)
+    // Comprehensive personalised report — multi-page, user-name in filename
+    const { exportComprehensiveReport } = await import('../lib/comprehensiveReport')
+    await exportComprehensiveReport({
+      identity: storage.getIdentity(),
+      profile,
+      buckets,
+      returnAssumptions,
+    })
   }
 
   const wr = ((profile.monthlyWithdrawal * 12) / Math.max(1, total)) * 100
@@ -90,7 +96,10 @@ export function Dashboard({
       <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-12 flex items-center justify-between">
           <div className="flex items-center gap-3 min-w-0">
-            <h1 className="font-semibold text-gray-900 text-sm tracking-tight truncate">Retirement Planner</h1>
+            <h1 className="font-semibold text-gray-900 text-sm tracking-tight truncate">
+              <span className="hidden sm:inline">Retirement Planner</span>
+              <UserGreeting />
+            </h1>
             <StepLabel activeTab={activeTab} />
           </div>
           <div className="flex items-center gap-1">
@@ -274,6 +283,18 @@ export function Dashboard({
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
     </div>
+  )
+}
+
+function UserGreeting() {
+  const id = storage.getIdentity()
+  const first = id?.fullName?.trim().split(/\s+/)[0]
+  if (!first || first === 'Anonymous') return null
+  return (
+    <span className="text-slate-500 font-normal hidden md:inline">
+      <span className="hidden sm:inline mx-1.5 text-slate-300">·</span>
+      {first}'s plan
+    </span>
   )
 }
 

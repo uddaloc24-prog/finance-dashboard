@@ -35,20 +35,45 @@ const DEFAULT_PROFILE: UserProfile = {
   expenses: { ...DEFAULT_EXPENSES },
 }
 
+function emptySchedule() {
+  return { monthly: 0, quarterly: 0, halfYearly: 0, yearly: 0 }
+}
+
+function migrateLegacyToSchedule(amount: number, freq: UserProfile['withdrawalFrequency']) {
+  const s = emptySchedule()
+  if (!amount || amount <= 0) return s
+  switch (freq) {
+    case 'monthly':     s.monthly = amount; break
+    case 'quarterly':   s.quarterly = amount; break
+    case 'half-yearly': s.halfYearly = amount; break
+    case 'yearly':      s.yearly = amount; break
+  }
+  return s
+}
+
 function loadProfile(): UserProfile {
   const p = storage.getProfile()
   if (!p) {
     storage.setProfile(DEFAULT_PROFILE)
     return DEFAULT_PROFILE
   }
-  // Migrate old profiles without frequency fields
   const raw = p as unknown as Record<string, unknown>
+  const withdrawalFrequency = (raw.withdrawalFrequency as UserProfile['withdrawalFrequency']) ?? 'monthly'
+  const withdrawalAmount = (raw.withdrawalAmount as number) ?? p.monthlyWithdrawal
+  const sipAmount = (raw.sipAmount as number) ?? 0
+  const sipFrequency = (raw.sipFrequency as UserProfile['sipFrequency']) ?? 'monthly'
+  const withdrawalSchedule = (raw.withdrawalSchedule as UserProfile['withdrawalSchedule'])
+    ?? migrateLegacyToSchedule(withdrawalAmount, withdrawalFrequency)
+  const sipSchedule = (raw.sipSchedule as UserProfile['sipSchedule'])
+    ?? migrateLegacyToSchedule(sipAmount, sipFrequency)
   return {
     ...p,
-    withdrawalFrequency: (raw.withdrawalFrequency as UserProfile['withdrawalFrequency']) ?? 'monthly',
-    withdrawalAmount: (raw.withdrawalAmount as number) ?? p.monthlyWithdrawal,
-    sipAmount: (raw.sipAmount as number) ?? 0,
-    sipFrequency: (raw.sipFrequency as UserProfile['sipFrequency']) ?? 'monthly',
+    withdrawalFrequency,
+    withdrawalAmount,
+    sipAmount,
+    sipFrequency,
+    withdrawalSchedule,
+    sipSchedule,
   }
 }
 
@@ -94,6 +119,7 @@ function V1App() {
         isReturning={welcome.isReturning}
         daysSince={welcome.daysSince}
         onStart={() => {
+          // Identity itself is persisted by WelcomePage before this fires
           storage.setHasLaunched(true)
           storage.setLastWelcomed(new Date().toISOString())
           setWelcome({ show: false, isReturning: false, daysSince: 0 })

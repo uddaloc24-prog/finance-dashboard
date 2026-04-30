@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import type { UserIdentity, MaritalStatus } from '../types/identity'
+import { storage } from '../lib/storage'
 import { Button } from './ui/Button'
 
 interface Props {
-  onStart: () => void
+  onStart: (identity: UserIdentity) => void
   isReturning?: boolean    // true if user has been here before (≥ 1 week ago)
   daysSince?: number        // days since last visit (for "welcome back")
 }
@@ -18,6 +20,24 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
   const [step, setStep] = useState(0)
   const [direction, setDirection] = useState<'fwd' | 'back'>('fwd')
   const [animKey, setAnimKey] = useState(0)
+
+  // Identity form state — pre-populated from storage if user is returning
+  const existing = storage.getIdentity()
+  const [identity, setIdentity] = useState<UserIdentity>(() =>
+    existing ?? {
+      fullName: '',
+      email: '',
+      phone: '',
+      dateOfBirth: '',
+      panCard: '',
+      maritalStatus: undefined,
+      spouseName: '',
+      occupation: '',
+      address: { line1: '', line2: '', city: '', state: '', pincode: '' },
+      createdAt: '',
+      updatedAt: '',
+    },
+  )
 
   // Bump anim key on step change so React re-mounts the panel and the
   // CSS keyframe re-fires (giving us the slide-fade transition).
@@ -57,25 +77,46 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
     {
       eyebrow: 'How it works',
       heading: <>Five minutes <span className="font-bold text-blue-700">to your verdict.</span></>,
-      body: `Walk through the dashboard tabs in order — or jump around freely. The Summary page synthesises everything into a single take-home recommendation.`,
+      body: `Walk through the dashboard tabs in order — or jump around freely. The Summary page synthesises everything into a single take-home recommendation, exportable as a personalised PDF.`,
       panel: (
         <div className="space-y-3">
           <NumberStep n="1" label="Plan" desc="Enter corpus, monthly target, demographics" />
           <NumberStep n="2" label="Profile" desc="Take the 90-second risk quiz" />
           <NumberStep n="3" label="Compare" desc="See 10 strategies scored side-by-side" />
           <NumberStep n="4" label="Simulate" desc="Run Monte Carlo, verify success rate" />
-          <NumberStep n="5" label="Tax · Summary" desc="Review tax + see the final verdict" />
+          <NumberStep n="5" label="Tax · Summary" desc="Review tax + download your full plan" />
         </div>
       ),
+    },
+    {
+      eyebrow: 'About you',
+      heading: <>A few personal <span className="font-bold text-blue-700">details.</span></>,
+      body: `Used to personalise the dashboard, stamp your downloadable PDF report, and pre-fill demographics. Stored only in your browser — never transmitted off-device.`,
+      panel: <IdentityForm identity={identity} onChange={setIdentity} />,
     },
   ]
 
   const cur = steps[step]
   const isLast = step === steps.length - 1
+  const isIdentityStep = isLast    // identity form is the last step
+  const canProceed = !isIdentityStep || identity.fullName.trim().length > 0
+
+  const finalise = () => {
+    const now = new Date().toISOString()
+    const out: UserIdentity = {
+      ...identity,
+      fullName: identity.fullName.trim(),
+      createdAt: identity.createdAt || now,
+      updatedAt: now,
+    }
+    storage.setIdentity(out)
+    onStart(out)
+  }
 
   const handleNext = () => {
     if (isLast) {
-      onStart()
+      if (!canProceed) return
+      finalise()
     } else {
       setDirection('fwd')
       setStep(step + 1)
@@ -85,7 +126,18 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
     setDirection('back')
     setStep(Math.max(0, step - 1))
   }
-  const handleSkip = () => onStart()
+  const handleSkip = () => {
+    // Skipping still saves whatever the user has entered (likely empty)
+    const now = new Date().toISOString()
+    const out: UserIdentity = {
+      ...identity,
+      fullName: identity.fullName.trim() || 'Anonymous',
+      createdAt: identity.createdAt || now,
+      updatedAt: now,
+    }
+    storage.setIdentity(out)
+    onStart(out)
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex flex-col">
@@ -154,7 +206,7 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
             {step + 1} of {steps.length}
           </div>
 
-          <Button onClick={handleNext} className="!px-6 !py-2.5">
+          <Button onClick={handleNext} disabled={!canProceed} className="!px-6 !py-2.5">
             {isLast ? 'Start planning →' : 'Next →'}
           </Button>
         </div>
@@ -249,5 +301,167 @@ function Stat({ label, value }: { label: string; value: string }) {
       <div className="text-3xl font-bold text-blue-700 tabular-nums">{value}</div>
       <div className="text-[11px] text-slate-500 uppercase tracking-wide mt-1 font-medium">{label}</div>
     </div>
+  )
+}
+
+interface IdentityFormProps {
+  identity: UserIdentity
+  onChange: (next: UserIdentity) => void
+}
+
+function IdentityForm({ identity, onChange }: IdentityFormProps) {
+  const set = (patch: Partial<UserIdentity>) => onChange({ ...identity, ...patch })
+  const setAddr = (patch: Partial<NonNullable<UserIdentity['address']>>) =>
+    onChange({ ...identity, address: { ...(identity.address ?? { line1: '', city: '', state: '', pincode: '' }), ...patch } })
+
+  const inputCls = 'w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-slate-400'
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 max-h-[440px] overflow-y-auto space-y-3">
+      <Field label="Full name" required>
+        <input
+          type="text"
+          value={identity.fullName}
+          onChange={(e) => set({ fullName: e.target.value })}
+          placeholder="e.g. Anand Kumar"
+          className={inputCls}
+          autoFocus
+        />
+      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Date of birth">
+          <input
+            type="date"
+            value={identity.dateOfBirth ?? ''}
+            onChange={(e) => set({ dateOfBirth: e.target.value })}
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Marital status">
+          <select
+            value={identity.maritalStatus ?? ''}
+            onChange={(e) => set({ maritalStatus: (e.target.value || undefined) as MaritalStatus })}
+            className={inputCls}
+          >
+            <option value="">—</option>
+            <option value="single">Single</option>
+            <option value="married">Married</option>
+            <option value="divorced">Divorced</option>
+            <option value="widowed">Widowed</option>
+          </select>
+        </Field>
+      </div>
+      {identity.maritalStatus === 'married' && (
+        <Field label="Spouse name">
+          <input
+            type="text"
+            value={identity.spouseName ?? ''}
+            onChange={(e) => set({ spouseName: e.target.value })}
+            placeholder="Spouse's full name"
+            className={inputCls}
+          />
+        </Field>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+        <Field label="Email">
+          <input
+            type="email"
+            value={identity.email ?? ''}
+            onChange={(e) => set({ email: e.target.value })}
+            placeholder="you@example.com"
+            className={inputCls}
+          />
+        </Field>
+        <Field label="Phone">
+          <input
+            type="tel"
+            value={identity.phone ?? ''}
+            onChange={(e) => set({ phone: e.target.value })}
+            placeholder="+91 90000 00000"
+            className={inputCls}
+          />
+        </Field>
+      </div>
+      <Field label="Occupation">
+        <input
+          type="text"
+          value={identity.occupation ?? ''}
+          onChange={(e) => set({ occupation: e.target.value })}
+          placeholder="e.g. Retired Civil Engineer"
+          className={inputCls}
+        />
+      </Field>
+      <Field label="PAN" hint="Optional. Used only on the printed PDF report.">
+        <input
+          type="text"
+          value={identity.panCard ?? ''}
+          onChange={(e) => set({ panCard: e.target.value.toUpperCase() })}
+          placeholder="ABCDE1234F"
+          maxLength={10}
+          className={`${inputCls} uppercase tracking-wider`}
+        />
+      </Field>
+      <div className="pt-1.5 border-t border-slate-100">
+        <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Address</div>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={identity.address?.line1 ?? ''}
+            onChange={(e) => setAddr({ line1: e.target.value })}
+            placeholder="Address line 1"
+            className={inputCls}
+          />
+          <input
+            type="text"
+            value={identity.address?.line2 ?? ''}
+            onChange={(e) => setAddr({ line2: e.target.value })}
+            placeholder="Address line 2 (optional)"
+            className={inputCls}
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <input
+              type="text"
+              value={identity.address?.city ?? ''}
+              onChange={(e) => setAddr({ city: e.target.value })}
+              placeholder="City"
+              className={inputCls}
+            />
+            <input
+              type="text"
+              value={identity.address?.state ?? ''}
+              onChange={(e) => setAddr({ state: e.target.value })}
+              placeholder="State"
+              className={inputCls}
+            />
+            <input
+              type="text"
+              value={identity.address?.pincode ?? ''}
+              onChange={(e) => setAddr({ pincode: e.target.value.replace(/[^0-9]/g, '') })}
+              placeholder="Pincode"
+              maxLength={6}
+              className={inputCls}
+            />
+          </div>
+        </div>
+      </div>
+      <p className="text-[10px] text-slate-500 leading-relaxed">
+        All fields except the name are optional. Data is stored only in your browser and never transmitted off your device. You can edit any of these later from the dashboard header.
+      </p>
+    </div>
+  )
+}
+
+function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-[11px] font-semibold text-slate-700 uppercase tracking-wide">
+          {label}
+          {required && <span className="text-red-500 ml-0.5">*</span>}
+        </span>
+        {hint && <span className="text-[10px] text-slate-400">{hint}</span>}
+      </div>
+      {children}
+    </label>
   )
 }
