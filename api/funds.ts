@@ -1,7 +1,7 @@
 import type { FundsResponse } from '../src/types/v2'
 import { CURATED_FUNDS } from '../src/constants/curatedFunds'
 
-export const config = { runtime: 'nodejs' }
+export const config = { runtime: 'edge' }
 
 export default async function handler(req: Request): Promise<Response> {
   if (req.method !== 'GET') return new Response('Method not allowed', { status: 405 })

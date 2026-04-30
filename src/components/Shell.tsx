@@ -74,12 +74,12 @@ export function Shell() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-white">
-      <header className="border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <div className="h-screen w-screen flex flex-col bg-white" style={{ height: '100dvh' }}>
+      <header className="shrink-0 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
         <div>
           <div className="text-sm font-semibold text-gray-900">Retirement Planner</div>
           <div className="text-[11px] text-gray-500">
-            Chat-first · 4-bucket cascade · AMFI-validated funds
+            Chat-first · Guardrail-aware 4-bucket strategy · AMFI-validated funds
           </div>
         </div>
         {stage !== 'corpus' && (

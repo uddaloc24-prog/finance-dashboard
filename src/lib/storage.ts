@@ -1,5 +1,6 @@
 import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggestion } from '../types'
 import type { Goal, PlanResult, InterviewSession } from '../types/v2'
+import type { QuizState, RiskProfileId } from '../types/profiles'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
@@ -16,6 +17,10 @@ const KEYS = {
   ACTIVE_PLAN: 'rp_v2_plan',
   INTERVIEW: 'rp_v2_interview',
   SCHEMA_VERSION: 'rp_schema_version',
+  QUIZ_STATE: 'rp_quiz_state',
+  RISK_PROFILE: 'rp_risk_profile',
+  HAS_LAUNCHED: 'rp_has_launched',
+  LAST_WELCOMED: 'rp_last_welcomed',  // ISO timestamp of last welcome view
 } as const
 
 export function migrateV1toV2(profile: UserProfile): { goals: Goal[] } {
@@ -127,6 +132,18 @@ export const storage = {
   getInterviewSession: () => get<InterviewSession>(KEYS.INTERVIEW),
   setInterviewSession: (s: InterviewSession) => set(KEYS.INTERVIEW, s),
   clearInterviewSession: () => remove(KEYS.INTERVIEW),
+
+  getQuizState: () => get<QuizState>(KEYS.QUIZ_STATE),
+  setQuizState: (s: QuizState) => set(KEYS.QUIZ_STATE, s),
+
+  getRiskProfile: () => get<RiskProfileId>(KEYS.RISK_PROFILE),
+  setRiskProfile: (id: RiskProfileId) => set(KEYS.RISK_PROFILE, id),
+
+  getHasLaunched: (): boolean => get<boolean>(KEYS.HAS_LAUNCHED) === true,
+  setHasLaunched: (v: boolean) => set(KEYS.HAS_LAUNCHED, v),
+
+  getLastWelcomed: () => get<string>(KEYS.LAST_WELCOMED),
+  setLastWelcomed: (iso: string) => set(KEYS.LAST_WELCOMED, iso),
 
   clearAll: () => Object.values(KEYS).forEach(remove),
 }

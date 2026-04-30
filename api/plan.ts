@@ -30,7 +30,7 @@ import {
   GUARDRAIL_CUT_THRESHOLD,
 } from '../src/constants'
 
-export const config = { runtime: 'nodejs' }
+export const config = { runtime: 'edge' }
 
 const INFLATION_RATE = 6.5
 const DEFAULT_MONTHLY = 60_000

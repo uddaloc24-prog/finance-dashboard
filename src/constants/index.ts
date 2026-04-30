@@ -126,10 +126,13 @@ export const CITY_COST_MULTIPLIER: Record<CityTier, number> = {
 
 export const TAB_ITEMS = [
   { id: 'plan', label: 'Plan', icon: '📋' },
-  { id: 'assets', label: 'Assets', icon: '🏦' },
-  { id: 'tax', label: 'Tax', icon: '🧾' },
+  { id: 'profiles', label: 'Profile', icon: '👤' },
+  { id: 'strategies', label: 'Compare', icon: '⚖️' },
+  { id: 'assets', label: 'Buckets', icon: '🪣' },
   { id: 'simulate', label: 'Simulate', icon: '📊' },
+  { id: 'tax', label: 'Tax', icon: '🧾' },
   { id: 'ai', label: 'AI', icon: '🤖' },
+  { id: 'summary', label: 'Summary', icon: '✓' },
 ] as const
 
 export type TabId = typeof TAB_ITEMS[number]['id']

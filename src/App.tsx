@@ -4,6 +4,7 @@ import { storage } from './lib/storage'
 import { allocateBuckets } from './lib/calculations'
 import { Dashboard } from './components/Dashboard'
 import { Shell } from './components/Shell'
+import { WelcomePage } from './components/WelcomePage'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION, DEFAULT_DEMOGRAPHICS, DEFAULT_EXPENSES } from './constants'
 
 const V2_FLAG_ENV = (import.meta.env.VITE_V2_ENABLED as string | undefined) === 'true'
@@ -66,12 +67,40 @@ export function App() {
   return <V1App />
 }
 
+const WEEKLY_REFRESH_MS = 7 * 24 * 60 * 60 * 1000
+
+function shouldShowWelcome(): { show: boolean; isReturning: boolean; daysSince: number } {
+  const hasLaunched = storage.getHasLaunched()
+  if (!hasLaunched) return { show: true, isReturning: false, daysSince: 0 }
+  const last = storage.getLastWelcomed()
+  if (!last) return { show: false, isReturning: false, daysSince: 0 }
+  const elapsed = Date.now() - new Date(last).getTime()
+  const days = Math.floor(elapsed / (24 * 60 * 60 * 1000))
+  if (elapsed >= WEEKLY_REFRESH_MS) return { show: true, isReturning: true, daysSince: days }
+  return { show: false, isReturning: false, daysSince: days }
+}
+
 function V1App() {
+  const [welcome, setWelcome] = useState(() => shouldShowWelcome())
   const [profile, setProfile] = useState<UserProfile>(loadProfile)
   const [buckets, setBuckets] = useState<BucketState>(() => loadBuckets(profile))
   const [returnAssumptions, setReturnAssumptions] = useState<ReturnAssumptions>(
     () => storage.getReturnAssumptions()
   )
+
+  if (welcome.show) {
+    return (
+      <WelcomePage
+        isReturning={welcome.isReturning}
+        daysSince={welcome.daysSince}
+        onStart={() => {
+          storage.setHasLaunched(true)
+          storage.setLastWelcomed(new Date().toISOString())
+          setWelcome({ show: false, isReturning: false, daysSince: 0 })
+        }}
+      />
+    )
+  }
 
   function handleBucketsUpdate(b: BucketState) {
     storage.setBuckets(b)
@@ -89,7 +118,7 @@ function V1App() {
   }
 
   function handleReset() {
-    if (!confirm('Reset all values to defaults?')) return
+    if (!confirm('Reset all values to defaults? You will return to the welcome screen.')) return
     storage.clearAll()
     const p = { ...DEFAULT_PROFILE }
     const b = allocateBuckets(p.corpus, p.bucketAllocation ?? BUCKET_ALLOCATION)
@@ -98,6 +127,7 @@ function V1App() {
     setProfile(p)
     setBuckets(b)
     setReturnAssumptions(DEFAULT_RETURN_ASSUMPTIONS)
+    setWelcome({ show: true, isReturning: false, daysSince: 0 })
   }
 
   return (

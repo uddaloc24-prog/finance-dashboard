@@ -8,9 +8,9 @@ interface Props {
 export function TabNav({ activeTab, onChange }: Props) {
   return (
     <>
-      {/* Desktop: horizontal pill tabs */}
+      {/* Desktop: flat underline tabs — integrates with sticky header */}
       <nav aria-label="Main navigation" className="hidden md:block">
-        <div role="tablist" aria-label="Dashboard sections" className="flex gap-1 bg-gray-100 rounded-xl p-1">
+        <div role="tablist" aria-label="Dashboard sections" className="flex gap-0.5">
           {TAB_ITEMS.map(tab => (
             <button
               key={tab.id}
@@ -20,14 +20,17 @@ export function TabNav({ activeTab, onChange }: Props) {
               aria-controls={`tabpanel-${tab.id}`}
               id={`tab-${tab.id}`}
               onClick={() => onChange(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`relative flex items-center gap-1.5 px-3.5 py-2 text-[13px] font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  ? 'text-blue-700'
+                  : 'text-gray-500 hover:text-gray-800'
               }`}
             >
-              <span className="text-base" aria-hidden="true">{tab.icon}</span>
+              <span className="text-sm" aria-hidden="true">{tab.icon}</span>
               <span>{tab.label}</span>
+              {activeTab === tab.id && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-blue-600 rounded-full" />
+              )}
             </button>
           ))}
         </div>

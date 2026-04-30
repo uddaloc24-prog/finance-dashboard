@@ -1,6 +1,6 @@
 import type { InterviewRequest, InterviewResponse, InterviewTurn } from '../src/types/v2'
 
-export const config = { runtime: 'nodejs' }
+export const config = { runtime: 'edge' }
 
 const SCRIPTED_QUESTIONS = [
   "What's your current corpus, and roughly how is it split — bank/FD vs mutual funds vs real estate vs EPF/PPF/NPS?",

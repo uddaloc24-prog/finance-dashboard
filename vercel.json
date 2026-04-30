@@ -3,9 +3,9 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "functions": {
-    "api/interview.ts": { "maxDuration": 60, "memory": 512 },
-    "api/plan.ts": { "maxDuration": 120, "memory": 1024 },
-    "api/funds.ts": { "maxDuration": 30, "memory": 256 }
+    "api/interview.ts": { "maxDuration": 25 },
+    "api/plan.ts": { "maxDuration": 25 },
+    "api/funds.ts": { "maxDuration": 25 }
   },
   "crons": [
     { "path": "/api/funds?refresh=1", "schedule": "0 6 * * *" }
