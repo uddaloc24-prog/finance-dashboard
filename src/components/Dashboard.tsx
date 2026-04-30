@@ -136,7 +136,7 @@ export function Dashboard({
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+      <main className="max-w-6xl mx-auto px-3 sm:px-5 py-3 space-y-3">
         {profile.sipAmount > 0 && (
           <div className="rounded-lg bg-teal-50 border border-teal-200 px-3 py-2 text-xs text-teal-800 flex items-center justify-between">
             <span><strong>{FREQ_LABELS[profile.sipFrequency ?? 'monthly']} SIP/income:</strong> {INR(profile.sipAmount)}</span>
@@ -145,7 +145,7 @@ export function Dashboard({
 
         {/* Tab Content — only render the active tab */}
         {activeTab === 'plan' && (
-          <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-6">
+          <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <ProfileSettings
               profile={profile}
               buckets={buckets}
@@ -164,7 +164,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'assets' && (
-          <div role="tabpanel" id="tabpanel-assets" aria-labelledby="tab-assets" className="space-y-6">
+          <div role="tabpanel" id="tabpanel-assets" aria-labelledby="tab-assets" className="space-y-3">
             {/* Refill alerts */}
             <RefillAlert
               buckets={buckets}
@@ -199,7 +199,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'profiles' && (
-          <div role="tabpanel" id="tabpanel-profiles" aria-labelledby="tab-profiles" className="space-y-6">
+          <div role="tabpanel" id="tabpanel-profiles" aria-labelledby="tab-profiles" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <ProfilesPanel userProfile={profile} />
             </Suspense>
@@ -207,7 +207,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'strategies' && (
-          <div role="tabpanel" id="tabpanel-strategies" aria-labelledby="tab-strategies" className="space-y-6">
+          <div role="tabpanel" id="tabpanel-strategies" aria-labelledby="tab-strategies" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <StrategiesPanel
                 profile={profile}
@@ -219,7 +219,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'simulate' && (
-          <div role="tabpanel" id="tabpanel-simulate" aria-labelledby="tab-simulate" className="space-y-4">
+          <div role="tabpanel" id="tabpanel-simulate" aria-labelledby="tab-simulate" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <CorpusPreservation
                 profile={profile}
@@ -248,7 +248,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'tax' && (
-          <div role="tabpanel" id="tabpanel-tax" aria-labelledby="tab-tax" className="space-y-4">
+          <div role="tabpanel" id="tabpanel-tax" aria-labelledby="tab-tax" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <TaxPanel
                 profile={profile}
@@ -260,7 +260,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'ai' && (
-          <div role="tabpanel" id="tabpanel-ai" aria-labelledby="tab-ai" className="space-y-6">
+          <div role="tabpanel" id="tabpanel-ai" aria-labelledby="tab-ai" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <AIPortfolioOptimizer
                 profile={profile}
@@ -273,7 +273,7 @@ export function Dashboard({
         )}
 
         {activeTab === 'summary' && (
-          <div role="tabpanel" id="tabpanel-summary" aria-labelledby="tab-summary" className="space-y-4">
+          <div role="tabpanel" id="tabpanel-summary" aria-labelledby="tab-summary" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <SummaryPanel
                 profile={profile}

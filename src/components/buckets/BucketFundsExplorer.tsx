@@ -9,7 +9,7 @@ import {
   type AssetClassMeta,
   type BucketKey,
 } from '../../lib/data/assetClasses'
-import { recommendationFor, type BucketRecommendation } from '../../lib/data/recommendations'
+import { recommendationFor, type BucketRecommendation, type OptimalMixSlice } from '../../lib/data/recommendations'
 import { profileById } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 
@@ -79,21 +79,20 @@ function BucketSection({ bucket, purpose, bucketValue, recommendation, profileLa
   const isShowingRecommended = recommendation && classId === recommendation.primary
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
       {/* Bucket header */}
-      <div className={`px-5 py-4 border-b border-slate-200 ${palette.bg}`}>
-        <div className="flex items-start justify-between flex-wrap gap-3">
+      <div className={`px-4 py-2.5 border-b border-slate-200 ${palette.bg}`}>
+        <div className="flex items-start justify-between flex-wrap gap-2">
           <div className="min-w-0">
-            <h3 className={`text-sm font-bold ${palette.text}`}>{purpose.label}</h3>
-            <p className="text-xs text-slate-700 mt-0.5">{purpose.role}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              Horizon {purpose.horizon} · default allocation {purpose.defaultPct}%
+            <h3 className={`text-[13px] font-bold ${palette.text}`}>{purpose.label}</h3>
+            <p className="text-[11px] text-slate-600 mt-0.5 leading-tight">
+              {purpose.role} <span className="text-slate-400">· {purpose.horizon} · default {purpose.defaultPct}%</span>
             </p>
           </div>
           {bucketValue > 0 && (
             <div className="text-right shrink-0">
-              <div className="text-[10px] uppercase tracking-wide text-slate-500">Allocation</div>
-              <div className={`text-lg font-bold tabular-nums ${palette.text}`}>{fmtINR(bucketValue)}</div>
+              <div className="text-[9px] uppercase tracking-wide text-slate-500 font-semibold">Allocation</div>
+              <div className={`text-base font-bold tabular-nums ${palette.text}`}>{fmtINR(bucketValue)}</div>
             </div>
           )}
         </div>
@@ -101,25 +100,27 @@ function BucketSection({ bucket, purpose, bucketValue, recommendation, profileLa
 
       {/* Recommendation banner */}
       {recommendation && profileLabel && (
-        <div className={`px-5 py-2.5 border-b border-slate-100 flex items-center gap-2 flex-wrap text-xs ${palette.soft}`}>
-          <span className={`shrink-0 w-5 h-5 rounded-full ${palette.bar} text-white flex items-center justify-center text-[10px] font-bold`} aria-hidden="true">★</span>
+        <div className={`px-4 py-2 border-b border-slate-100 flex items-center gap-2 flex-wrap text-[11px] ${palette.soft}`}>
+          <span className={`shrink-0 w-4 h-4 rounded-full ${palette.bar} text-white flex items-center justify-center text-[9px] font-bold`} aria-hidden="true">★</span>
           <span className="text-slate-700">
-            <strong className={palette.text}>Recommended for {profileLabel}:</strong>{' '}
+            <strong className={palette.text}>Primary for {profileLabel}:</strong>{' '}
             <span className="text-slate-700">{classById(recommendation.primary)?.label ?? recommendation.primary}</span>
-            {recommendation.secondary && (
-              <span className="text-slate-500"> · or {classById(recommendation.secondary)?.label ?? recommendation.secondary}</span>
-            )}
           </span>
         </div>
       )}
 
+      {/* Optimised mix panel */}
+      {recommendation?.optimalMix && profileLabel && (
+        <OptimalMixPanel mix={recommendation.optimalMix} palette={palette} bucket={bucket} profileLabel={profileLabel} />
+      )}
+
       {/* Class dropdown */}
-      <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap">
-        <label className="text-xs font-semibold text-slate-700 whitespace-nowrap">Asset class:</label>
+      <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+        <label className="text-[11px] font-semibold text-slate-700 whitespace-nowrap uppercase tracking-wide">Asset class</label>
         <select
           value={classId}
           onChange={(e) => setClassId(e.target.value)}
-          className={`flex-1 min-w-[200px] bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-slate-500 focus:ring-1 ${palette.ring}`}
+          className={`flex-1 min-w-[180px] bg-white border border-slate-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-slate-500 focus:ring-1 ${palette.ring}`}
         >
           {classes.map((c) => {
             const isPrimary = recommendation?.primary === c.id
@@ -162,19 +163,21 @@ interface ClassDetailProps {
 }
 
 function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: ClassDetailProps) {
-  const funds = fundsForClass(cls)
+  const isDirect = cls.kind === 'direct'
+  const funds = isDirect ? [] : fundsForClass(cls)
+  const directInstruments = cls.directInstruments ?? []
   const [expanded, setExpanded] = useState<string | null>(null)
   const recommendedSet = new Set(isShowingRecommended ? recommendation?.primaryFundCodes ?? [] : [])
 
   return (
-    <div className="p-5 space-y-4">
+    <div className="p-4 space-y-3">
       {/* Tagline + rationale */}
       <div>
-        <div className="flex items-baseline justify-between flex-wrap gap-2 mb-1">
-          <h4 className="text-base font-semibold text-slate-900">{cls.label}</h4>
-          <span className="text-[11px] text-slate-500">{cls.short}</span>
+        <div className="flex items-baseline justify-between flex-wrap gap-2 mb-0.5">
+          <h4 className="text-sm font-semibold text-slate-900">{cls.label}</h4>
+          <span className="text-[10px] text-slate-500">{cls.short}</span>
         </div>
-        <p className="text-sm text-slate-700 leading-relaxed">{cls.rationale}</p>
+        <p className="text-xs text-slate-700 leading-relaxed">{cls.rationale}</p>
       </div>
 
       {/* Why-for-your-profile callout when on the recommended class */}
@@ -192,10 +195,15 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
         <KPI label="Expected CAGR" value={`${cls.expectedReturnRange[0]}–${cls.expectedReturnRange[1]}%`} />
         <KPI label="Volatility" value={cls.volatilityBand.split(' — ')[0]} hint={cls.volatilityBand.split(' — ')[1]} />
         <KPI label="Liquidity" value={cls.liquidityNote.split(';')[0]} />
-        <KPI label="Funds shortlist" value={`${funds.length}`} hint="curated AMFI funds" />
+        {isDirect ? (
+          <KPI label="Instruments" value={`${directInstruments.length}`} hint="direct (non-MF)" />
+        ) : (
+          <KPI label="Funds shortlist" value={`${funds.length}`} hint="curated AMFI funds" />
+        )}
       </div>
 
-      {/* Funds list */}
+      {/* Funds list — MF kind */}
+      {!isDirect && (
       <div>
         <div className="flex items-center justify-between mb-2">
           <h5 className="text-sm font-semibold text-slate-900">Best funds in this class</h5>
@@ -266,6 +274,76 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
           })}
         </div>
       </div>
+      )}
+
+      {/* Direct instruments — direct kind */}
+      {isDirect && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <h5 className="text-sm font-semibold text-slate-900">Available instruments (direct)</h5>
+            <span className="text-[11px] text-slate-500">Not mutual funds — buy direct or via your bank/broker</span>
+          </div>
+          <div className="space-y-2">
+            {directInstruments.length === 0 && (
+              <div className="text-xs text-slate-500 italic py-3">No direct instruments configured for this class yet.</div>
+            )}
+            {directInstruments.map((inst) => {
+              const isExpanded = expanded === inst.name
+              return (
+                <div key={inst.name} className={`rounded-lg border ${isExpanded ? `${palette.bg} border-slate-300` : 'bg-white border-slate-200'} transition-colors`}>
+                  <button
+                    type="button"
+                    onClick={() => setExpanded(isExpanded ? null : inst.name)}
+                    className="w-full text-left px-3 py-2.5 flex items-start gap-3"
+                  >
+                    <span className={`shrink-0 w-1 h-12 ${palette.bar} rounded-full`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-slate-900 truncate">{inst.name}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600 mt-0.5">{inst.issuer} · {inst.category}</div>
+                      <div className="flex gap-3 mt-0.5 text-[11px] text-slate-600 tabular-nums flex-wrap">
+                        <span>Yield <strong>{inst.expectedCagr}%</strong></span>
+                        {inst.tenure && <span>Tenure <strong>{inst.tenure}</strong></span>}
+                        {inst.minTicket && <span>Min <strong>{inst.minTicket}</strong></span>}
+                        {inst.maxTicket && <span>Max <strong>{inst.maxTicket}</strong></span>}
+                      </div>
+                    </div>
+                    <span className={`shrink-0 text-slate-400 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
+                  </button>
+                  {isExpanded && (
+                    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-200">
+                      <div className={`rounded-md ${palette.soft} px-3 py-2`}>
+                        <div className={`text-[10px] uppercase tracking-wide font-semibold ${palette.text} mb-1`}>Notes</div>
+                        <p className="text-xs text-slate-800 leading-relaxed">{inst.notes}</p>
+                      </div>
+                      {inst.yieldOrCoupon && (
+                        <div className="text-xs">
+                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">Yield / coupon</div>
+                          <div className="text-slate-700">{inst.yieldOrCoupon}</div>
+                        </div>
+                      )}
+                      <div className="grid sm:grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">Tax treatment</div>
+                          <div className="text-slate-700 leading-relaxed">{inst.taxNote}</div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">How to invest</div>
+                          <div className="text-slate-700 leading-relaxed">{cls.howToInvest}</div>
+                        </div>
+                      </div>
+                      <div className="text-[10px] text-slate-500 italic">
+                        Verify current rates, eligibility, and tax treatment with the issuer before investing. Direct instruments are not regulated as mutual funds and may have different protections.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Detailed analysis report */}
       <details className="bg-slate-50 rounded-lg border border-slate-200 px-4 py-3">
@@ -304,12 +382,71 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
   )
 }
 
+// Palette of distinct slice colors for the optimal-mix bar; loops if needed
+const SLICE_COLORS = [
+  'bg-slate-700', 'bg-blue-500', 'bg-teal-500', 'bg-amber-500',
+  'bg-violet-500', 'bg-orange-500', 'bg-rose-500', 'bg-emerald-500',
+]
+
+function OptimalMixPanel({
+  mix, palette, bucket, profileLabel,
+}: {
+  mix: OptimalMixSlice[]
+  palette: typeof BUCKET_COLOR[BucketKey]
+  bucket: BucketKey
+  profileLabel: string
+}) {
+  const total = mix.reduce((s, m) => s + m.pctOfBucket, 0)
+  const normalised = total > 0 ? mix.map((m) => ({ ...m, pct: (m.pctOfBucket / total) * 100 })) : []
+
+  return (
+    <div className={`px-4 py-3 border-b border-slate-100 ${palette.bg}`}>
+      <div className="flex items-baseline justify-between gap-2 mb-1.5">
+        <h4 className={`text-xs font-bold ${palette.text}`}>
+          Optimised mix · {bucket.toUpperCase()} for {profileLabel}
+        </h4>
+        <span className="text-[10px] text-slate-500">Reshuffled for best risk-adjusted return</span>
+      </div>
+
+      {/* Stacked horizontal bar */}
+      <div className="flex h-2 rounded-full overflow-hidden bg-slate-200/50 mb-2">
+        {normalised.map((slice, i) => {
+          const cls = classById(slice.classId)
+          return (
+            <div
+              key={slice.classId}
+              className={SLICE_COLORS[i % SLICE_COLORS.length]}
+              style={{ width: `${slice.pct}%` }}
+              title={`${cls?.label ?? slice.classId} — ${slice.pctOfBucket}%`}
+            />
+          )
+        })}
+      </div>
+
+      {/* Slice list */}
+      <div className="grid sm:grid-cols-2 gap-x-3 gap-y-1">
+        {normalised.map((slice, i) => {
+          const cls = classById(slice.classId)
+          return (
+            <div key={slice.classId} className="flex items-baseline gap-1.5 text-[10px]">
+              <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${SLICE_COLORS[i % SLICE_COLORS.length]} translate-y-[-1px]`} aria-hidden="true" />
+              <span className="font-semibold text-slate-800 tabular-nums shrink-0 w-7">{slice.pctOfBucket}%</span>
+              <span className="text-slate-700 truncate">{cls?.label ?? slice.classId}</span>
+              <span className="text-slate-500 truncate">— {slice.role}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function KPI({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold">{label}</div>
-      <div className="text-sm font-semibold text-slate-900 mt-0.5 tabular-nums truncate">{value}</div>
-      {hint && <div className="text-[10px] text-slate-500 mt-0.5 truncate">{hint}</div>}
+    <div className="rounded border border-slate-200 bg-slate-50/60 px-2.5 py-1.5">
+      <div className="text-[9px] uppercase tracking-wide text-slate-500 font-semibold">{label}</div>
+      <div className="text-xs font-semibold text-slate-900 mt-0.5 tabular-nums truncate">{value}</div>
+      {hint && <div className="text-[9px] text-slate-500 mt-0.5 truncate">{hint}</div>}
     </div>
   )
 }
