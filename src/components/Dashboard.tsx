@@ -25,6 +25,7 @@ const ProfilesPanel = lazy(() => import('./profiles/ProfilesPanel').then(m => ({
 const MonteCarloPanel = lazy(() => import('./montecarlo/MonteCarloPanel').then(m => ({ default: m.MonteCarloPanel })))
 const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.TaxPanel })))
 const SummaryPanel = lazy(() => import('./summary/SummaryPanel').then(m => ({ default: m.SummaryPanel })))
+const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
 
 function TabLoading() {
   return (
@@ -189,6 +190,11 @@ export function Dashboard({
               onReturnsChange={onReturnsUpdate}
               onBucketsUpdate={onBucketsUpdate}
             />
+
+            {/* Asset class explorer — dropdown per bucket + detailed analysis */}
+            <Suspense fallback={<TabLoading />}>
+              <BucketFundsExplorer bucketValues={buckets} />
+            </Suspense>
           </div>
         )}
 
