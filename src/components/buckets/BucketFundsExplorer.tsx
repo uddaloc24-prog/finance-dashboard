@@ -78,10 +78,29 @@ function BucketSection({ bucket, purpose, bucketValue, recommendation, profileLa
   const palette = BUCKET_COLOR[bucket]
   const isShowingRecommended = recommendation && classId === recommendation.primary
 
+  // ── Compute fund / instrument options for the chosen class (lifted up here
+  // so the second dropdown can sit alongside the asset-class dropdown) ──
+  const isDirect = cls?.kind === 'direct'
+  const recommendedSet = new Set(isShowingRecommended ? recommendation?.primaryFundCodes ?? [] : [])
+  const fundsRaw = isDirect ? [] : (cls ? fundsForClass(cls) : [])
+  const directInstruments = cls?.directInstruments ?? []
+  const sortedFunds = sortByRecommendation(fundsRaw, recommendedSet)
+  const availableOptions: Array<{ key: string; label: string; recommended: boolean }> = isDirect
+    ? directInstruments.map((d) => ({ key: d.name, label: d.name, recommended: false }))
+    : sortedFunds.map((f) => ({ key: f.schemeCode, label: f.schemeName, recommended: recommendedSet.has(f.schemeCode) }))
+
+  const [fundKey, setFundKey] = useState<string>(availableOptions[0]?.key ?? '')
+
+  // Reset fund selection when the class changes — auto-pick first (recommended) option
+  useEffect(() => {
+    setFundKey(availableOptions[0]?.key ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [classId])
+
   return (
-    <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+    <div className="bg-white border-2 border-slate-300 rounded-lg overflow-hidden shadow-sm">
       {/* Bucket header */}
-      <div className={`px-4 py-2.5 border-b border-slate-200 ${palette.bg}`}>
+      <div className={`px-4 py-2.5 border-b-2 border-slate-200 ${palette.bg}`}>
         <div className="flex items-start justify-between flex-wrap gap-2">
           <div className="min-w-0">
             <h3 className={`text-[13px] font-bold ${palette.text}`}>{purpose.label}</h3>
@@ -100,7 +119,7 @@ function BucketSection({ bucket, purpose, bucketValue, recommendation, profileLa
 
       {/* Recommendation banner */}
       {recommendation && profileLabel && (
-        <div className={`px-4 py-2 border-b border-slate-100 flex items-center gap-2 flex-wrap text-[11px] ${palette.soft}`}>
+        <div className={`px-4 py-2 border-b-2 border-slate-200 flex items-center gap-2 flex-wrap text-[11px] ${palette.soft}`}>
           <span className={`shrink-0 w-4 h-4 rounded-full ${palette.bar} text-white flex items-center justify-center text-[9px] font-bold`} aria-hidden="true">★</span>
           <span className="text-slate-700">
             <strong className={palette.text}>Primary for {profileLabel}:</strong>{' '}
@@ -114,41 +133,68 @@ function BucketSection({ bucket, purpose, bucketValue, recommendation, profileLa
         <OptimalMixPanel mix={recommendation.optimalMix} palette={palette} bucket={bucket} profileLabel={profileLabel} />
       )}
 
-      {/* Class dropdown */}
-      <div className="px-4 py-2 border-b border-slate-100 flex items-center gap-2 flex-wrap">
-        <label className="text-[11px] font-semibold text-slate-700 whitespace-nowrap uppercase tracking-wide">Asset class</label>
-        <select
-          value={classId}
-          onChange={(e) => setClassId(e.target.value)}
-          className={`flex-1 min-w-[180px] bg-white border border-slate-300 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:border-slate-500 focus:ring-1 ${palette.ring}`}
-        >
-          {classes.map((c) => {
-            const isPrimary = recommendation?.primary === c.id
-            const isSecondary = recommendation?.secondary === c.id
-            const tag = isPrimary ? '  ★ recommended' : isSecondary ? '  ☆ alternative' : ''
-            return (
-              <option key={c.id} value={c.id}>{c.label}{tag}</option>
-            )
-          })}
-        </select>
-        <span className="text-[11px] text-slate-500 hidden sm:inline">{classes.length} classes for this bucket</span>
+      {/* Dual dropdown row — Asset class | Fund / Instrument (side by side) */}
+      <div className="px-4 py-3 border-b-2 border-slate-200 bg-slate-50/40">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Asset class */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-[1.5px] mb-1.5">
+              Asset class · {classes.length} options
+            </label>
+            <select
+              value={classId}
+              onChange={(e) => setClassId(e.target.value)}
+              className={`w-full bg-white border-2 border-slate-300 rounded-md px-2.5 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-slate-500 focus:ring-2 ${palette.ring}`}
+            >
+              {classes.map((c) => {
+                const isPrimary = recommendation?.primary === c.id
+                const isSecondary = recommendation?.secondary === c.id
+                const tag = isPrimary ? '  ★ recommended' : isSecondary ? '  ☆ alternative' : ''
+                return (
+                  <option key={c.id} value={c.id}>{c.label}{tag}</option>
+                )
+              })}
+            </select>
+          </div>
+
+          {/* Fund / instrument */}
+          <div>
+            <label className="block text-[10px] font-bold text-slate-700 uppercase tracking-[1.5px] mb-1.5">
+              {isDirect ? 'Instrument' : 'Fund'} · {availableOptions.length} option{availableOptions.length !== 1 ? 's' : ''}
+            </label>
+            <select
+              value={fundKey}
+              onChange={(e) => setFundKey(e.target.value)}
+              className={`w-full bg-white border-2 border-slate-300 rounded-md px-2.5 py-2 text-xs sm:text-sm font-medium text-slate-800 focus:outline-none focus:border-slate-500 focus:ring-2 ${palette.ring}`}
+              disabled={availableOptions.length === 0}
+            >
+              {availableOptions.length === 0 && <option value="">(no options)</option>}
+              {availableOptions.map((o) => (
+                <option key={o.key} value={o.key}>
+                  {o.recommended ? '★ ' : ''}{o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Off-recommendation hint */}
       {recommendation && !isShowingRecommended && profileLabel && classId !== recommendation.secondary && (
-        <div className="px-5 py-2 bg-amber-50/50 border-b border-amber-100 text-[11px] text-amber-800 flex items-center gap-2">
+        <div className="px-4 py-2 bg-amber-50/60 border-b-2 border-amber-200 text-[11px] text-amber-800 flex items-center gap-2">
           <span aria-hidden="true">ℹ️</span>
-          <span>This isn't the typical pick for a <strong>{profileLabel}</strong> profile in this bucket. The recommendation above explains why.</span>
+          <span>This isn't the typical pick for a <strong>{profileLabel}</strong> profile in this bucket. The primary recommendation banner above explains why.</span>
         </div>
       )}
 
-      {/* Class detail */}
+      {/* Class detail (shows the selected fund / instrument card) */}
       {cls && (
         <ClassDetail
           cls={cls}
           palette={palette}
           recommendation={recommendation}
           isShowingRecommended={isShowingRecommended ?? false}
+          selectedFundKey={fundKey}
         />
       )}
     </div>
@@ -160,30 +206,18 @@ interface ClassDetailProps {
   palette: typeof BUCKET_COLOR[BucketKey]
   recommendation: BucketRecommendation | null
   isShowingRecommended: boolean
+  selectedFundKey: string
 }
 
-function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: ClassDetailProps) {
+function ClassDetail({ cls, palette, recommendation, isShowingRecommended, selectedFundKey }: ClassDetailProps) {
   const isDirect = cls.kind === 'direct'
   const fundsRaw = isDirect ? [] : fundsForClass(cls)
   const directInstruments = cls.directInstruments ?? []
   const recommendedSet = new Set(isShowingRecommended ? recommendation?.primaryFundCodes ?? [] : [])
 
-  // ── Fund / instrument selector dropdown ──
-  // Sort funds with recommended ones first so the default selection is the top pick
   const funds = sortByRecommendation(fundsRaw, recommendedSet)
-  const availableOptions: Array<{ key: string; label: string; recommended: boolean }> = isDirect
-    ? directInstruments.map((d) => ({ key: d.name, label: d.name, recommended: false }))
-    : funds.map((f) => ({ key: f.schemeCode, label: f.schemeName, recommended: recommendedSet.has(f.schemeCode) }))
-
-  const [selectedKey, setSelectedKey] = useState<string>(availableOptions[0]?.key ?? '')
-
-  // Reset selection when class changes — auto-pick first (recommended) option
-  useEffect(() => {
-    setSelectedKey(availableOptions[0]?.key ?? '')
-  }, [cls.id])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  const selectedFund = !isDirect ? funds.find((f) => f.schemeCode === selectedKey) : undefined
-  const selectedInstrument = isDirect ? directInstruments.find((d) => d.name === selectedKey) : undefined
+  const selectedFund = !isDirect ? funds.find((f) => f.schemeCode === selectedFundKey) : undefined
+  const selectedInstrument = isDirect ? directInstruments.find((d) => d.name === selectedFundKey) : undefined
 
   return (
     <div className="p-4 space-y-3">
@@ -218,28 +252,6 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
         )}
       </div>
 
-      {/* Fund / instrument dropdown */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <h5 className="text-sm font-semibold text-slate-900">
-            {isDirect ? 'Pick an instrument' : 'Pick a fund'}
-          </h5>
-          <span className="text-[11px] text-slate-500">{availableOptions.length} option{availableOptions.length !== 1 ? 's' : ''}</span>
-        </div>
-        <select
-          value={selectedKey}
-          onChange={(e) => setSelectedKey(e.target.value)}
-          className={`w-full bg-white border border-slate-300 rounded-md px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:border-slate-500 focus:ring-1 ${palette.ring}`}
-        >
-          {availableOptions.length === 0 && <option value="">(no options for this class)</option>}
-          {availableOptions.map((o) => (
-            <option key={o.key} value={o.key}>
-              {o.recommended ? '★ ' : ''}{o.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
       {/* Selected fund detail (MF kind) */}
       {!isDirect && selectedFund && (
         <FundDetailCard fund={selectedFund} palette={palette} cls={cls} isTopPick={recommendedSet.has(selectedFund.schemeCode)} />
@@ -251,7 +263,7 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
       )}
 
       {/* Empty state */}
-      {availableOptions.length === 0 && (
+      {!selectedFund && !selectedInstrument && (
         <div className="text-xs text-slate-500 italic py-3">No options configured for this class yet.</div>
       )}
 
@@ -415,7 +427,7 @@ function OptimalMixPanel({
   const normalised = total > 0 ? mix.map((m) => ({ ...m, pct: (m.pctOfBucket / total) * 100 })) : []
 
   return (
-    <div className={`px-4 py-3 border-b border-slate-100 ${palette.bg}`}>
+    <div className={`px-4 py-3 border-b-2 border-slate-200 ${palette.bg}`}>
       <div className="flex items-baseline justify-between gap-2 mb-1.5">
         <h4 className={`text-xs font-bold ${palette.text}`}>
           Optimised mix · {bucket.toUpperCase()} for {profileLabel}
