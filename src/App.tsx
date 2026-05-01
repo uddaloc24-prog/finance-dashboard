@@ -19,10 +19,10 @@ function isV2Enabled(): boolean {
 }
 
 const DEFAULT_PROFILE: UserProfile = {
-  corpus: 1_00_00_000,
-  monthlyWithdrawal: 60_000,
+  corpus: 0,
+  monthlyWithdrawal: 0,
   withdrawalFrequency: 'monthly',
-  withdrawalAmount: 60_000,
+  withdrawalAmount: 0,
   sipAmount: 0,
   sipFrequency: 'monthly',
   inflationRate: 6.5,
