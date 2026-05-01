@@ -25,7 +25,7 @@ interface Props {
   children: ReactNode
 }
 
-export function PlanSection({ num, title, subtitle, tone, defaultOpen = true, status, children }: Props) {
+export function PlanSection({ num, title, subtitle, tone, defaultOpen = false, status, children }: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const t = TONES[tone]
 
