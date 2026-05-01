@@ -131,8 +131,9 @@ export const TAB_ITEMS = [
   { id: 'assets', label: 'Buckets', icon: '🪣' },
   { id: 'simulate', label: 'Simulate', icon: '📊' },
   { id: 'tax', label: 'Tax', icon: '🧾' },
-  { id: 'ai', label: 'AI', icon: '🤖' },
+  { id: 'overview', label: 'Overview', icon: '◆' },
   { id: 'summary', label: 'Summary', icon: '✓' },
+  { id: 'ai', label: 'AI', icon: '🤖' },
 ] as const
 
 export type TabId = typeof TAB_ITEMS[number]['id']

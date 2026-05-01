@@ -26,6 +26,7 @@ const MonteCarloPanel = lazy(() => import('./montecarlo/MonteCarloPanel').then(m
 const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.TaxPanel })))
 const SummaryPanel = lazy(() => import('./summary/SummaryPanel').then(m => ({ default: m.SummaryPanel })))
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
+const OverviewPage = lazy(() => import('./OverviewPage').then(m => ({ default: m.OverviewPage })))
 
 function TabLoading() {
   return (
@@ -144,6 +145,21 @@ export function Dashboard({
         )}
 
         {/* Tab Content — only render the active tab */}
+        {activeTab === 'overview' && (
+          <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-3">
+            <Suspense fallback={<TabLoading />}>
+              <OverviewPage
+                profile={profile}
+                buckets={buckets}
+                returnAssumptions={returnAssumptions}
+                onBucketsUpdate={onBucketsUpdate}
+                onProfileUpdate={onProfileUpdate}
+                onReturnsUpdate={onReturnsUpdate}
+              />
+            </Suspense>
+          </div>
+        )}
+
         {activeTab === 'plan' && (
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <ProfileSettings

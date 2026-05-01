@@ -1,27 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { UserIdentity, MaritalStatus } from '../types/identity'
 import { storage } from '../lib/storage'
 import { Button } from './ui/Button'
 
 interface Props {
   onStart: (identity: UserIdentity) => void
-  isReturning?: boolean    // true if user has been here before (≥ 1 week ago)
-  daysSince?: number        // days since last visit (for "welcome back")
-}
-
-interface Step {
-  eyebrow: string
-  heading: React.ReactNode
-  body: React.ReactNode
-  panel: React.ReactNode
+  isReturning?: boolean
+  daysSince?: number
 }
 
 export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
-  const [step, setStep] = useState(0)
-  const [direction, setDirection] = useState<'fwd' | 'back'>('fwd')
-  const [animKey, setAnimKey] = useState(0)
-
-  // Identity form state — pre-populated from storage if user is returning
   const existing = storage.getIdentity()
   const [identity, setIdentity] = useState<UserIdentity>(() =>
     existing ?? {
@@ -39,95 +27,9 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
     },
   )
 
-  // Bump anim key on step change so React re-mounts the panel and the
-  // CSS keyframe re-fires (giving us the slide-fade transition).
-  useEffect(() => { setAnimKey((k) => k + 1) }, [step])
-
-  const steps: Step[] = [
-    {
-      eyebrow: isReturning ? 'Welcome back' : 'Welcome',
-      heading: isReturning ? (
-        <>It's been <span className="font-bold text-blue-700">{daysSince ?? 0} days</span>.<br />Quick refresher?</>
-      ) : (
-        <>Plan your retirement<br /><span className="font-bold text-blue-700">with confidence.</span></>
-      ),
-      body: isReturning
-        ? `Things may have changed since you were last here — your inputs, the market, even the tax rules. Take 60 seconds to step through what this tool does, or jump straight back to your dashboard.`
-        : `A guided four-bucket withdrawal strategy, tested against ten global frameworks and the Indian tax code — for retirees who want a defensible plan, not a guess.`,
-      panel: <HeroPanel />,
-    },
-    {
-      eyebrow: 'The problem',
-      heading: <>The Indian retirement<br /><span className="font-bold text-blue-700">income challenge.</span></>,
-      body: `Standard "park it in FDs" advice loses two-thirds of its real purchasing power over 20 years. The 4% Rule was designed for US 60/40 portfolios. There is no "set and forget" answer for an Indian retiree.`,
-      panel: (
-        <div className="space-y-3">
-          <Bullet icon="↑" text="Inflation eats principal — general 6.5%, healthcare 10%, education 12%." />
-          <Bullet icon="₹" text="Tax favours equity over debt — debt MFs at slab, equity LTCG only 12.5% above ₹1.25L." />
-          <Bullet icon="!" text="Sequence-of-returns risk — a year-5 crash permanently impairs even a well-funded plan." />
-        </div>
-      ),
-    },
-    {
-      eyebrow: 'The solution',
-      heading: <>A <span className="font-bold text-blue-700">four-bucket</span> strategy with guardrails.</>,
-      body: `Split the corpus across four time horizons. B4 grows. B3 produces income. B1 is the cash buffer. B2 is the safety floor — held to maturity, untouched. Refills cascade automatically.`,
-      panel: <BucketPanel />,
-    },
-    {
-      eyebrow: 'How it works',
-      heading: <>Five minutes <span className="font-bold text-blue-700">to your verdict.</span></>,
-      body: `Walk through the dashboard tabs in order — or jump around freely. The Summary page synthesises everything into a single take-home recommendation, exportable as a personalised PDF.`,
-      panel: (
-        <div className="space-y-3">
-          <NumberStep n="1" label="Plan" desc="Enter corpus, monthly target, demographics" />
-          <NumberStep n="2" label="Profile" desc="Take the 90-second risk quiz" />
-          <NumberStep n="3" label="Compare" desc="See 10 strategies scored side-by-side" />
-          <NumberStep n="4" label="Simulate" desc="Run Monte Carlo, verify success rate" />
-          <NumberStep n="5" label="Tax · Summary" desc="Review tax + download your full plan" />
-        </div>
-      ),
-    },
-    {
-      eyebrow: 'About you',
-      heading: <>A few personal <span className="font-bold text-blue-700">details.</span></>,
-      body: `Used to personalise the dashboard, stamp your downloadable PDF report, and pre-fill demographics. Stored only in your browser — never transmitted off-device.`,
-      panel: <IdentityForm identity={identity} onChange={setIdentity} />,
-    },
-  ]
-
-  const cur = steps[step]
-  const isLast = step === steps.length - 1
-  const isIdentityStep = isLast    // identity form is the last step
-  const canProceed = !isIdentityStep || identity.fullName.trim().length > 0
+  const canProceed = identity.fullName.trim().length > 0
 
   const finalise = () => {
-    const now = new Date().toISOString()
-    const out: UserIdentity = {
-      ...identity,
-      fullName: identity.fullName.trim(),
-      createdAt: identity.createdAt || now,
-      updatedAt: now,
-    }
-    storage.setIdentity(out)
-    onStart(out)
-  }
-
-  const handleNext = () => {
-    if (isLast) {
-      if (!canProceed) return
-      finalise()
-    } else {
-      setDirection('fwd')
-      setStep(step + 1)
-    }
-  }
-  const handleBack = () => {
-    setDirection('back')
-    setStep(Math.max(0, step - 1))
-  }
-  const handleSkip = () => {
-    // Skipping still saves whatever the user has entered (likely empty)
     const now = new Date().toISOString()
     const out: UserIdentity = {
       ...identity,
@@ -140,148 +42,196 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex flex-col">
-      {/* Top progress dots */}
-      <div className="pt-6 px-6">
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
-          <div className="text-[11px] font-semibold tracking-[2px] uppercase text-blue-700">
-            {cur.eyebrow}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+
+        {/* ── Hero ─────────────────────────────────────────────── */}
+        <header className="text-center mb-12 sm:mb-14">
+          <div className="text-[11px] font-bold tracking-[4px] uppercase text-amber-700 mb-3">
+            {isReturning ? `Welcome back · ${daysSince ?? 0} days` : 'Indian Retirement Planner · Version 2.0'}
           </div>
-          <div className="flex items-center gap-1.5" aria-label="Progress">
-            {steps.map((_, i) => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${
-                  i === step ? 'w-6 bg-blue-600' : i < step ? 'w-1.5 bg-blue-600' : 'w-1.5 bg-slate-300'
-                }`}
-                aria-current={i === step ? 'step' : undefined}
-              />
-            ))}
+          <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extralight tracking-tight text-slate-900 leading-[1.05]">
+            {isReturning
+              ? <>Quick <em className="font-extrabold not-italic text-blue-700">refresher</em>?</>
+              : <>Plan your retirement <em className="font-extrabold not-italic text-blue-700">with confidence.</em></>}
+          </h1>
+          <p className="mt-5 text-base text-slate-600 max-w-xl mx-auto leading-relaxed">
+            {isReturning
+              ? `It's been ${daysSince ?? 0} days. Things may have changed — your inputs, the market, even the tax rules. Take a minute to refresh, or jump back in below.`
+              : 'A guided four-bucket withdrawal strategy, tested against ten global frameworks and the Indian tax code — for retirees who want a defensible plan, not a guess.'}
+          </p>
+          <div className="mt-7 flex items-center justify-center gap-3">
+            <span className="h-px w-16 bg-amber-500/60" aria-hidden="true" />
+            <span className="text-amber-700 text-xs">◆</span>
+            <span className="h-px w-16 bg-amber-500/60" aria-hidden="true" />
           </div>
-          <button
-            type="button"
-            onClick={handleSkip}
-            className="text-[11px] text-slate-500 hover:text-slate-800 underline"
-          >
-            Skip intro
-          </button>
+        </header>
+
+        <div className="space-y-12">
+
+          {/* ── 01 — At a glance ─────────────────────────────── */}
+          <Section num="01" eyebrow="At a glance" title={<>What you'll <em>get</em>.</>}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <Stat label="Strategies compared" value="10" />
+              <Stat label="Risk profiles" value="5" />
+              <Stat label="Monte Carlo paths" value="200" />
+              <Stat label="Tax engine FY" value="24-25" />
+            </div>
+          </Section>
+
+          <Divider />
+
+          {/* ── 02 — The problem ─────────────────────────────── */}
+          <Section num="02" eyebrow="The problem" title={<>The Indian retirement <em>income challenge.</em></>}>
+            <p className="text-sm text-slate-600 mb-3">
+              Standard "park it in FDs" advice loses two-thirds of its real purchasing power over 20 years. The 4% Rule was designed for US 60/40 portfolios. There is no "set and forget" answer for an Indian retiree.
+            </p>
+            <div className="grid sm:grid-cols-3 gap-3">
+              <Bullet icon="↑" title="Inflation" text="General 6.5% · healthcare 10% · education 12%" />
+              <Bullet icon="₹" title="Tax structure" text="Debt MFs at slab; equity LTCG only above ₹1.25L" />
+              <Bullet icon="!" title="Sequence risk" text="A year-5 crash permanently impairs retirement plans" />
+            </div>
+          </Section>
+
+          <Divider />
+
+          {/* ── 03 — The solution ────────────────────────────── */}
+          <Section num="03" eyebrow="The solution" title={<>A <em>four-bucket</em> strategy with guardrails.</>}>
+            <p className="text-sm text-slate-600 mb-4">
+              Split the corpus across four time horizons. B4 grows. B3 produces income. B1 is the cash buffer. B2 is the safety floor — held to maturity, untouched. Refills cascade automatically.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Bucket id="B1" label="Liquidity"   pct={10} color="bg-blue-500"   horizon="0–2 years"  desc="Cash buffer for monthly draws" />
+              <Bucket id="B2" label="Fixed Floor" pct={20} color="bg-teal-500"   horizon="5-yr ladder" desc="SCSS, FDs, RBI bonds — untouched" />
+              <Bucket id="B3" label="Stability"   pct={25} color="bg-violet-500" horizon="5–10 years"  desc="BAF / hybrid SWP source" />
+              <Bucket id="B4" label="Growth"      pct={45} color="bg-orange-500" horizon="10+ years"   desc="Equity engine — refills B3 each year" />
+            </div>
+          </Section>
+
+          <Divider />
+
+          {/* ── 04 — How it works ────────────────────────────── */}
+          <Section num="04" eyebrow="How it works" title={<>Five minutes <em>to your verdict.</em></>}>
+            <p className="text-sm text-slate-600 mb-4">
+              Walk through the dashboard tabs in order — or jump around freely. The Summary page synthesises everything into a single take-home recommendation, exportable as a personalised PDF.
+            </p>
+            <div className="space-y-2">
+              <Step n="1" label="Plan"             desc="Enter corpus, monthly target, demographics" />
+              <Step n="2" label="Profile"          desc="Take the 90-second risk quiz" />
+              <Step n="3" label="Compare"          desc="See 10 strategies scored side-by-side" />
+              <Step n="4" label="Buckets · Simulate" desc="Allocate, run Monte Carlo, verify success rate" />
+              <Step n="5" label="Tax · Summary"    desc="Review tax + download your full plan" />
+            </div>
+          </Section>
+
+          <Divider />
+
+          {/* ── 05 — About you ───────────────────────────────── */}
+          <Section num="05" eyebrow="About you" title={<>A few personal <em>details.</em></>}>
+            <p className="text-sm text-slate-600 mb-4">
+              Used to personalise the dashboard, stamp your downloadable PDF report, and pre-fill demographics. Stored only in your browser — never transmitted off-device.
+            </p>
+            <IdentityForm identity={identity} onChange={setIdentity} />
+          </Section>
+
+          <Divider final />
+
+          {/* ── CTA ──────────────────────────────────────────── */}
+          <div className="text-center pt-2 pb-4">
+            <Button onClick={finalise} disabled={!canProceed} className="!px-8 !py-3.5 !text-base">
+              Start planning →
+            </Button>
+            <p className="text-[11px] text-slate-500 mt-3">
+              Free · No signup · Everything stays in your browser
+            </p>
+            {!canProceed && (
+              <p className="text-[11px] text-amber-700 mt-1">Enter your full name above to continue.</p>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Main panel */}
-      <main className="flex-1 flex items-center justify-center px-6 py-10">
-        <div className="max-w-3xl w-full">
-          <div
-            key={animKey}
-            className={`grid lg:grid-cols-[1.1fr_1fr] gap-8 lg:gap-12 items-center ${direction === 'fwd' ? 'wp-anim-fwd' : 'wp-anim-back'}`}
-          >
-            <div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-light tracking-tight text-slate-900 leading-tight">
-                {cur.heading}
-              </h1>
-              <p className="text-base text-slate-600 mt-5 leading-relaxed max-w-md">
-                {cur.body}
-              </p>
-            </div>
-            <div>
-              {cur.panel}
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {/* Bottom controls */}
-      <footer className="px-6 pb-8">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={step === 0}
-            className="text-sm text-slate-600 hover:text-slate-900 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors px-2 py-2"
-          >
-            ← Back
-          </button>
-
-          <div className="text-[11px] text-slate-500 tabular-nums">
-            {step + 1} of {steps.length}
-          </div>
-
-          <Button onClick={handleNext} disabled={!canProceed} className="!px-6 !py-2.5">
-            {isLast ? 'Start planning →' : 'Next →'}
-          </Button>
-        </div>
-      </footer>
-
-      {/* Inline keyframes for slide-fade transitions */}
-      <style>{`
-        @keyframes wpFwd {
-          from { opacity: 0; transform: translateX(24px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes wpBack {
-          from { opacity: 0; transform: translateX(-24px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        .wp-anim-fwd  { animation: wpFwd 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-        .wp-anim-back { animation: wpBack 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
-      `}</style>
     </div>
   )
 }
 
-// ── Sub-panels ────────────────────────────────────────────────────────
+// ── Section primitives ────────────────────────────────────────────────
 
-function HeroPanel() {
+function Section({ num, eyebrow, title, children }: { num: string; eyebrow: string; title: ReactNode; children: ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-3">
-      <Stat label="Strategies compared" value="10" />
-      <Stat label="Risk profiles" value="5" />
-      <Stat label="Monte Carlo paths" value="200" />
-      <Stat label="Tax engine FY" value="24-25" />
-    </div>
-  )
-}
-
-function BucketPanel() {
-  const buckets = [
-    { id: 'B1', label: 'Liquidity',   pct: 10, color: 'bg-blue-500',   desc: '0–2 yr cash buffer' },
-    { id: 'B2', label: 'Fixed Floor', pct: 20, color: 'bg-teal-500',   desc: '5-yr ladder, untouched' },
-    { id: 'B3', label: 'Stability',   pct: 25, color: 'bg-violet-500', desc: 'BAF / hybrid SWP' },
-    { id: 'B4', label: 'Growth',      pct: 45, color: 'bg-orange-500', desc: 'Equity refill engine' },
-  ]
-  return (
-    <div className="space-y-2">
-      {buckets.map((b) => (
-        <div key={b.id} className="bg-white rounded-lg border border-slate-200 p-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${b.color}`} aria-hidden="true" />
-              <span className="text-sm font-semibold text-slate-900">{b.id} · {b.label}</span>
-            </div>
-            <span className="text-xs font-bold text-slate-700 tabular-nums">{b.pct}%</span>
-          </div>
-          <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden mb-1">
-            <div className={`h-full ${b.color}`} style={{ width: `${b.pct * 2}%` }} />
-          </div>
-          <div className="text-[11px] text-slate-500">{b.desc}</div>
+    <section>
+      <header className="mb-4 sm:mb-5">
+        <div className="flex items-baseline gap-3 mb-2">
+          <span className="text-[11px] font-bold tracking-[3px] uppercase text-amber-700 tabular-nums">{num}</span>
+          <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
+          <span className="text-[11px] font-bold tracking-[3px] uppercase text-amber-700">{eyebrow}</span>
         </div>
-      ))}
-    </div>
+        <h2 className="text-2xl sm:text-3xl font-extralight tracking-tight text-slate-900 leading-[1.15]">
+          {title}
+        </h2>
+      </header>
+      {children}
+    </section>
   )
 }
 
-function Bullet({ icon, text }: { icon: string; text: string }) {
+function Divider({ final }: { final?: boolean } = {}) {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-3.5 flex gap-3">
-      <span className="shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-sm font-bold flex items-center justify-center" aria-hidden="true">
-        {icon}
-      </span>
-      <p className="text-xs text-slate-700 leading-relaxed flex-1">{text}</p>
+    <div className="flex items-center gap-3" aria-hidden="true">
+      <span className="h-px flex-1 bg-slate-200" />
+      <span className={`w-1.5 h-1.5 rounded-full ${final ? 'bg-amber-500' : 'bg-slate-300'}`} />
+      <span className="h-px flex-1 bg-slate-200" />
     </div>
   )
 }
 
-function NumberStep({ n, label, desc }: { n: string; label: string; desc: string }) {
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-3 text-center">
+      <div className="text-2xl sm:text-3xl font-bold text-blue-700 tabular-nums leading-none">{value}</div>
+      <div className="text-[10px] text-slate-500 uppercase tracking-wide mt-1.5 font-semibold">{label}</div>
+    </div>
+  )
+}
+
+function Bullet({ icon, title, text }: { icon: string; title: string; text: string }) {
+  return (
+    <div className="bg-white rounded-lg border border-slate-200 p-3.5">
+      <div className="flex items-start gap-2.5">
+        <span className="shrink-0 w-6 h-6 rounded-full bg-amber-50 text-amber-700 text-xs font-bold flex items-center justify-center" aria-hidden="true">
+          {icon}
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-bold text-slate-900">{title}</div>
+          <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">{text}</p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Bucket({ id, label, pct, color, horizon, desc }: { id: string; label: string; pct: number; color: string; horizon: string; desc: string }) {
+  return (
+    <div className="bg-white rounded-lg border border-slate-200 p-3">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <span className={`w-2 h-2 rounded-full ${color}`} aria-hidden="true" />
+          <span className="text-sm font-bold text-slate-900">{id}</span>
+          <span className="text-xs text-slate-700">{label}</span>
+        </div>
+        <span className="text-xs font-bold text-slate-700 tabular-nums">{pct}%</span>
+      </div>
+      <div className="h-1 bg-slate-100 rounded-full overflow-hidden mb-1.5">
+        <div className={`h-full ${color}`} style={{ width: `${pct * 2}%` }} />
+      </div>
+      <div className="flex items-baseline justify-between text-[11px]">
+        <span className="text-slate-700">{desc}</span>
+        <span className="text-slate-400 tabular-nums shrink-0 ml-2">{horizon}</span>
+      </div>
+    </div>
+  )
+}
+
+function Step({ n, label, desc }: { n: string; label: string; desc: string }) {
   return (
     <div className="flex items-center gap-3 bg-white rounded-lg border border-slate-200 px-3.5 py-2.5">
       <span className="shrink-0 w-7 h-7 rounded-full bg-slate-900 text-white text-xs font-bold flex items-center justify-center">
@@ -295,14 +245,7 @@ function NumberStep({ n, label, desc }: { n: string; label: string; desc: string
   )
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
-      <div className="text-3xl font-bold text-blue-700 tabular-nums">{value}</div>
-      <div className="text-[11px] text-slate-500 uppercase tracking-wide mt-1 font-medium">{label}</div>
-    </div>
-  )
-}
+// ── Identity form (unchanged from before) ─────────────────────────────
 
 interface IdentityFormProps {
   identity: UserIdentity
@@ -317,7 +260,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
   const inputCls = 'w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200 placeholder:text-slate-400'
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4 max-h-[440px] overflow-y-auto space-y-3">
+    <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-5 space-y-3">
       <Field label="Full name" required>
         <input
           type="text"
@@ -328,6 +271,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           autoFocus
         />
       </Field>
+
       <div className="grid grid-cols-2 gap-2">
         <Field label="Date of birth">
           <input
@@ -351,6 +295,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           </select>
         </Field>
       </div>
+
       {identity.maritalStatus === 'married' && (
         <Field label="Spouse name">
           <input
@@ -362,6 +307,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           />
         </Field>
       )}
+
       <div className="grid grid-cols-2 gap-2">
         <Field label="Email">
           <input
@@ -382,6 +328,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           />
         </Field>
       </div>
+
       <Field label="Occupation">
         <input
           type="text"
@@ -391,6 +338,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           className={inputCls}
         />
       </Field>
+
       <Field label="PAN" hint="Optional. Used only on the printed PDF report.">
         <input
           type="text"
@@ -401,7 +349,8 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           className={`${inputCls} uppercase tracking-wider`}
         />
       </Field>
-      <div className="pt-1.5 border-t border-slate-100">
+
+      <div className="pt-2 border-t border-slate-100">
         <div className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1.5">Address</div>
         <div className="space-y-2">
           <input
@@ -444,6 +393,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
           </div>
         </div>
       </div>
+
       <p className="text-[10px] text-slate-500 leading-relaxed">
         All fields except the name are optional. Data is stored only in your browser and never transmitted off your device. You can edit any of these later from the dashboard header.
       </p>
@@ -451,7 +401,7 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
   )
 }
 
-function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: React.ReactNode }) {
+function Field({ label, required, hint, children }: { label: string; required?: boolean; hint?: string; children: ReactNode }) {
   return (
     <label className="block">
       <div className="flex items-baseline justify-between mb-1">

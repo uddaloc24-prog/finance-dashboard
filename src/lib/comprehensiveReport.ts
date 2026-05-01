@@ -102,15 +102,19 @@ export async function exportComprehensiveReport(ctx: ExportContext): Promise<voi
     ? computePostTax(incomeMix, { slab, regime, isSenior, ltcgUsedThisYear: 0 })
     : null
 
+  const toc: TOCEntry[] = []
   const report = {
     ctx,
     total, monthly, annual, wr, isSenior, slab, regime,
     strategies, bestFit, stress, mc, projection25,
-    riskProfile, postTax,
+    riskProfile, postTax, toc,
   }
 
   // ── Render pages ────────────────────────────────────────────────────
+  // Cover (page 1). TOC will be inserted as page 2 after content is rendered.
   renderCoverPage(doc, report)
+
+  // Sections (pages 2..N initially; will become 3..N+1 after TOC inserted)
   doc.addPage(); renderPersonalDetails(doc, report)
   doc.addPage(); renderInputsAndAssumptions(doc, report)
   doc.addPage(); renderRiskProfile(doc, report)
@@ -121,18 +125,127 @@ export async function exportComprehensiveReport(ctx: ExportContext): Promise<voi
   doc.addPage(); renderActions(doc, report)
   doc.addPage(); renderDisclaimers(doc, report)
 
-  // ── Apply running headers/footers on every page (after all content drawn)
+  // Insert TOC at page 2; everything else shifts by +1
+  doc.insertPage(2)
+  doc.setPage(2)
+  // Adjust recorded page numbers (+1 since we inserted a page before them)
+  for (const entry of toc) entry.page = entry.page + 1
+  renderTOC(doc, report)
+
+  // ── Apply running headers / footers / page borders on every page ─────
   const pageCount = doc.getNumberOfPages()
   const userName = ctx.identity?.fullName?.trim() || 'Personal'
   for (let p = 1; p <= pageCount; p++) {
     doc.setPage(p)
-    drawHeader(doc, userName)
+    if (p > 1) {
+      drawPageBorder(doc)
+      drawHeader(doc, userName)
+    }
     drawFooter(doc, p, pageCount)
   }
 
   const slug = fileSlug(ctx.identity)
   const dateStr = new Date().toISOString().slice(0, 10)
   doc.save(`${slug}-retirement-plan-${dateStr}.pdf`)
+}
+
+// ── TOC entry tracking ──────────────────────────────────────────────────
+
+interface TOCEntry {
+  level: 1 | 2          // 1 = main section, 2 = sub-section
+  number: string        // e.g. "1" or "1.2"
+  title: string
+  page: number          // the page on which this entry begins (set when called)
+}
+
+function recordSection(doc: import('jspdf').jsPDF, toc: TOCEntry[], level: 1 | 2, number: string, title: string) {
+  toc.push({ level, number, title, page: doc.getCurrentPageInfo().pageNumber })
+}
+
+function renderTOC(doc: import('jspdf').jsPDF, r: Report) {
+  // Page already added/inserted by caller; just draw onto current page
+  // Title block
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(...GOLD)
+  doc.text('CONTENTS', 20, 30)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(28)
+  doc.setTextColor(...NAVY)
+  doc.text('Table of Contents', 20, 42)
+
+  doc.setDrawColor(...GOLD)
+  doc.setLineWidth(0.6)
+  doc.line(20, 46, 70, 46)
+
+  doc.setDrawColor(...GRAY)
+  doc.setLineWidth(0.15)
+  doc.line(20, 49, 190, 49)
+
+  // Entries
+  let y = 60
+  const lineHeight = 7
+  for (const entry of r.toc) {
+    if (y > 270) break  // single-page TOC; skip overflow safely
+
+    const isMain = entry.level === 1
+    const indent = isMain ? 22 : 32
+    const numCol = isMain ? 22 : 32
+    const titleCol = isMain ? 32 : 40
+
+    // Spacing before main sections
+    if (isMain) {
+      // light divider before each main section (except first)
+      if (entry !== r.toc[0]) {
+        y += 2
+      }
+    }
+
+    if (isMain) {
+      doc.setFont('helvetica', 'bold')
+      doc.setFontSize(11)
+      doc.setTextColor(...NAVY)
+    } else {
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(9.5)
+      doc.setTextColor(...SLATE)
+    }
+
+    // Number
+    doc.text(entry.number, numCol, y)
+    // Title
+    doc.text(entry.title, titleCol, y)
+    // Page (right-aligned)
+    doc.text(String(entry.page), 188, y, { align: 'right' })
+
+    // Dotted leader between title and page
+    const titleWidth = doc.getTextWidth(entry.title)
+    const leaderStart = titleCol + titleWidth + 2
+    const leaderEnd = 184
+    if (leaderEnd > leaderStart) {
+      const dotCount = Math.floor((leaderEnd - leaderStart) / 1.5)
+      doc.setTextColor(...GRAY)
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+      const dots = '. '.repeat(Math.max(0, dotCount))
+      doc.text(dots, leaderStart, y)
+    }
+
+    y += lineHeight + (isMain ? 1 : 0)
+
+    // Use indent var to satisfy TS without changing layout
+    void indent
+  }
+
+  // Footer note
+  doc.setFont('helvetica', 'italic')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...GRAY)
+  doc.text(
+    'Each section number references the navigation structure used throughout this report.',
+    20, 285, { maxWidth: 170 },
+  )
 }
 
 // ── Page renderers ────────────────────────────────────────────────────
@@ -147,6 +260,7 @@ type Report = {
   projection25: ReturnType<typeof simulateRefillLinked>
   riskProfile: ReturnType<typeof profileById> | null
   postTax: ReturnType<typeof computePostTax> | null
+  toc: TOCEntry[]
 }
 
 function renderCoverPage(doc: import('jspdf').jsPDF, r: Report) {
@@ -224,18 +338,23 @@ function renderCoverPage(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderPersonalDetails(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '1. Personal details')
-  let y = 40
+  recordSection(doc, r.toc, 1, '1', 'Personal Details')
+  pageTitle(doc, '1', 'Personal Details')
+  let y = 42
   const id = r.ctx.identity
   if (!id) {
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(...GRAY)
-    doc.text('No personal details captured.', 20, y)
+    doc.text('No personal details captured.', 22, y)
     return
   }
   const dem = r.ctx.profile.demographics
   const age = ageFromDOB(id.dateOfBirth) ?? dem?.currentAge ?? null
-  const rows: Array<[string, string]> = [
+
+  // 1.1 — Identity
+  recordSection(doc, r.toc, 2, '1.1', 'Identity')
+  y = subTitle(doc, '1.1', 'Identity', y)
+  drawKVBlock(doc, 22, y, [
     ['Full name',        id.fullName || '—'],
     ['Email',            id.email || '—'],
     ['Phone',            id.phone || '—'],
@@ -245,36 +364,27 @@ function renderPersonalDetails(doc: import('jspdf').jsPDF, r: Report) {
     ['Spouse name',      id.spouseName || '—'],
     ['Occupation',       id.occupation || '—'],
     ['PAN',              id.panCard || '—'],
-  ]
-  drawKVBlock(doc, 20, y, rows)
-  y += rows.length * 9 + 8
+  ])
+  y += 9 * 9 + 6
 
+  // 1.2 — Address
   if (id.address && (id.address.line1 || id.address.city)) {
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(11)
-    doc.setTextColor(...NAVY)
-    doc.text('Address', 20, y)
-    y += 6
+    recordSection(doc, r.toc, 2, '1.2', 'Address')
+    y = subTitle(doc, '1.2', 'Address', y)
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(10)
     doc.setTextColor(...SLATE)
-    if (id.address.line1) { doc.text(id.address.line1, 20, y); y += 5 }
-    if (id.address.line2) { doc.text(id.address.line2, 20, y); y += 5 }
+    if (id.address.line1) { doc.text(id.address.line1, 22, y); y += 5 }
+    if (id.address.line2) { doc.text(id.address.line2, 22, y); y += 5 }
     const cityLine = [id.address.city, id.address.state, id.address.pincode].filter(Boolean).join(', ')
-    if (cityLine) { doc.text(cityLine, 20, y); y += 5 }
+    if (cityLine) { doc.text(cityLine, 22, y); y += 5 }
+    y += 6
   }
 
-  // Demographics from profile
-  y += 10
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Demographics for planning', 20, y)
-  y += 6
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(10)
-  doc.setTextColor(...SLATE)
-  drawKVBlock(doc, 20, y, [
+  // 1.3 — Demographics for planning
+  recordSection(doc, r.toc, 2, '1.3', 'Demographics for Planning')
+  y = subTitle(doc, '1.3', 'Demographics for Planning', y)
+  drawKVBlock(doc, 22, y, [
     ['Current age',          dem?.currentAge != null ? `${dem.currentAge}` : '—'],
     ['Retirement age',       dem?.retirementAge != null ? `${dem.retirementAge}` : '—'],
     ['Life expectancy',      dem?.lifeExpectancy != null ? `${dem.lifeExpectancy}` : '—'],
@@ -285,40 +395,42 @@ function renderPersonalDetails(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderInputsAndAssumptions(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '2. Inputs and assumptions')
-  let y = 40
+  recordSection(doc, r.toc, 1, '2', 'Inputs and Assumptions')
+  pageTitle(doc, '2', 'Inputs and Assumptions')
+  let y = 42
   const p = r.ctx.profile
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Corpus and withdrawal', 20, y)
-  y += 6
-  drawKVBlock(doc, 20, y, [
+  // 2.1 — Corpus and withdrawal
+  recordSection(doc, r.toc, 2, '2.1', 'Corpus and Withdrawal')
+  y = subTitle(doc, '2.1', 'Corpus and Withdrawal', y)
+  drawKVBlock(doc, 22, y, [
     ['Total corpus',          fmtINR(p.corpus)],
     ['Monthly draw target',   fmtINR(p.monthlyWithdrawal)],
     ['Annualised draw',       fmtINR(p.monthlyWithdrawal * 12)],
     ['Inflation rate (gen.)', `${p.inflationRate}% per year`],
     ['Tax slab',              `${p.taxBracket}% (${r.regime} regime)`],
   ])
-  y += 5 * 9 + 8
+  y += 5 * 9 + 6
 
-  // Withdrawal schedule (if user used the multi-frequency editor)
+  // 2.2 — Withdrawal schedule
   if (p.withdrawalSchedule && hasAny(p.withdrawalSchedule)) {
-    y = renderSchedule(doc, y, 'Withdrawal schedule', p.withdrawalSchedule)
-  }
-  if (p.sipSchedule && hasAny(p.sipSchedule)) {
-    y = renderSchedule(doc, y, 'SIP / passive income', p.sipSchedule)
+    recordSection(doc, r.toc, 2, '2.2', 'Withdrawal Schedule')
+    y = subTitle(doc, '2.2', 'Withdrawal Schedule', y)
+    y = renderScheduleBody(doc, y, p.withdrawalSchedule)
   }
 
-  // Bucket allocation
-  if (y > 230) { doc.addPage(); y = 40 }
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Bucket allocation', 20, y)
-  y += 6
-  drawKVBlock(doc, 20, y, [
+  // 2.3 — SIP / passive income
+  if (p.sipSchedule && hasAny(p.sipSchedule)) {
+    recordSection(doc, r.toc, 2, '2.3', 'SIP / Passive Income')
+    y = subTitle(doc, '2.3', 'SIP / Passive Income', y)
+    y = renderScheduleBody(doc, y, p.sipSchedule)
+  }
+
+  // 2.4 — Bucket allocation
+  if (y > 220) { doc.addPage(); drawPageBorder(doc); y = 42 }
+  recordSection(doc, r.toc, 2, '2.4', 'Bucket Allocation')
+  y = subTitle(doc, '2.4', 'Bucket Allocation', y)
+  drawKVBlock(doc, 22, y, [
     [`B1 — Liquidity (${pctOf(r.ctx.buckets.b1, r.total)}%)`,    fmtINR(r.ctx.buckets.b1)],
     [`B2 — Fixed Floor (${pctOf(r.ctx.buckets.b2, r.total)}%)`,  fmtINR(r.ctx.buckets.b2)],
     [`B3 — Stability (${pctOf(r.ctx.buckets.b3, r.total)}%)`,    fmtINR(r.ctx.buckets.b3)],
@@ -326,13 +438,10 @@ function renderInputsAndAssumptions(doc: import('jspdf').jsPDF, r: Report) {
   ])
   y += 4 * 9 + 6
 
-  // Return assumptions
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Expected returns (nominal CAGR)', 20, y)
-  y += 6
-  drawKVBlock(doc, 20, y, [
+  // 2.5 — Expected returns
+  recordSection(doc, r.toc, 2, '2.5', 'Expected Returns (Nominal CAGR)')
+  y = subTitle(doc, '2.5', 'Expected Returns (Nominal CAGR)', y)
+  drawKVBlock(doc, 22, y, [
     ['B1 liquid',     `${r.ctx.returnAssumptions.b1}%`],
     ['B2 fixed',      `${r.ctx.returnAssumptions.b2}%`],
     ['B3 hybrid',     `${r.ctx.returnAssumptions.b3}%`],
@@ -340,14 +449,9 @@ function renderInputsAndAssumptions(doc: import('jspdf').jsPDF, r: Report) {
   ])
 }
 
-function renderSchedule(doc: import('jspdf').jsPDF, y: number, label: string, s: FrequencySchedule): number {
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text(label, 20, y)
-  y += 6
+function renderScheduleBody(doc: import('jspdf').jsPDF, y: number, s: FrequencySchedule): number {
   const monthlyEq = s.monthly + s.quarterly / 3 + s.halfYearly / 6 + s.yearly / 12
-  drawKVBlock(doc, 20, y, [
+  drawKVBlock(doc, 22, y, [
     ['Monthly slot',     fmtINR(s.monthly)],
     ['Quarterly slot',   fmtINR(s.quarterly)],
     ['Half-yearly slot', fmtINR(s.halfYearly)],
@@ -358,37 +462,41 @@ function renderSchedule(doc: import('jspdf').jsPDF, y: number, label: string, s:
 }
 
 function renderRiskProfile(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '3. Risk profile and instrument mix')
-  let y = 40
+  recordSection(doc, r.toc, 1, '3', 'Risk Profile and Instrument Mix')
+  pageTitle(doc, '3', 'Risk Profile and Instrument Mix')
+  let y = 42
 
   if (!r.riskProfile) {
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(...GRAY)
-    doc.text('No risk profile selected. Take the quiz on the Profile tab for instrument-level recommendations.', 20, y, { maxWidth: 170 })
+    doc.text('No risk profile selected. Take the quiz on the Profile tab for instrument-level recommendations.', 22, y, { maxWidth: 168 })
     return
   }
 
+  // 3.1 — Profile description
+  recordSection(doc, r.toc, 2, '3.1', 'Profile Description')
+  y = subTitle(doc, '3.1', 'Profile Description', y)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(13)
+  doc.setFontSize(12)
   doc.setTextColor(...NAVY)
-  doc.text(r.riskProfile.name, 20, y)
+  doc.text(r.riskProfile.name, 22, y)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...SLATE)
-  doc.text(r.riskProfile.tagline, 20, y + 6)
-
-  y += 14
-  const wrap = doc.splitTextToSize(r.riskProfile.description, 170)
-  doc.text(wrap, 20, y)
+  doc.text(r.riskProfile.tagline, 22, y + 5)
+  y += 12
+  const wrap = doc.splitTextToSize(r.riskProfile.description, 168)
+  doc.text(wrap, 22, y)
   y += wrap.length * 5 + 4
-
   doc.setFont('helvetica', 'italic')
   doc.setFontSize(9.5)
   doc.setTextColor(...GRAY)
-  doc.text(`Best for: ${r.riskProfile.bestFor}`, 20, y, { maxWidth: 170 })
+  doc.text(`Best for: ${r.riskProfile.bestFor}`, 22, y, { maxWidth: 168 })
   y += 10
 
-  // Instruments table
+  // 3.2 — Recommended instruments
+  recordSection(doc, r.toc, 2, '3.2', 'Recommended Instruments')
+  y = subTitle(doc, '3.2', 'Recommended Instruments', y)
   const scale = r.ctx.profile.corpus / 1_00_00_000
   const headers = ['Bucket', 'Instrument', '₹ allocated', 'Income/mo']
   const rows = r.riskProfile.instruments.map((inst) => [
@@ -397,12 +505,13 @@ function renderRiskProfile(doc: import('jspdf').jsPDF, r: Report) {
     fmtINR(inst.allocationOn1CrCorpus * scale),
     inst.monthlyIncomeOn1Cr ? fmtINR(inst.monthlyIncomeOn1Cr * scale) : '—',
   ])
-  drawTable(doc, 20, y, [38, 80, 32, 30], headers, rows)
+  drawTable(doc, 22, y, [38, 80, 32, 30], headers, rows)
 }
 
 function renderStrategyComparison(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '4. Strategy comparison')
-  let y = 40
+  recordSection(doc, r.toc, 1, '4', 'Strategy Comparison')
+  pageTitle(doc, '4', 'Strategy Comparison')
+  let y = 42
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
@@ -426,8 +535,10 @@ function renderStrategyComparison(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderMonteCarlo(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '5. Monte Carlo simulation')
-  let y = 40
+  recordSection(doc, r.toc, 1, '5', 'Monte Carlo Simulation')
+  pageTitle(doc, '5', 'Monte Carlo Simulation')
+  let y = 42
+  recordSection(doc, r.toc, 2, '5.1', 'Headline Results')
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
@@ -447,12 +558,9 @@ function renderMonteCarlo(doc: import('jspdf').jsPDF, r: Report) {
   ])
   y += 5 * 9 + 8
 
-  // Year-by-year percentile bands (every 5 years)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Percentile bands at key years', 20, y)
-  y += 6
+  // 5.2 Percentile bands
+  recordSection(doc, r.toc, 2, '5.2', 'Percentile Bands at Key Years')
+  y = subTitle(doc, '5.2', 'Percentile Bands at Key Years', y)
   const headers = ['Year', 'p10', 'p25', 'Median', 'p75', 'p90']
   const milestones = [1, 5, 10, 15, 20, 25].map((yr) => r.mc.yearlyPercentiles[yr] as PercentileBand | undefined).filter(Boolean) as PercentileBand[]
   const rows = milestones.map((p) => [
@@ -462,12 +570,9 @@ function renderMonteCarlo(doc: import('jspdf').jsPDF, r: Report) {
   drawTable(doc, 15, y, [22, 32, 32, 32, 32, 32], headers, rows)
   y += rows.length * 8 + 12
 
-  // Stress test
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Stress test', 20, y)
-  y += 6
+  // 5.3 Stress test
+  recordSection(doc, r.toc, 2, '5.3', 'Stress Test')
+  y = subTitle(doc, '5.3', 'Stress Test', y)
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
   doc.setTextColor(...SLATE)
@@ -478,8 +583,10 @@ function renderMonteCarlo(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderTaxAnalysis(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '6. Tax analysis (FY 2024-25)')
-  let y = 40
+  recordSection(doc, r.toc, 1, '6', 'Tax Analysis (FY 2024-25)')
+  pageTitle(doc, '6', 'Tax Analysis (FY 2024-25)')
+  let y = 42
+  recordSection(doc, r.toc, 2, '6.1', 'Headline Tax Figures')
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
@@ -502,11 +609,8 @@ function renderTaxAnalysis(doc: import('jspdf').jsPDF, r: Report) {
   ])
   y += 4 * 9 + 8
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(...NAVY)
-  doc.text('Per-tax-class breakdown (annual)', 20, y)
-  y += 6
+  recordSection(doc, r.toc, 2, '6.2', 'Per-Tax-Class Breakdown (Annual)')
+  y = subTitle(doc, '6.2', 'Per-Tax-Class Breakdown (Annual)', y)
   const headers = ['Class', 'Gross', 'Tax', 'Net']
   const rows = r.postTax.breakdown.map((b) => [
     classLabel(b.taxClass),
@@ -518,8 +622,9 @@ function renderTaxAnalysis(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderProjectionTable(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '7. 25-year projection — 4-Bucket')
-  let y = 40
+  recordSection(doc, r.toc, 1, '7', '25-Year Projection (4-Bucket)')
+  pageTitle(doc, '7', '25-Year Projection (4-Bucket)')
+  let y = 42
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(10)
@@ -541,8 +646,9 @@ function renderProjectionTable(doc: import('jspdf').jsPDF, r: Report) {
 }
 
 function renderActions(doc: import('jspdf').jsPDF, r: Report) {
-  pageTitle(doc, '8. Recommended next actions')
-  let y = 40
+  recordSection(doc, r.toc, 1, '8', 'Recommended Next Actions')
+  pageTitle(doc, '8', 'Recommended Next Actions')
+  let y = 42
   const actions = synthesiseActions(r)
 
   doc.setFont('helvetica', 'normal')
@@ -572,9 +678,10 @@ function renderActions(doc: import('jspdf').jsPDF, r: Report) {
   }
 }
 
-function renderDisclaimers(doc: import('jspdf').jsPDF, _r: Report) {
-  pageTitle(doc, '9. Methodology and disclaimers')
-  let y = 40
+function renderDisclaimers(doc: import('jspdf').jsPDF, r: Report) {
+  recordSection(doc, r.toc, 1, '9', 'Methodology and Disclaimers')
+  pageTitle(doc, '9', 'Methodology and Disclaimers')
+  let y = 42
 
   const sections: Array<[string, string]> = [
     ['Methodology', 'The four-bucket refill-linked strategy implements the academic Indian retirement income framework. Withdrawals draw from B1 cash first, then B3 stability, then B4 growth (skipped in losing years). B2 is a 5-year fixed-deposit ladder, held to maturity and renewed, never drawn or refilled. Refills cascade B4 → B3 (interest-harvest above 12% return or B3 cover < 6 yrs) and B3 → B1 (top up to a 2-year buffer). Guardrails freeze inflation when corpus drops below 85% of starting and cut withdrawals 10% below 70%.'],
@@ -623,14 +730,50 @@ function drawFooter(doc: import('jspdf').jsPDF, page: number, total: number) {
   doc.text('Generated by Indian Retirement Planner v2.0', 20, 290)
 }
 
-function pageTitle(doc: import('jspdf').jsPDF, title: string) {
+function pageTitle(doc: import('jspdf').jsPDF, num: string, title: string) {
+  // Section number — large and ghost-light
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(36)
+  doc.setTextColor(230, 232, 236)
+  doc.text(num, 20, 32)
+  // Title — bold navy
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
+  doc.setFontSize(17)
   doc.setTextColor(...NAVY)
-  doc.text(title, 20, 28)
+  doc.text(title, 36, 30)
+  // Gold accent rule
   doc.setDrawColor(...GOLD)
-  doc.setLineWidth(0.6)
-  doc.line(20, 32, 60, 32)
+  doc.setLineWidth(0.7)
+  doc.line(36, 33, 80, 33)
+  // Subtle hairline below
+  doc.setDrawColor(...GRAY)
+  doc.setLineWidth(0.15)
+  doc.line(20, 36, 190, 36)
+}
+
+function subTitle(doc: import('jspdf').jsPDF, num: string, title: string, y: number): number {
+  // Number in gold
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8.5)
+  doc.setTextColor(...GOLD)
+  doc.text(num, 22, y)
+  // Title in navy
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(11)
+  doc.setTextColor(...NAVY)
+  doc.text(title, 32, y)
+  return y + 7
+}
+
+function drawPageBorder(doc: import('jspdf').jsPDF) {
+  // Outer border
+  doc.setDrawColor(...NAVY)
+  doc.setLineWidth(0.4)
+  doc.rect(15, 15, 180, 267)
+  // Inner accent border (gold thin line)
+  doc.setDrawColor(...GOLD)
+  doc.setLineWidth(0.15)
+  doc.rect(17, 17, 176, 263)
 }
 
 function drawKVBlock(doc: import('jspdf').jsPDF, x: number, y: number, rows: Array<[string, string]>) {

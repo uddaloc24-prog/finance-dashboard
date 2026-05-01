@@ -6,6 +6,7 @@ interface Props {
 }
 
 const TAB_DESCRIPTIONS: Record<TabId, string> = {
+  overview: 'All five planning steps on a single elegant scrollable page',
   plan: 'Enter your corpus, demographics, and expense profile',
   profiles: 'Take the risk quiz, see all 5 profiles side by side',
   strategies: 'Compare 10 retirement strategies against your corpus',
