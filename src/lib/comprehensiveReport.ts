@@ -207,10 +207,10 @@ function renderTOC(doc: import('jspdf').jsPDF, r: Report) {
   doc.setTextColor(...GOLD)
   doc.text('CONTENTS', 20, 30)
 
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(28)
+  doc.setFont('times', 'normal')
+  doc.setFontSize(32)
   doc.setTextColor(...NAVY)
-  doc.text('Table of Contents', 20, 42)
+  doc.text('Table of Contents', 20, 44)
 
   doc.setDrawColor(...GOLD)
   doc.setLineWidth(0.6)
@@ -309,13 +309,16 @@ function renderCoverPage(doc: import('jspdf').jsPDF, r: Report) {
 
   doc.setTextColor(255, 255, 255)
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(11)
+  doc.setFontSize(10)
+  // Wider letter-spacing through manual character placement isn't practical;
+  // use uppercase + smaller size as the "tracked" eyebrow surrogate
   doc.text('INDIAN RETIREMENT PLAN', 20, 22)
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(28)
+  // Display name in TIMES serif for editorial / consulting-firm gravitas
+  doc.setFont('times', 'normal')
+  doc.setFontSize(34)
   const name = r.ctx.identity?.fullName?.trim() || 'Personalised Plan'
-  doc.text(name, 20, 38)
+  doc.text(name, 20, 40)
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(11)
@@ -767,24 +770,24 @@ function drawFooter(doc: import('jspdf').jsPDF, page: number, total: number) {
 }
 
 function pageTitle(doc: import('jspdf').jsPDF, num: string, title: string) {
-  // Section number — large and ghost-light
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(36)
-  doc.setTextColor(230, 232, 236)
-  doc.text(num, 20, 32)
-  // Title — bold navy
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(17)
+  // Section number — large TIMES serif, ghost-light (editorial watermark)
+  doc.setFont('times', 'normal')
+  doc.setFontSize(40)
+  doc.setTextColor(225, 229, 235)
+  doc.text(num, 22, 33)
+  // Title — TIMES serif, deep navy
+  doc.setFont('times', 'bold')
+  doc.setFontSize(20)
   doc.setTextColor(...NAVY)
-  doc.text(title, 36, 30)
+  doc.text(title, 38, 30)
   // Gold accent rule
   doc.setDrawColor(...GOLD)
   doc.setLineWidth(0.7)
-  doc.line(36, 33, 80, 33)
+  doc.line(38, 33, 90, 33)
   // Subtle hairline below
   doc.setDrawColor(...GRAY)
   doc.setLineWidth(0.15)
-  doc.line(20, 36, 190, 36)
+  doc.line(22, 38, 188, 38)
 }
 
 function subTitle(doc: import('jspdf').jsPDF, num: string, title: string, y: number): number {

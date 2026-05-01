@@ -132,8 +132,7 @@ export const TAB_ITEMS = [
   { id: 'explorer', label: 'Explorer', icon: '🔍' },
   { id: 'simulate', label: 'Simulate', icon: '📊' },
   { id: 'tax', label: 'Tax', icon: '🧾' },
-  { id: 'overview', label: 'Overview', icon: '◆' },
-  { id: 'summary', label: 'Summary', icon: '✓' },
+  { id: 'insights', label: 'Insights', icon: '◆' },
   { id: 'ai', label: 'AI', icon: '🤖' },
 ] as const
 

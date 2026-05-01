@@ -41,7 +41,7 @@ export async function exportPptx(ctx: ExportContext): Promise<void> {
     x: 0.6, y: 0.6, w: 12, h: 0.4, fontSize: 14, color: GOLD, bold: true, fontFace: 'Calibri',
   })
   cover.addText(userName, {
-    x: 0.6, y: 1.4, w: 12, h: 1.2, fontSize: 56, color: 'FFFFFF', bold: true, fontFace: 'Calibri Light',
+    x: 0.6, y: 1.4, w: 12, h: 1.2, fontSize: 60, color: 'FFFFFF', bold: false, fontFace: 'Cambria',
   })
   cover.addText(`Generated ${today}  ·  Version 2.0`, {
     x: 0.6, y: 2.7, w: 12, h: 0.4, fontSize: 16, color: 'CBD5E1', fontFace: 'Calibri',
@@ -176,7 +176,7 @@ export async function exportPptx(ctx: ExportContext): Promise<void> {
   const close = pptx.addSlide()
   close.background = { color: NAVY }
   close.addText('Thank you.', {
-    x: 0.6, y: 2.5, w: 12, h: 1.2, fontSize: 60, bold: true, color: 'FFFFFF', fontFace: 'Calibri Light',
+    x: 0.6, y: 2.5, w: 12, h: 1.2, fontSize: 64, bold: false, italic: true, color: 'FFFFFF', fontFace: 'Cambria',
   })
   close.addText(`Validate any major action with a SEBI-registered advisor or CA.\nGenerated ${today} · Indian Retirement Planner v2.0`, {
     x: 0.6, y: 4, w: 12, h: 1, fontSize: 14, color: 'CBD5E1', fontFace: 'Calibri', italic: true,

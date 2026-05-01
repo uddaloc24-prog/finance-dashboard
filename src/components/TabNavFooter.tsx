@@ -6,7 +6,6 @@ interface Props {
 }
 
 const TAB_DESCRIPTIONS: Record<TabId, string> = {
-  overview: 'All five planning steps on a single elegant scrollable page',
   plan: 'Enter your corpus, demographics, and expense profile',
   profiles: 'Take the risk quiz, see all 5 profiles side by side',
   strategies: 'Compare 10 retirement strategies against your corpus',
@@ -14,8 +13,8 @@ const TAB_DESCRIPTIONS: Record<TabId, string> = {
   explorer: 'Browse asset classes per bucket — pick a class then a specific fund/instrument',
   simulate: 'Stress-test the plan with Monte Carlo and year-by-year sims',
   tax: 'Indian tax breakdown, LTCG optimizer, and reshuffle advice',
+  insights: 'The full editorial report — verdict, all sections, take-home, and download',
   ai: 'AI-powered fund picks based on your profile and live market data',
-  summary: 'Final verdict, take-home, and recommended next actions',
 }
 
 export function TabNavFooter({ activeTab, onChange }: Props) {

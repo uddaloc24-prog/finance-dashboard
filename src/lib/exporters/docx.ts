@@ -23,21 +23,22 @@ export async function exportDocx(ctx: ExportContext): Promise<void> {
       children: [new TextRun({ text, bold: opts.bold, size: opts.size ?? 22, color: opts.color ?? SLATE })],
     })
 
+  // Cambria (serif) for major headings — McKinsey / Big-Four editorial feel
   const heading1 = (num: string, title: string) => new Paragraph({
     heading: HeadingLevel.HEADING_1,
-    spacing: { before: 240, after: 120 },
+    spacing: { before: 280, after: 140 },
     children: [
-      new TextRun({ text: `${num}.  `, bold: true, color: GOLD, size: 32 }),
-      new TextRun({ text: title, bold: true, color: NAVY, size: 32 }),
+      new TextRun({ text: `${num}.  `, bold: false, color: GOLD, size: 36, font: 'Cambria' }),
+      new TextRun({ text: title, bold: false, color: NAVY, size: 36, font: 'Cambria' }),
     ],
   })
 
   const heading2 = (num: string, title: string) => new Paragraph({
     heading: HeadingLevel.HEADING_2,
-    spacing: { before: 180, after: 80 },
+    spacing: { before: 200, after: 90 },
     children: [
-      new TextRun({ text: `${num}  `, bold: true, color: GOLD, size: 24 }),
-      new TextRun({ text: title, bold: true, color: NAVY, size: 24 }),
+      new TextRun({ text: `${num}  `, bold: true, color: GOLD, size: 24, font: 'Cambria' }),
+      new TextRun({ text: title, bold: true, color: NAVY, size: 24, font: 'Cambria' }),
     ],
   })
 
@@ -64,8 +65,11 @@ export async function exportDocx(ctx: ExportContext): Promise<void> {
 
   // ── Cover block ─────────────────────────────────────────────
   children.push(
-    para('INDIAN RETIREMENT PLAN', { bold: true, size: 18, color: GOLD, align: 'center', spacing: 60 }),
-    para(userName, { bold: true, size: 56, color: NAVY, align: 'center', spacing: 60 }),
+    para('INDIAN RETIREMENT PLAN', { bold: true, size: 20, color: GOLD, align: 'center', spacing: 120 }),
+    new Paragraph({
+      alignment: AlignmentType.CENTER, spacing: { after: 120 },
+      children: [new TextRun({ text: userName, bold: false, size: 64, color: NAVY, font: 'Cambria' })],
+    }),
     para(`Generated ${today}  ·  Version 2.0`, { size: 18, color: SLATE, align: 'center', spacing: 360 }),
   )
 

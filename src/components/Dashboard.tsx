@@ -25,9 +25,8 @@ const StrategiesPanel = lazy(() => import('./strategies/StrategiesPanel').then(m
 const ProfilesPanel = lazy(() => import('./profiles/ProfilesPanel').then(m => ({ default: m.ProfilesPanel })))
 const MonteCarloPanel = lazy(() => import('./montecarlo/MonteCarloPanel').then(m => ({ default: m.MonteCarloPanel })))
 const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.TaxPanel })))
-const SummaryPanel = lazy(() => import('./summary/SummaryPanel').then(m => ({ default: m.SummaryPanel })))
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
-const OverviewPage = lazy(() => import('./OverviewPage').then(m => ({ default: m.OverviewPage })))
+const InsightsPage = lazy(() => import('./InsightsPage').then(m => ({ default: m.InsightsPage })))
 
 function TabLoading() {
   return (
@@ -96,10 +95,10 @@ export function Dashboard({
             <StepLabel activeTab={activeTab} />
           </div>
           <div className="flex items-center gap-1">
-            {activeTab !== 'summary' && (
-              <Button variant="ghost" size="sm" onClick={() => setActiveTab('summary')}>
-                <span className="hidden sm:inline">Skip to summary</span>
-                <span className="sm:hidden">Summary</span>
+            {activeTab !== 'insights' && (
+              <Button variant="ghost" size="sm" onClick={() => setActiveTab('insights')}>
+                <span className="hidden sm:inline">Skip to insights</span>
+                <span className="sm:hidden">Insights</span>
                 <span className="ml-1" aria-hidden="true">→</span>
               </Button>
             )}
@@ -136,10 +135,10 @@ export function Dashboard({
         )}
 
         {/* Tab Content — only render the active tab */}
-        {activeTab === 'overview' && (
-          <div role="tabpanel" id="tabpanel-overview" aria-labelledby="tab-overview" className="space-y-3">
+        {activeTab === 'insights' && (
+          <div role="tabpanel" id="tabpanel-insights" aria-labelledby="tab-insights" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
-              <OverviewPage
+              <InsightsPage
                 profile={profile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
@@ -277,19 +276,6 @@ export function Dashboard({
                 buckets={buckets}
                 marketData={marketData}
                 onReturnsUpdate={onReturnsUpdate}
-              />
-            </Suspense>
-          </div>
-        )}
-
-        {activeTab === 'summary' && (
-          <div role="tabpanel" id="tabpanel-summary" aria-labelledby="tab-summary" className="space-y-3">
-            <Suspense fallback={<TabLoading />}>
-              <SummaryPanel
-                profile={profile}
-                buckets={buckets}
-                returnAssumptions={returnAssumptions}
-                onChangeTab={(t) => setActiveTab(t as TabId)}
               />
             </Suspense>
           </div>
