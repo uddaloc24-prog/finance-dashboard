@@ -64,9 +64,10 @@ function NumField({ label, value, min, max, suffix = 'yrs', onChange }: NumField
 interface Props {
   profile: UserProfile
   onProfileUpdate: (p: UserProfile) => void
+  chrome?: 'default' | 'bare'
 }
 
-export function DemographicsForm({ profile, onProfileUpdate }: Props) {
+export function DemographicsForm({ profile, onProfileUpdate, chrome = 'default' }: Props) {
   const demo = profile.demographics ?? DEFAULT_DEMOGRAPHICS
   const isRetired = demo.currentAge >= demo.retirementAge
   const yearsToRetirement = Math.max(0, demo.retirementAge - demo.currentAge)
@@ -80,9 +81,9 @@ export function DemographicsForm({ profile, onProfileUpdate }: Props) {
     onProfileUpdate(updated)
   }
 
-  return (
-    <Card className="p-0">
-      <div className="p-4 sm:p-5">
+  const body = (
+    <>
+      {chrome !== 'bare' && (
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-800">Demographics & Longevity</h2>
           <div className="flex items-center gap-2">
@@ -96,8 +97,9 @@ export function DemographicsForm({ profile, onProfileUpdate }: Props) {
             <span className="text-xs text-gray-400">{retirementHorizon}yr horizon</span>
           </div>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <NumField
             label="Current Age"
             value={demo.currentAge}
@@ -165,7 +167,14 @@ export function DemographicsForm({ profile, onProfileUpdate }: Props) {
             />
           </div>
         </details>
-      </div>
+    </>
+  )
+
+  if (chrome === 'bare') return <>{body}</>
+
+  return (
+    <Card className="p-0">
+      <div className="p-4 sm:p-5">{body}</div>
     </Card>
   )
 }

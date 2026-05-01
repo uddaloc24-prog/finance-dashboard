@@ -114,9 +114,12 @@ interface Props {
   buckets: BucketState
   onProfileUpdate: (p: UserProfile) => void
   onBucketsUpdate: (b: BucketState) => void
+  // 'bare' renders just the form fields with no outer Card / collapsible chrome —
+  // used when an external wrapper (e.g. PlanSection) provides those.
+  chrome?: 'default' | 'bare'
 }
 
-export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUpdate }: Props) {
+export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUpdate, chrome = 'default' }: Props) {
   const [open, setOpen] = useState(false)
 
   // Local state for editable fields
@@ -177,32 +180,9 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
 
   const corpus = totalCorpus(buckets)
 
-  return (
-    <Card>
-      {/* Collapsed header — always visible */}
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        aria-controls="profile-settings-panel"
-        className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors rounded-xl"
-      >
-        <div className="flex items-center gap-3">
-          <span className="text-lg" aria-hidden="true">&#9881;</span>
-          <div className="text-left">
-            <h2 className="text-sm font-semibold text-gray-800">Profile & Settings</h2>
-            <p className="text-xs text-gray-400">
-              Corpus {INR(corpus)} · Tax {profile.taxBracket}% · Refresh every {profile.refreshInterval}hr{profile.refreshInterval > 1 ? 's' : ''}
-            </p>
-          </div>
-        </div>
-        <span className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">&#9662;</span>
-      </button>
-
-      {/* Expanded settings */}
-      {open && (
-        <div id="profile-settings-panel" className="px-5 pb-5 space-y-5 border-t border-gray-100 pt-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+  const body = (
+    <div className="space-y-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Corpus */}
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
@@ -312,6 +292,36 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
               </div>
             </div>
           </div>
+    </div>
+  )
+
+  if (chrome === 'bare') return body
+
+  return (
+    <Card>
+      {/* Collapsed header — always visible */}
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-controls="profile-settings-panel"
+        className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition-colors rounded-xl"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-lg" aria-hidden="true">&#9881;</span>
+          <div className="text-left">
+            <h2 className="text-sm font-semibold text-gray-800">Profile & Settings</h2>
+            <p className="text-xs text-gray-400">
+              Corpus {INR(corpus)} · Tax {profile.taxBracket}% · Refresh every {profile.refreshInterval}hr{profile.refreshInterval > 1 ? 's' : ''}
+            </p>
+          </div>
+        </div>
+        <span className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true">&#9662;</span>
+      </button>
+
+      {open && (
+        <div id="profile-settings-panel" className="px-5 pb-5 border-t border-gray-100 pt-4">
+          {body}
         </div>
       )}
     </Card>

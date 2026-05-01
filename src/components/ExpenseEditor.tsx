@@ -53,9 +53,10 @@ function AmountInput({ value, color, onChange }: AmountInputProps) {
 interface Props {
   profile: UserProfile
   onProfileUpdate: (p: UserProfile) => void
+  chrome?: 'default' | 'bare'
 }
 
-export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
+export function ExpenseEditor({ profile, onProfileUpdate, chrome = 'default' }: Props) {
   const expenses = profile.expenses ?? DEFAULT_EXPENSES
   const totalMonthly = expenses.essential + expenses.lifestyle + expenses.healthcare + expenses.education
 
@@ -67,7 +68,6 @@ export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
     onProfileUpdate(updated)
   }
 
-  // Project expense at a future year with dual inflation
   function projectAtYear(years: number): number {
     const essAtYear = expenses.essential * Math.pow(1 + expenses.generalInflation / 100, years)
     const lifAtYear = expenses.lifestyle * Math.pow(1 + expenses.generalInflation / 100, years)
@@ -79,16 +79,17 @@ export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
   const in10 = projectAtYear(10)
   const in20 = projectAtYear(20)
 
-  return (
-    <Card className="p-0">
-      <div className="p-4 sm:p-5">
+  const body = (
+    <>
+      {chrome !== 'bare' && (
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-800">Monthly Expenses</h2>
           <span className="text-sm font-bold text-gray-900">{INR(totalMonthly)}/mo</span>
         </div>
+      )}
 
-        {/* Category cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {/* Category cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {EXPENSE_CATEGORIES.map(cat => (
             <div key={cat.key} className={`${cat.bg} ${cat.border} border rounded-xl p-3`}>
               <div className="flex items-center justify-between mb-1">
@@ -118,22 +119,29 @@ export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
           ))}
         </div>
 
-        {/* Projection preview */}
-        <div className="mt-4 flex gap-3">
-          <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">In 10 Years</p>
-            <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(in10)}/mo</p>
-          </div>
-          <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">In 20 Years</p>
-            <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(in20)}/mo</p>
-          </div>
-          <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
-            <p className="text-[10px] text-gray-400 uppercase tracking-wide">Annual Today</p>
-            <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(totalMonthly * 12)}/yr</p>
-          </div>
+      {/* Projection preview */}
+      <div className="mt-4 flex gap-3">
+        <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">In 10 Years</p>
+          <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(in10)}/mo</p>
+        </div>
+        <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">In 20 Years</p>
+          <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(in20)}/mo</p>
+        </div>
+        <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
+          <p className="text-[10px] text-gray-400 uppercase tracking-wide">Annual Today</p>
+          <p className="text-sm font-bold text-gray-800 mt-0.5">{INR(totalMonthly * 12)}/yr</p>
         </div>
       </div>
+    </>
+  )
+
+  if (chrome === 'bare') return <>{body}</>
+
+  return (
+    <Card className="p-0">
+      <div className="p-4 sm:p-5">{body}</div>
     </Card>
   )
 }

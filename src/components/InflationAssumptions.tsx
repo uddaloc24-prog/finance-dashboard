@@ -9,9 +9,10 @@ import { Card } from './ui/Card'
 interface Props {
   profile: UserProfile
   onProfileUpdate: (p: UserProfile) => void
+  chrome?: 'default' | 'bare'
 }
 
-export function InflationAssumptions({ profile, onProfileUpdate }: Props) {
+export function InflationAssumptions({ profile, onProfileUpdate, chrome = 'default' }: Props) {
   const expenses = profile.expenses ?? DEFAULT_EXPENSES
 
   function update(partial: Partial<ExpenseProfile>) {
@@ -22,18 +23,19 @@ export function InflationAssumptions({ profile, onProfileUpdate }: Props) {
     onProfileUpdate(updated)
   }
 
-  return (
-    <Card className="p-0">
-      <div className="p-4 sm:p-5">
+  const body = (
+    <>
+      {chrome !== 'bare' && (
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-sm font-semibold text-gray-800">Inflation Assumptions</h2>
           <span className="text-[10px] text-gray-400 uppercase tracking-wide">Annual rates</span>
         </div>
-        <p className="text-[11px] text-gray-500 mb-4 leading-snug">
-          Healthcare and education historically inflate faster than the CPI basket — split rates let the projection
-          model purchasing-power decay realistically.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      )}
+      <p className="text-[11px] text-gray-500 mb-4 leading-snug">
+        Healthcare and education historically inflate faster than the CPI basket — split rates let the projection
+        model purchasing-power decay realistically.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <InflationSlider
             label="General"
             helper="Essentials & lifestyle"
@@ -47,15 +49,22 @@ export function InflationAssumptions({ profile, onProfileUpdate }: Props) {
             onChange={(v) => update({ healthcareInflation: v })}
             color="text-red-600"
           />
-          <InflationSlider
-            label="Education"
-            helper="Grandchildren & courses"
-            value={expenses.educationInflation}
-            onChange={(v) => update({ educationInflation: v })}
-            color="text-amber-600"
-          />
-        </div>
+        <InflationSlider
+          label="Education"
+          helper="Grandchildren & courses"
+          value={expenses.educationInflation}
+          onChange={(v) => update({ educationInflation: v })}
+          color="text-amber-600"
+        />
       </div>
+    </>
+  )
+
+  if (chrome === 'bare') return <>{body}</>
+
+  return (
+    <Card className="p-0">
+      <div className="p-4 sm:p-5">{body}</div>
     </Card>
   )
 }

@@ -10,6 +10,7 @@ import { ProfileSettings } from './ProfileSettings'
 import { DemographicsForm } from './DemographicsForm'
 import { ExpenseEditor } from './ExpenseEditor'
 import { InflationAssumptions } from './InflationAssumptions'
+import { PlanSection } from './PlanSection'
 import { TabNav } from './TabNav'
 import { TabNavFooter } from './TabNavFooter'
 import { Button } from './ui/Button'
@@ -172,24 +173,66 @@ export function Dashboard({
 
         {activeTab === 'plan' && (
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
-            <ProfileSettings
-              profile={profile}
-              buckets={buckets}
-              onProfileUpdate={onProfileUpdate}
-              onBucketsUpdate={onBucketsUpdate}
-            />
-            <DemographicsForm
-              profile={profile}
-              onProfileUpdate={onProfileUpdate}
-            />
-            <ExpenseEditor
-              profile={profile}
-              onProfileUpdate={onProfileUpdate}
-            />
-            <InflationAssumptions
-              profile={profile}
-              onProfileUpdate={onProfileUpdate}
-            />
+            <PlanIntro />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
+              <PlanSection
+                num="01"
+                tone="navy"
+                title="Profile & Settings"
+                subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
+                status={<ProfileStatus profile={profile} buckets={buckets} />}
+              >
+                <ProfileSettings
+                  profile={profile}
+                  buckets={buckets}
+                  onProfileUpdate={onProfileUpdate}
+                  onBucketsUpdate={onBucketsUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
+              <PlanSection
+                num="02"
+                tone="amber"
+                title="Demographics & Longevity"
+                subtitle="Current age, retirement age, life expectancy"
+                status={<DemographicsStatus profile={profile} />}
+              >
+                <DemographicsForm
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
+              <PlanSection
+                num="03"
+                tone="green"
+                title="Monthly Expenses"
+                subtitle="Essentials, lifestyle, healthcare, education"
+                status={<ExpensesStatus profile={profile} />}
+              >
+                <ExpenseEditor
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
+              <PlanSection
+                num="04"
+                tone="rose"
+                title="Inflation Assumptions"
+                subtitle="Split rates for general, healthcare, education"
+                status={<InflationStatus profile={profile} />}
+              >
+                <InflationAssumptions
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+            </div>
           </div>
         )}
 
@@ -313,6 +356,81 @@ export function Dashboard({
         {/* Step navigation — Previous / Next between tabs */}
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
+    </div>
+  )
+}
+
+function PlanIntro() {
+  return (
+    <div className="bg-white rounded-lg border-2 border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
+      <div className="flex items-baseline gap-3 mb-1">
+        <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700 tabular-nums">Step 1 · Plan</span>
+        <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
+      </div>
+      <h2 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 leading-tight">
+        Set up <em className="not-italic font-extrabold text-blue-700">your plan</em>.
+      </h2>
+      <p className="text-[11px] sm:text-xs text-slate-600 mt-1.5 leading-snug max-w-2xl">
+        Four numbered subsections. Tap any header to expand or collapse. Inputs save automatically as you type — every chart and recommendation downstream flows from these numbers.
+      </p>
+    </div>
+  )
+}
+
+function ProfileStatus({ profile, buckets }: { profile: UserProfile; buckets: BucketState }) {
+  const c = totalCorpus(buckets)
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Corpus</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{CR(c)}</div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">Tax {profile.taxBracket}%</div>
+    </div>
+  )
+}
+
+function DemographicsStatus({ profile }: { profile: UserProfile }) {
+  const demo = profile.demographics
+  if (!demo) return null
+  const isRetired = demo.currentAge >= demo.retirementAge
+  const yrs = Math.max(0, demo.retirementAge - demo.currentAge)
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">
+        {isRetired ? 'Retired' : 'To retire'}
+      </div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">
+        {isRetired ? `Age ${demo.currentAge}` : `${yrs} yrs`}
+      </div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">
+        Horizon {Math.max(0, demo.lifeExpectancy - demo.currentAge)}y
+      </div>
+    </div>
+  )
+}
+
+function ExpensesStatus({ profile }: { profile: UserProfile }) {
+  const e = profile.expenses
+  if (!e) return null
+  const total = e.essential + e.lifestyle + e.healthcare + e.education
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Per month</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{INR(total)}</div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">{INR(total * 12)}/yr</div>
+    </div>
+  )
+}
+
+function InflationStatus({ profile }: { profile: UserProfile }) {
+  const e = profile.expenses
+  if (!e) return null
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Annual</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">
+        {e.generalInflation}% / {e.healthcareInflation}% / {e.educationInflation}%
+      </div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">Gen · Health · Edu</div>
     </div>
   )
 }
