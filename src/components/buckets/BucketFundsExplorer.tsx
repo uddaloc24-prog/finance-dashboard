@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   ASSET_CLASSES,
   BUCKET_PURPOSES,
@@ -164,10 +164,26 @@ interface ClassDetailProps {
 
 function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: ClassDetailProps) {
   const isDirect = cls.kind === 'direct'
-  const funds = isDirect ? [] : fundsForClass(cls)
+  const fundsRaw = isDirect ? [] : fundsForClass(cls)
   const directInstruments = cls.directInstruments ?? []
-  const [expanded, setExpanded] = useState<string | null>(null)
   const recommendedSet = new Set(isShowingRecommended ? recommendation?.primaryFundCodes ?? [] : [])
+
+  // ── Fund / instrument selector dropdown ──
+  // Sort funds with recommended ones first so the default selection is the top pick
+  const funds = sortByRecommendation(fundsRaw, recommendedSet)
+  const availableOptions: Array<{ key: string; label: string; recommended: boolean }> = isDirect
+    ? directInstruments.map((d) => ({ key: d.name, label: d.name, recommended: false }))
+    : funds.map((f) => ({ key: f.schemeCode, label: f.schemeName, recommended: recommendedSet.has(f.schemeCode) }))
+
+  const [selectedKey, setSelectedKey] = useState<string>(availableOptions[0]?.key ?? '')
+
+  // Reset selection when class changes — auto-pick first (recommended) option
+  useEffect(() => {
+    setSelectedKey(availableOptions[0]?.key ?? '')
+  }, [cls.id])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedFund = !isDirect ? funds.find((f) => f.schemeCode === selectedKey) : undefined
+  const selectedInstrument = isDirect ? directInstruments.find((d) => d.name === selectedKey) : undefined
 
   return (
     <div className="p-4 space-y-3">
@@ -202,147 +218,41 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
         )}
       </div>
 
-      {/* Funds list — MF kind */}
-      {!isDirect && (
+      {/* Fund / instrument dropdown */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <h5 className="text-sm font-semibold text-slate-900">Best funds in this class</h5>
-          <span className="text-[11px] text-slate-500">Click any fund for the full analysis</span>
+          <h5 className="text-sm font-semibold text-slate-900">
+            {isDirect ? 'Pick an instrument' : 'Pick a fund'}
+          </h5>
+          <span className="text-[11px] text-slate-500">{availableOptions.length} option{availableOptions.length !== 1 ? 's' : ''}</span>
         </div>
-        <div className="space-y-2">
-          {funds.length === 0 && (
-            <div className="text-xs text-slate-500 italic py-3">No funds in our curated list for this class.</div>
-          )}
-          {sortByRecommendation(funds, recommendedSet).map((f) => {
-            const isExpanded = expanded === f.schemeCode
-            const note = fundAnalysis(f.schemeCode)
-            const isTopPick = recommendedSet.has(f.schemeCode)
-            return (
-              <div key={f.schemeCode} className={`rounded-lg border ${isTopPick ? `${palette.bg} border-2 ${borderForBucket(palette)}` : isExpanded ? `${palette.bg} border-slate-300` : 'bg-white border-slate-200'} transition-colors`}>
-                <button
-                  type="button"
-                  onClick={() => setExpanded(isExpanded ? null : f.schemeCode)}
-                  className="w-full text-left px-3 py-2.5 flex items-start gap-3"
-                >
-                  <span className={`shrink-0 w-1 h-10 ${palette.bar} rounded-full`} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-slate-900 truncate">{f.schemeName}</span>
-                      {isTopPick && (
-                        <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${palette.bar} text-white`}>
-                          ★ Top pick
-                        </span>
-                      )}
-                      <span className="text-[10px] text-slate-500 tabular-nums">{f.schemeCode}</span>
-                    </div>
-                    <div className="flex gap-3 mt-0.5 text-[11px] text-slate-600 tabular-nums flex-wrap">
-                      <span>AUM <strong>₹{f.aumCrore?.toLocaleString('en-IN')} Cr</strong></span>
-                      <span>Expense <strong>{f.expenseRatio}%</strong></span>
-                      <span>Category <strong>{f.category}</strong></span>
-                    </div>
-                  </div>
-                  <span className={`shrink-0 text-slate-400 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
-                </button>
-
-                {isExpanded && (
-                  <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-200">
-                    {note && (
-                      <div className={`rounded-md ${palette.soft} px-3 py-2`}>
-                        <div className={`text-[10px] uppercase tracking-wide font-semibold ${palette.text} mb-1`}>Why this fund</div>
-                        <p className="text-xs text-slate-800 leading-relaxed">{note}</p>
-                      </div>
-                    )}
-
-                    <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">Tax treatment</div>
-                        <div className="text-slate-700 leading-relaxed">{cls.taxTreatment}</div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">How to invest</div>
-                        <div className="text-slate-700 leading-relaxed">{cls.howToInvest}</div>
-                      </div>
-                    </div>
-
-                    <div className="text-[10px] text-slate-500 italic">
-                      Always verify NAV, AUM, expense ratio, and exit load on the AMC website before transacting. Past performance does not guarantee future returns.
-                    </div>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
+        <select
+          value={selectedKey}
+          onChange={(e) => setSelectedKey(e.target.value)}
+          className={`w-full bg-white border border-slate-300 rounded-md px-2.5 py-2 text-xs sm:text-sm focus:outline-none focus:border-slate-500 focus:ring-1 ${palette.ring}`}
+        >
+          {availableOptions.length === 0 && <option value="">(no options for this class)</option>}
+          {availableOptions.map((o) => (
+            <option key={o.key} value={o.key}>
+              {o.recommended ? '★ ' : ''}{o.label}
+            </option>
+          ))}
+        </select>
       </div>
+
+      {/* Selected fund detail (MF kind) */}
+      {!isDirect && selectedFund && (
+        <FundDetailCard fund={selectedFund} palette={palette} cls={cls} isTopPick={recommendedSet.has(selectedFund.schemeCode)} />
       )}
 
-      {/* Direct instruments — direct kind */}
-      {isDirect && (
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <h5 className="text-sm font-semibold text-slate-900">Available instruments (direct)</h5>
-            <span className="text-[11px] text-slate-500">Not mutual funds — buy direct or via your bank/broker</span>
-          </div>
-          <div className="space-y-2">
-            {directInstruments.length === 0 && (
-              <div className="text-xs text-slate-500 italic py-3">No direct instruments configured for this class yet.</div>
-            )}
-            {directInstruments.map((inst) => {
-              const isExpanded = expanded === inst.name
-              return (
-                <div key={inst.name} className={`rounded-lg border ${isExpanded ? `${palette.bg} border-slate-300` : 'bg-white border-slate-200'} transition-colors`}>
-                  <button
-                    type="button"
-                    onClick={() => setExpanded(isExpanded ? null : inst.name)}
-                    className="w-full text-left px-3 py-2.5 flex items-start gap-3"
-                  >
-                    <span className={`shrink-0 w-1 h-12 ${palette.bar} rounded-full`} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-slate-900 truncate">{inst.name}</span>
-                      </div>
-                      <div className="text-[11px] text-slate-600 mt-0.5">{inst.issuer} · {inst.category}</div>
-                      <div className="flex gap-3 mt-0.5 text-[11px] text-slate-600 tabular-nums flex-wrap">
-                        <span>Yield <strong>{inst.expectedCagr}%</strong></span>
-                        {inst.tenure && <span>Tenure <strong>{inst.tenure}</strong></span>}
-                        {inst.minTicket && <span>Min <strong>{inst.minTicket}</strong></span>}
-                        {inst.maxTicket && <span>Max <strong>{inst.maxTicket}</strong></span>}
-                      </div>
-                    </div>
-                    <span className={`shrink-0 text-slate-400 mt-1 transition-transform ${isExpanded ? 'rotate-180' : ''}`} aria-hidden="true">▾</span>
-                  </button>
-                  {isExpanded && (
-                    <div className="px-4 pb-4 pt-1 space-y-3 border-t border-slate-200">
-                      <div className={`rounded-md ${palette.soft} px-3 py-2`}>
-                        <div className={`text-[10px] uppercase tracking-wide font-semibold ${palette.text} mb-1`}>Notes</div>
-                        <p className="text-xs text-slate-800 leading-relaxed">{inst.notes}</p>
-                      </div>
-                      {inst.yieldOrCoupon && (
-                        <div className="text-xs">
-                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">Yield / coupon</div>
-                          <div className="text-slate-700">{inst.yieldOrCoupon}</div>
-                        </div>
-                      )}
-                      <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">Tax treatment</div>
-                          <div className="text-slate-700 leading-relaxed">{inst.taxNote}</div>
-                        </div>
-                        <div>
-                          <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">How to invest</div>
-                          <div className="text-slate-700 leading-relaxed">{cls.howToInvest}</div>
-                        </div>
-                      </div>
-                      <div className="text-[10px] text-slate-500 italic">
-                        Verify current rates, eligibility, and tax treatment with the issuer before investing. Direct instruments are not regulated as mutual funds and may have different protections.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+      {/* Selected instrument detail (direct kind) */}
+      {isDirect && selectedInstrument && (
+        <InstrumentDetailCard inst={selectedInstrument} palette={palette} cls={cls} />
+      )}
+
+      {/* Empty state */}
+      {availableOptions.length === 0 && (
+        <div className="text-xs text-slate-500 italic py-3">No options configured for this class yet.</div>
       )}
 
       {/* Detailed analysis report */}
@@ -378,6 +288,111 @@ function ClassDetail({ cls, palette, recommendation, isShowingRecommended }: Cla
           </div>
         </div>
       </details>
+    </div>
+  )
+}
+
+// ── Detail cards (rendered when a fund / instrument is selected) ─────
+
+import type { CuratedFund } from '../../types/v2'
+import type { DirectInstrument } from '../../lib/data/assetClasses'
+
+function FundDetailCard({
+  fund, palette, cls, isTopPick,
+}: {
+  fund: CuratedFund
+  palette: typeof BUCKET_COLOR[BucketKey]
+  cls: AssetClassMeta
+  isTopPick: boolean
+}) {
+  const note = fundAnalysis(fund.schemeCode)
+  return (
+    <div className={`rounded-lg border-2 ${isTopPick ? borderForBucket(palette) : 'border-slate-200'} ${palette.bg} overflow-hidden`}>
+      <div className="px-4 py-3 flex items-start gap-3">
+        <span className={`shrink-0 w-1 h-12 ${palette.bar} rounded-full`} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-slate-900">{fund.schemeName}</span>
+            {isTopPick && (
+              <span className={`text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded ${palette.bar} text-white`}>
+                ★ Top pick
+              </span>
+            )}
+            <span className="text-[10px] text-slate-500 tabular-nums">{fund.schemeCode}</span>
+          </div>
+          <div className="flex gap-3 mt-1 text-[11px] text-slate-600 tabular-nums flex-wrap">
+            <span>AUM <strong>₹{fund.aumCrore?.toLocaleString('en-IN')} Cr</strong></span>
+            <span>Expense <strong>{fund.expenseRatio}%</strong></span>
+            <span>Category <strong>{fund.category}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 pb-3 pt-1 space-y-2 border-t border-slate-200/60">
+        {note && (
+          <div className={`rounded-md ${palette.soft} px-3 py-2`}>
+            <div className={`text-[10px] uppercase tracking-wide font-semibold ${palette.text} mb-1`}>Why this fund</div>
+            <p className="text-xs text-slate-800 leading-relaxed">{note}</p>
+          </div>
+        )}
+        <div className="grid sm:grid-cols-2 gap-3 text-xs">
+          <InfoLine label="Tax treatment" value={cls.taxTreatment} />
+          <InfoLine label="How to invest" value={cls.howToInvest} />
+        </div>
+        <div className="text-[10px] text-slate-500 italic">
+          Verify NAV, AUM, expense ratio and exit load on the AMC website before transacting.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InstrumentDetailCard({
+  inst, palette, cls,
+}: {
+  inst: DirectInstrument
+  palette: typeof BUCKET_COLOR[BucketKey]
+  cls: AssetClassMeta
+}) {
+  return (
+    <div className={`rounded-lg border-2 border-slate-200 ${palette.bg} overflow-hidden`}>
+      <div className="px-4 py-3 flex items-start gap-3">
+        <span className={`shrink-0 w-1 h-12 ${palette.bar} rounded-full`} />
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-slate-900">{inst.name}</div>
+          <div className="text-[11px] text-slate-600 mt-0.5">{inst.issuer} · {inst.category}</div>
+          <div className="flex gap-3 mt-1 text-[11px] text-slate-600 tabular-nums flex-wrap">
+            <span>Yield <strong>{inst.expectedCagr}%</strong></span>
+            {inst.tenure && <span>Tenure <strong>{inst.tenure}</strong></span>}
+            {inst.minTicket && <span>Min <strong>{inst.minTicket}</strong></span>}
+            {inst.maxTicket && <span>Max <strong>{inst.maxTicket}</strong></span>}
+          </div>
+        </div>
+      </div>
+      <div className="px-4 pb-3 pt-1 space-y-2 border-t border-slate-200/60">
+        <div className={`rounded-md ${palette.soft} px-3 py-2`}>
+          <div className={`text-[10px] uppercase tracking-wide font-semibold ${palette.text} mb-1`}>Notes</div>
+          <p className="text-xs text-slate-800 leading-relaxed">{inst.notes}</p>
+        </div>
+        {inst.yieldOrCoupon && (
+          <InfoLine label="Yield / coupon" value={inst.yieldOrCoupon} />
+        )}
+        <div className="grid sm:grid-cols-2 gap-3 text-xs">
+          <InfoLine label="Tax treatment" value={inst.taxNote} />
+          <InfoLine label="How to invest" value={cls.howToInvest} />
+        </div>
+        <div className="text-[10px] text-slate-500 italic">
+          Verify current rates, eligibility and tax treatment with the issuer before investing.
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function InfoLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-0.5">{label}</div>
+      <div className="text-slate-700 leading-relaxed text-[11px]">{value}</div>
     </div>
   )
 }

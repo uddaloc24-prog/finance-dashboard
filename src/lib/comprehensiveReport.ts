@@ -31,6 +31,43 @@ const GOLD = [184, 149, 106] as const  // #B8956A
 const SLATE = [71, 85, 105] as const   // #475569
 const GRAY = [148, 163, 184] as const  // #94A3B8
 
+// Narrow page layout — content stays well inside the page border
+const PAGE_W = 210
+const BORDER_X = 15      // page border outer left/right
+const BORDER_Y_TOP = 15
+const BORDER_Y_BOT = 282
+const TEXT_X = 24        // paragraph left edge
+const TEXT_RIGHT = 186   // paragraph right edge
+
+function drawJustified(doc: import('jspdf').jsPDF, text: string, x: number, y: number, lineHeight = 4.6): number {
+  const maxWidth = TEXT_RIGHT - x
+  const lines = doc.splitTextToSize(text, maxWidth) as string[]
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const isLast = i === lines.length - 1
+    if (isLast || !line.includes(' ')) {
+      // Last line and single-word lines render flush-left
+      doc.text(line, x, y)
+    } else {
+      // Justify by computing extra space per word gap
+      const words = line.trim().split(/\s+/)
+      if (words.length <= 1) {
+        doc.text(line, x, y)
+      } else {
+        const lineWidth = doc.getTextWidth(line.trim())
+        const gap = (maxWidth - lineWidth) / (words.length - 1)
+        let cursor = x
+        for (let w = 0; w < words.length; w++) {
+          doc.text(words[w], cursor, y)
+          cursor += doc.getTextWidth(words[w]) + doc.getTextWidth(' ') + gap
+        }
+      }
+    }
+    y += lineHeight
+  }
+  return y
+}
+
 interface ExportContext {
   identity: UserIdentity | null
   profile: UserProfile
@@ -693,18 +730,17 @@ function renderDisclaimers(doc: import('jspdf').jsPDF, r: Report) {
   ]
 
   for (const [title, body] of sections) {
-    if (y > 250) { doc.addPage(); y = 40 }
+    if (y > 250) { doc.addPage(); drawPageBorder(doc); y = 42 }
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(11)
     doc.setTextColor(...NAVY)
-    doc.text(title, 20, y)
+    doc.text(title, TEXT_X, y)
     y += 6
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(9.5)
     doc.setTextColor(...SLATE)
-    const wrapped = doc.splitTextToSize(body, 170)
-    doc.text(wrapped, 20, y)
-    y += wrapped.length * 4.5 + 6
+    y = drawJustified(doc, body, TEXT_X, y, 4.5)
+    y += 5
   }
 }
 
@@ -769,12 +805,13 @@ function drawPageBorder(doc: import('jspdf').jsPDF) {
   // Outer border
   doc.setDrawColor(...NAVY)
   doc.setLineWidth(0.4)
-  doc.rect(15, 15, 180, 267)
+  doc.rect(BORDER_X, BORDER_Y_TOP, PAGE_W - 2 * BORDER_X, BORDER_Y_BOT - BORDER_Y_TOP)
   // Inner accent border (gold thin line)
   doc.setDrawColor(...GOLD)
   doc.setLineWidth(0.15)
-  doc.rect(17, 17, 176, 263)
+  doc.rect(BORDER_X + 2, BORDER_Y_TOP + 2, PAGE_W - 2 * BORDER_X - 4, BORDER_Y_BOT - BORDER_Y_TOP - 4)
 }
+
 
 function drawKVBlock(doc: import('jspdf').jsPDF, x: number, y: number, rows: Array<[string, string]>) {
   doc.setFont('helvetica', 'normal')

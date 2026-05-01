@@ -129,6 +129,7 @@ export const TAB_ITEMS = [
   { id: 'profiles', label: 'Profile', icon: '👤' },
   { id: 'strategies', label: 'Compare', icon: '⚖️' },
   { id: 'assets', label: 'Buckets', icon: '🪣' },
+  { id: 'explorer', label: 'Explorer', icon: '🔍' },
   { id: 'simulate', label: 'Simulate', icon: '📊' },
   { id: 'tax', label: 'Tax', icon: '🧾' },
   { id: 'overview', label: 'Overview', icon: '◆' },

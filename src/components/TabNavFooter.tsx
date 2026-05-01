@@ -11,6 +11,7 @@ const TAB_DESCRIPTIONS: Record<TabId, string> = {
   profiles: 'Take the risk quiz, see all 5 profiles side by side',
   strategies: 'Compare 10 retirement strategies against your corpus',
   assets: 'Review and adjust your bucket allocation',
+  explorer: 'Browse asset classes per bucket — pick a class then a specific fund/instrument',
   simulate: 'Stress-test the plan with Monte Carlo and year-by-year sims',
   tax: 'Indian tax breakdown, LTCG optimizer, and reshuffle advice',
   ai: 'AI-powered fund picks based on your profile and live market data',

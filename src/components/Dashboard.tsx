@@ -14,6 +14,7 @@ import { TabNavFooter } from './TabNavFooter'
 import { Button } from './ui/Button'
 import { TAB_ITEMS } from '../constants'
 import { storage } from '../lib/storage'
+import { ExportMenu } from './ExportMenu'
 
 // Lazy-load heavy components (Recharts, AI)
 const CorpusPreservation = lazy(() => import('./CorpusPreservation').then(m => ({ default: m.CorpusPreservation })))
@@ -74,16 +75,6 @@ export function Dashboard({
   const runway = b1RunwayMonths(buckets.b1, profile.monthlyWithdrawal)
   const total = totalCorpus(buckets)
 
-  async function handleExportPDF() {
-    // Comprehensive personalised report — multi-page, user-name in filename
-    const { exportComprehensiveReport } = await import('../lib/comprehensiveReport')
-    await exportComprehensiveReport({
-      identity: storage.getIdentity(),
-      profile,
-      buckets,
-      returnAssumptions,
-    })
-  }
 
   const wr = ((profile.monthlyWithdrawal * 12) / Math.max(1, total)) * 100
   const wrTone = wr <= 5 ? 'text-green-700' : wr <= 7 ? 'text-amber-700' : 'text-red-700'
@@ -112,7 +103,7 @@ export function Dashboard({
                 <span className="ml-1" aria-hidden="true">→</span>
               </Button>
             )}
-            <Button variant="ghost" size="sm" onClick={handleExportPDF}>Export</Button>
+            <ExportMenu profile={profile} buckets={buckets} returnAssumptions={returnAssumptions} variant="header" />
             <Button variant="ghost" size="sm" onClick={onReset}>Reset</Button>
           </div>
         </div>
@@ -206,8 +197,11 @@ export function Dashboard({
               onReturnsChange={onReturnsUpdate}
               onBucketsUpdate={onBucketsUpdate}
             />
+          </div>
+        )}
 
-            {/* Asset class explorer — dropdown per bucket + detailed analysis */}
+        {activeTab === 'explorer' && (
+          <div role="tabpanel" id="tabpanel-explorer" aria-labelledby="tab-explorer" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <BucketFundsExplorer bucketValues={buckets} />
             </Suspense>
