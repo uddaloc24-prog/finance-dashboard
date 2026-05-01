@@ -168,7 +168,12 @@ export function InsightsPage({
           A 90-second quiz scores you 10–50 across time horizon, capacity, and goals — mapping to one of five canonical profiles. The choice cascades through every subsequent recommendation.
         </p>
         <Suspense fallback={<SectionLoading />}>
-          <ProfilesPanel userProfile={profile} />
+          <ProfilesPanel
+            userProfile={profile}
+            buckets={buckets}
+            onProfileUpdate={onProfileUpdate}
+            onBucketsUpdate={onBucketsUpdate}
+          />
         </Suspense>
       </Section>
 

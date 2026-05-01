@@ -118,32 +118,6 @@ export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
           ))}
         </div>
 
-        {/* Inflation rates */}
-        <details className="mt-4">
-          <summary className="text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-700 transition-colors">
-            Inflation Assumptions
-          </summary>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-3">
-            <InflationSlider
-              label="General"
-              value={expenses.generalInflation}
-              onChange={v => update({ generalInflation: v })}
-            />
-            <InflationSlider
-              label="Healthcare"
-              value={expenses.healthcareInflation}
-              onChange={v => update({ healthcareInflation: v })}
-              color="text-red-600"
-            />
-            <InflationSlider
-              label="Education"
-              value={expenses.educationInflation}
-              onChange={v => update({ educationInflation: v })}
-              color="text-amber-600"
-            />
-          </div>
-        </details>
-
         {/* Projection preview */}
         <div className="mt-4 flex gap-3">
           <div className="flex-1 bg-gray-50 rounded-lg p-3 text-center">
@@ -164,27 +138,3 @@ export function ExpenseEditor({ profile, onProfileUpdate }: Props) {
   )
 }
 
-function InflationSlider({ label, value, onChange, color = 'text-blue-600' }: {
-  label: string
-  value: number
-  onChange: (v: number) => void
-  color?: string
-}) {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium text-gray-600">{label}</span>
-        <span className={`text-xs font-bold ${color}`}>{value}%</span>
-      </div>
-      <input
-        type="range"
-        min={2}
-        max={15}
-        step={0.5}
-        value={value}
-        onChange={e => onChange(parseFloat(e.target.value))}
-        className="w-full accent-blue-600"
-      />
-    </div>
-  )
-}

@@ -3,7 +3,6 @@ import type { UserProfile, FrequencySchedule } from '../types'
 import { storage } from '../lib/storage'
 import { allocateBuckets, totalCorpus } from '../lib/calculations'
 import type { BucketState } from '../types'
-import { RiskProfiler, type RiskResult } from './RiskProfiler'
 import { Card } from './ui/Card'
 
 const SLOTS: Array<{ key: keyof FrequencySchedule; label: string; months: number; helper: string }> = [
@@ -119,8 +118,6 @@ interface Props {
 
 export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUpdate }: Props) {
   const [open, setOpen] = useState(false)
-  const [showProfiler, setShowProfiler] = useState(false)
-  const [riskResult, setRiskResult] = useState<RiskResult | null>(null)
 
   // Local state for editable fields
   const [corpusText, setCorpusText] = useState(String(profile.corpus))
@@ -179,7 +176,6 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
   }
 
   const corpus = totalCorpus(buckets)
-  const riskLabel = profile.riskAppetite <= 2 ? 'Conservative' : profile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'
 
   return (
     <Card>
@@ -196,7 +192,7 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
           <div className="text-left">
             <h2 className="text-sm font-semibold text-gray-800">Profile & Settings</h2>
             <p className="text-xs text-gray-400">
-              Corpus {INR(corpus)} · Tax {profile.taxBracket}% · Risk {riskLabel} ({profile.riskAppetite}/5)
+              Corpus {INR(corpus)} · Tax {profile.taxBracket}% · Refresh every {profile.refreshInterval}hr{profile.refreshInterval > 1 ? 's' : ''}
             </p>
           </div>
         </div>
@@ -274,68 +270,6 @@ export function ProfileSettings({ profile, buckets, onProfileUpdate, onBucketsUp
               accentText="text-teal-700"
               accentRing="ring-teal-300"
             />
-          </div>
-
-          {/* Risk Assessment */}
-          <div className="border border-gray-200 rounded-xl overflow-hidden">
-            {!showProfiler ? (
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Risk Profile</p>
-                    <p className="text-sm font-bold text-gray-800 mt-0.5">
-                      {riskLabel} ({profile.riskAppetite}/5)
-                      {riskResult && <span className="text-xs font-medium text-green-600 ml-2">Assessed</span>}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="range"
-                      min={1}
-                      max={5}
-                      value={profile.riskAppetite}
-                      onChange={e => update({ riskAppetite: parseInt(e.target.value) as 1 | 2 | 3 | 4 | 5 })}
-                      aria-label="Risk appetite"
-                      className="w-32 accent-blue-600"
-                    />
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowProfiler(true)}
-                  className="w-full px-4 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 transition-all"
-                >
-                  Take Detailed Risk Assessment
-                </button>
-                <p className="text-xs text-gray-400 text-center mt-1.5">
-                  15 questions — auto-adjusts your bucket allocation based on your profile
-                </p>
-              </div>
-            ) : (
-              <div className="p-4">
-                <RiskProfiler
-                  onComplete={(result) => {
-                    setRiskResult(result)
-                    update({ riskAppetite: result.riskScore })
-                    // Apply recommended allocation
-                    const allocFractions = {
-                      b1: result.allocation.b1 / 100,
-                      b2: result.allocation.b2 / 100,
-                      b3: result.allocation.b3 / 100,
-                      b4: result.allocation.b4 / 100,
-                    }
-                    const newBuckets = allocateBuckets(corpus, allocFractions)
-                    const updated = { ...profile, riskAppetite: result.riskScore, bucketAllocation: allocFractions }
-                    storage.setProfile(updated)
-                    onProfileUpdate(updated)
-                    storage.setBuckets(newBuckets)
-                    onBucketsUpdate(newBuckets)
-                    setShowProfiler(false)
-                  }}
-                  onSkip={() => setShowProfiler(false)}
-                />
-              </div>
-            )}
           </div>
 
           {/* Groq API Key + Refresh */}

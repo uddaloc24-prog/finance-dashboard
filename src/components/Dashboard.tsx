@@ -9,6 +9,7 @@ import { Sliders } from './Sliders'
 import { ProfileSettings } from './ProfileSettings'
 import { DemographicsForm } from './DemographicsForm'
 import { ExpenseEditor } from './ExpenseEditor'
+import { InflationAssumptions } from './InflationAssumptions'
 import { TabNav } from './TabNav'
 import { TabNavFooter } from './TabNavFooter'
 import { Button } from './ui/Button'
@@ -185,6 +186,10 @@ export function Dashboard({
               profile={profile}
               onProfileUpdate={onProfileUpdate}
             />
+            <InflationAssumptions
+              profile={profile}
+              onProfileUpdate={onProfileUpdate}
+            />
           </div>
         )}
 
@@ -229,7 +234,12 @@ export function Dashboard({
         {activeTab === 'profiles' && (
           <div role="tabpanel" id="tabpanel-profiles" aria-labelledby="tab-profiles" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
-              <ProfilesPanel userProfile={profile} />
+              <ProfilesPanel
+                userProfile={profile}
+                buckets={buckets}
+                onProfileUpdate={onProfileUpdate}
+                onBucketsUpdate={onBucketsUpdate}
+              />
             </Suspense>
           </div>
         )}

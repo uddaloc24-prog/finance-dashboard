@@ -77,7 +77,12 @@ export function OverviewPage({
           tagline="A 90-second quiz scores you 10–50 and maps you to one of five risk profiles. Drives every recommendation downstream."
         >
           <Suspense fallback={<SectionLoading />}>
-            <ProfilesPanel userProfile={profile} />
+            <ProfilesPanel
+              userProfile={profile}
+              buckets={buckets}
+              onProfileUpdate={onProfileUpdate}
+              onBucketsUpdate={onBucketsUpdate}
+            />
           </Suspense>
         </Section>
 
