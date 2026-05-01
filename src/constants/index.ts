@@ -125,6 +125,7 @@ export const CITY_COST_MULTIPLIER: Record<CityTier, number> = {
 }
 
 export const TAB_ITEMS = [
+  { id: 'guide', label: 'Guide', icon: '📖' },
   { id: 'plan', label: 'Plan', icon: '📋' },
   { id: 'profiles', label: 'Profile', icon: '👤' },
   { id: 'strategies', label: 'Compare', icon: '⚖️' },

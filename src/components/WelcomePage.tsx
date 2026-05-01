@@ -2,8 +2,7 @@ import { useState, type ReactNode } from 'react'
 import type { UserIdentity, MaritalStatus } from '../types/identity'
 import { storage } from '../lib/storage'
 import { Button } from './ui/Button'
-import { ExportMenu } from './ExportMenu'
-import { FORMATS } from '../lib/exporters'
+import { UploadSection } from './UploadSection'
 
 interface Props {
   onStart: (identity: UserIdentity) => void
@@ -154,67 +153,10 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
           )}
         </div>
 
-        {/* ── Download options ────────────────────────────────── */}
-        <DownloadSection />
+        {/* ── Upload an existing plan ─────────────────────────── */}
+        <UploadSection />
       </div>
     </div>
-  )
-}
-
-function DownloadSection() {
-  const storedProfile = storage.getProfile()
-  const storedBuckets = storage.getBuckets()
-  const storedReturns = storage.getReturnAssumptions()
-  const hasPlan = storedProfile != null && storedBuckets != null
-
-  return (
-    <section className="mt-10 bg-white rounded-lg border-2 border-slate-300 ring-1 ring-inset ring-slate-100 p-4 sm:p-5">
-      <div className="flex items-baseline gap-3 mb-3">
-        <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700 tabular-nums">11</span>
-        <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
-        <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Download options</span>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-extrabold tracking-tight text-slate-900">
-            {hasPlan ? 'Already have a plan? Download it.' : 'Available formats after planning.'}
-          </h3>
-          <p className="text-xs text-slate-600 mt-1 leading-snug">
-            {hasPlan
-              ? 'Your saved plan exports in any of these formats — name stamped on every page, FY 2024-25 tax applied.'
-              : 'Complete the dashboard tabs first, then return here to export. Each format pulls the same content — pick what your audience needs.'}
-          </p>
-        </div>
-        {hasPlan && (
-          <div className="shrink-0">
-            <ExportMenu
-              profile={storedProfile}
-              buckets={storedBuckets}
-              returnAssumptions={storedReturns}
-              variant="cta"
-              label="Download ▾"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* Format chip strip — always visible as a preview of what's available */}
-      <ul className="mt-4 grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {FORMATS.map((f) => (
-          <li
-            key={f.id}
-            className="bg-slate-50 border-2 border-slate-200 rounded px-2.5 py-1.5"
-          >
-            <div className="flex items-baseline justify-between gap-1">
-              <span className="text-[12px] font-bold text-slate-900">{f.label}</span>
-              <span className="text-[9px] font-mono text-slate-400">{f.ext}</span>
-            </div>
-            <div className="text-[10px] text-slate-600 leading-tight mt-0.5 line-clamp-2">{f.hint}</div>
-          </li>
-        ))}
-      </ul>
-    </section>
   )
 }
 

@@ -15,6 +15,7 @@ import { Button } from './ui/Button'
 import { TAB_ITEMS } from '../constants'
 import { storage } from '../lib/storage'
 import { ExportMenu } from './ExportMenu'
+import { InstallPrompt, OfflineBanner } from './InstallPrompt'
 
 // Lazy-load heavy components (Recharts, AI)
 const CorpusPreservation = lazy(() => import('./CorpusPreservation').then(m => ({ default: m.CorpusPreservation })))
@@ -27,6 +28,7 @@ const MonteCarloPanel = lazy(() => import('./montecarlo/MonteCarloPanel').then(m
 const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.TaxPanel })))
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
 const InsightsPage = lazy(() => import('./InsightsPage').then(m => ({ default: m.InsightsPage })))
+const HowToUsePage = lazy(() => import('./HowToUsePage').then(m => ({ default: m.HowToUsePage })))
 
 function TabLoading() {
   return (
@@ -69,7 +71,9 @@ export function Dashboard({
   onReturnsUpdate,
   onReset,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>('plan')
+  const [activeTab, setActiveTab] = useState<TabId>(() =>
+    storage.getGuideSeen() ? 'plan' : 'guide',
+  )
   const { data: marketData } = useMarketData(profile.refreshInterval)
   const runway = b1RunwayMonths(buckets.b1, profile.monthlyWithdrawal)
   const total = totalCorpus(buckets)
@@ -81,6 +85,9 @@ export function Dashboard({
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-0">
+      {/* Offline banner — only when navigator.onLine is false */}
+      <OfflineBanner />
+
       {/* Persistent progress bar — flush at the very top */}
       <ProgressBar activeTab={activeTab} />
 
@@ -102,6 +109,7 @@ export function Dashboard({
                 <span className="ml-1" aria-hidden="true">→</span>
               </Button>
             )}
+            <InstallPrompt />
             <ExportMenu profile={profile} buckets={buckets} returnAssumptions={returnAssumptions} variant="header" />
             <Button variant="ghost" size="sm" onClick={onReset}>Reset</Button>
           </div>
@@ -146,6 +154,17 @@ export function Dashboard({
                 onProfileUpdate={onProfileUpdate}
                 onReturnsUpdate={onReturnsUpdate}
               />
+            </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'guide' && (
+          <div role="tabpanel" id="tabpanel-guide" aria-labelledby="tab-guide" className="space-y-3">
+            <Suspense fallback={<TabLoading />}>
+              <HowToUsePage onDone={(t) => {
+                storage.setGuideSeen(true)
+                setActiveTab(t as TabId)
+              }} />
             </Suspense>
           </div>
         )}
