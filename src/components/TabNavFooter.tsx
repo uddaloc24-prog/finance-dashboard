@@ -6,6 +6,7 @@ interface Props {
 }
 
 const TAB_DESCRIPTIONS: Record<TabId, string> = {
+  welcome: 'Namaskar — Indian retirement playbook + 36-item readiness checklist',
   guide: 'How to use the planner — five steps in plain language',
   plan: 'Enter your corpus, demographics, and expense profile',
   profiles: 'Take the risk quiz, see all 5 profiles side by side',
@@ -19,8 +20,8 @@ const TAB_DESCRIPTIONS: Record<TabId, string> = {
 }
 
 export function TabNavFooter({ activeTab, onChange }: Props) {
-  // The Guide tab has its own internal navigation buttons, so suppress the footer there.
-  if (activeTab === 'guide') return null
+  // The Welcome and Guide tabs have their own internal CTAs, so suppress the footer there.
+  if (activeTab === 'guide' || activeTab === 'welcome') return null
 
   const idx = TAB_ITEMS.findIndex((t) => t.id === activeTab)
   const next = idx < TAB_ITEMS.length - 1 ? TAB_ITEMS[idx + 1] : null

@@ -99,11 +99,100 @@ export const DEFAULT_DEMOGRAPHICS: Demographics = {
   city: 'metro',
 }
 
+// All sub-fields default to amount 0 / monthly frequency. User picks a
+// per-row frequency (monthly / quarterly / half-yearly / yearly) and enters
+// the amount paid at that frequency. The four ExpenseProfile category totals
+// and the withdrawalSchedule are recomputed from these entries.
+import type { ExpenseBreakdown, AssetInventory, InsuranceCover, LoanProfile } from '../types'
+
+const loanBlank = { active: false, outstanding: 0, interestRate: 0, emi: 0 }
+
+export const DEFAULT_LOAN_PROFILE: LoanProfile = {
+  // Secured
+  homeLoan:              { ...loanBlank, maxGain: false },
+  loanAgainstProperty:   { ...loanBlank },
+  plotLoan:              { ...loanBlank },
+  goldLoan:              { ...loanBlank },
+  loanAgainstSecurities: { ...loanBlank },
+  // Vehicle
+  carLoan:               { ...loanBlank },
+  twoWheelerLoan:        { ...loanBlank },
+  // Unsecured
+  personalLoan:          { ...loanBlank },
+  creditCardOutstanding: { ...loanBlank },
+  familyLoan:            { ...loanBlank },
+  educationLoan:         { ...loanBlank },
+  // Business
+  businessWorkingCapital: { ...loanBlank },
+  businessTermLoan:      { ...loanBlank },
+  strategy:              'avalanche',
+}
+
+const insBlank = { cover: 0, premium: 0, active: false }
+
+export const DEFAULT_INSURANCE_COVER: InsuranceCover = {
+  // Health & Medical
+  familyFloater:    { ...insBlank },
+  personalHealth:   { ...insBlank },
+  superTopUp:       { ...insBlank },
+  criticalIllness:  { ...insBlank },
+  seniorCitizen:    { ...insBlank },
+  corporateGroup:   { ...insBlank },
+  // Life Insurance
+  termPlan:         { ...insBlank, mwp: false },
+  endowment:        { ...insBlank },
+  ulip:             { ...insBlank },
+  wholeLife:        { ...insBlank },
+  // Other Risk Cover
+  personalAccident: { ...insBlank },
+  disability:       { ...insBlank },
+  homeProperty:     { ...insBlank },
+  vehicle:          { ...insBlank },
+}
+
+// Status drives where the asset sits in the corpus split:
+//   'liquid'   → Liquid Corpus (drives every retirement calculation)
+//   'invested' → Invested Corpus (held; its monthlyIncome flows to Passive Income)
+const liq = { amount: 0, status: 'liquid' as const, monthlyIncome: 0, optimize: false }
+const inv = { amount: 0, status: 'invested' as const, monthlyIncome: 0, optimize: false }
+
+export const DEFAULT_ASSET_INVENTORY: AssetInventory = {
+  // Liquid & Cash — naturally liquid by default
+  savings: liq, sweepFdr: liq, cashOnHand: liq,
+  // Fixed Income
+  bankFds: inv, bankRds: inv, corporateBonds: inv, govtBonds: inv, rbiFrb: inv,
+  // Senior & Retirement Schemes
+  scss: inv, pomis: inv, pmvvy: inv, ppf: inv, epfVpf: inv, npsTier1: inv, npsTier2: inv, sukanya: inv,
+  // Mutual Funds (single clubbed entry)
+  mutualFunds: inv,
+  // Direct Equity
+  stocksIndia: inv, stocksIntl: inv,
+  // Real Estate
+  selfOccupiedHome: inv, secondHome: inv, commercialProperty: inv, landPlot: inv, reits: inv, invits: inv,
+  // Gold & Precious Metals
+  physicalGold: inv, sgb: inv, silver: inv,
+  // Alternative & Other
+  ulipsEndowment: inv, crypto: inv, businessEquity: inv, foreignAssets: inv, collectibles: inv,
+}
+
+const m = { amount: 0, frequency: 'monthly' as const }
+// Items most people pay yearly by default — pre-set their frequency so the
+// user only needs to enter the amount. Nudges, not constraints — they can change.
+const y = { amount: 0, frequency: 'yearly' as const }
+
+export const DEFAULT_EXPENSE_BREAKDOWN: ExpenseBreakdown = {
+  rent: m, food: m, utilities: m, domesticHelp: m, transportation: m,
+  diningOut: m, travel: y, subscriptions: m, personalCare: m, giftsMisc: y,
+  insurancePremium: y, doctorVisits: m, medicines: m, diagnostics: m,
+  tuition: y, books: y, courses: y, coaching: m,
+}
+
 export const DEFAULT_EXPENSES: ExpenseProfile = {
-  essential: 30_000,
-  lifestyle: 15_000,
-  healthcare: 10_000,
-  education: 5_000,
+  essential: 0,
+  lifestyle: 0,
+  healthcare: 0,
+  education: 0,
+  breakdown: { ...DEFAULT_EXPENSE_BREAKDOWN },
   generalInflation: 6,
   healthcareInflation: 10,
   educationInflation: 12,
@@ -125,6 +214,7 @@ export const CITY_COST_MULTIPLIER: Record<CityTier, number> = {
 }
 
 export const TAB_ITEMS = [
+  { id: 'welcome', label: 'Welcome', icon: '🙏' },
   { id: 'guide', label: 'Guide', icon: '📖' },
   { id: 'plan', label: 'Plan', icon: '📋' },
   { id: 'profiles', label: 'Profile', icon: '👤' },

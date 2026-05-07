@@ -24,6 +24,7 @@ const KEYS = {
   LAST_WELCOMED: 'rp_last_welcomed',  // ISO timestamp of last welcome view
   IDENTITY: 'rp_identity',
   GUIDE_SEEN: 'rp_guide_seen',
+  WELCOME_SEEN: 'rp_welcome_seen',
 } as const
 
 export function migrateV1toV2(profile: UserProfile): { goals: Goal[] } {
@@ -153,6 +154,9 @@ export const storage = {
 
   getGuideSeen: (): boolean => get<boolean>(KEYS.GUIDE_SEEN) === true,
   setGuideSeen: (v: boolean) => set(KEYS.GUIDE_SEEN, v),
+
+  getWelcomeSeen: (): boolean => get<boolean>(KEYS.WELCOME_SEEN) === true,
+  setWelcomeSeen: (v: boolean) => set(KEYS.WELCOME_SEEN, v),
 
   clearAll: () => Object.values(KEYS).forEach(remove),
 }

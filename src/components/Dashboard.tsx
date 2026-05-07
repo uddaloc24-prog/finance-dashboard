@@ -11,6 +11,11 @@ import { DemographicsForm } from './DemographicsForm'
 import { ExpenseEditor } from './ExpenseEditor'
 import { InflationAssumptions } from './InflationAssumptions'
 import { PlanSection } from './PlanSection'
+import { CashflowSummary } from './CashflowSummary'
+import { RetirementWelcome } from './RetirementWelcome'
+import { AssetInventory } from './AssetInventory'
+import { InsuranceCover } from './InsuranceCover'
+import { LoansLiabilities } from './LoansLiabilities'
 import { TabNav } from './TabNav'
 import { TabNavFooter } from './TabNavFooter'
 import { Button } from './ui/Button'
@@ -73,15 +78,29 @@ export function Dashboard({
   onReturnsUpdate,
   onReset,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<TabId>(() =>
-    storage.getGuideSeen() ? 'plan' : 'guide',
-  )
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (!storage.getWelcomeSeen()) return 'welcome'
+    if (!storage.getGuideSeen()) return 'guide'
+    return 'plan'
+  })
   const { data: marketData } = useMarketData(profile.refreshInterval)
-  const runway = b1RunwayMonths(buckets.b1, profile.monthlyWithdrawal)
+
+  // Effective monthly draw nets passive income against withdrawal: only the
+  // shortfall actually comes out of the corpus. When passive income meets or
+  // exceeds the budget, the corpus draws nothing and the surplus deploys via
+  // CashflowSummary's SIP/RD recommendation.
+  const effectiveMonthlyDraw = Math.max(0, profile.monthlyWithdrawal - profile.sipAmount)
+  const effectiveProfile: UserProfile = {
+    ...profile,
+    monthlyWithdrawal: effectiveMonthlyDraw,
+    withdrawalAmount: effectiveMonthlyDraw,
+  }
+
+  const runway = b1RunwayMonths(buckets.b1, effectiveMonthlyDraw)
   const total = totalCorpus(buckets)
 
 
-  const wr = ((profile.monthlyWithdrawal * 12) / Math.max(1, total)) * 100
+  const wr = ((effectiveMonthlyDraw * 12) / Math.max(1, total)) * 100
   const wrTone = wr <= 5 ? 'text-green-700' : wr <= 7 ? 'text-amber-700' : 'text-red-700'
   const runwayTone = runway < 6 ? 'text-red-700' : runway < 12 ? 'text-amber-700' : 'text-gray-900'
 
@@ -116,17 +135,25 @@ export function Dashboard({
             <Button variant="ghost" size="sm" onClick={onReset}>Reset</Button>
           </div>
         </div>
-        {/* Dense KPI strip — 4 inline metrics, no card chrome */}
+        {/* Dense KPI strip — 4 inline metrics computed on the NET draw
+           (monthlyWithdrawal − sipAmount). When passive income covers the
+           budget, the corpus draw is 0 and the WR / runway reflect that. */}
         <div className="border-t border-gray-100 bg-white">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 py-2 grid grid-cols-4 gap-4 text-center sm:text-left">
             <KpiCell label="Corpus" value={CR(total)} />
             <KpiCell
-              label={`${FREQ_LABELS[profile.withdrawalFrequency ?? 'monthly']} draw`}
-              value={INR(profile.withdrawalAmount ?? profile.monthlyWithdrawal)}
-              sub={(profile.withdrawalFrequency ?? 'monthly') !== 'monthly' ? `${INR(profile.monthlyWithdrawal)}/mo` : undefined}
+              label="Net monthly draw"
+              value={INR(effectiveMonthlyDraw)}
+              sub={
+                profile.sipAmount > 0
+                  ? `${INR(profile.monthlyWithdrawal)} − ${INR(profile.sipAmount)} income`
+                  : profile.monthlyWithdrawal > 0
+                    ? 'no passive income'
+                    : undefined
+              }
             />
-            <KpiCell label="Withdrawal rate" value={`${wr.toFixed(2)}%`} valueClass={wrTone} sub="annual" />
-            <KpiCell label="B1 runway" value={`${runway}mo`} valueClass={runwayTone} />
+            <KpiCell label="Withdrawal rate" value={`${wr.toFixed(2)}%`} valueClass={wrTone} sub="annual · net" />
+            <KpiCell label="B1 runway" value={`${runway}mo`} valueClass={runwayTone} sub="on net draw" />
           </div>
         </div>
         {/* Tab nav — desktop pills inline; mobile renders a fixed bottom bar via TabNav internals */}
@@ -149,7 +176,7 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-insights" aria-labelledby="tab-insights" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <InsightsPage
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
                 onBucketsUpdate={onBucketsUpdate}
@@ -157,6 +184,15 @@ export function Dashboard({
                 onReturnsUpdate={onReturnsUpdate}
               />
             </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'welcome' && (
+          <div role="tabpanel" id="tabpanel-welcome" aria-labelledby="tab-welcome" className="space-y-3">
+            <RetirementWelcome onStart={() => {
+              storage.setWelcomeSeen(true)
+              setActiveTab('plan')
+            }} />
           </div>
         )}
 
@@ -174,9 +210,57 @@ export function Dashboard({
         {activeTab === 'plan' && (
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <PlanIntro />
+
+            {/* 01 — Wealth Snapshot — full width */}
+            <PlanSection
+              num="01"
+              tone="navy"
+              title="Wealth Snapshot"
+              subtitle="8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income"
+              status={<AssetInventoryStatus profile={profile} />}
+            >
+              <AssetInventory
+                profile={profile}
+                buckets={buckets}
+                onProfileUpdate={onProfileUpdate}
+                onBucketsUpdate={onBucketsUpdate}
+                chrome="bare"
+              />
+            </PlanSection>
+
+            {/* 02 — Loans & Liabilities — full width */}
+            <PlanSection
+              num="02"
+              tone="rose"
+              title="Loans & Liabilities"
+              subtitle="4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy"
+              status={<LoansStatus profile={profile} />}
+            >
+              <LoansLiabilities
+                profile={profile}
+                onProfileUpdate={onProfileUpdate}
+                chrome="bare"
+              />
+            </PlanSection>
+
+            {/* 03–06 — remaining sections in 2-col grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
               <PlanSection
-                num="01"
+                num="03"
+                tone="green"
+                title="Monthly Budget"
+                subtitle="Detailed breakdown — drives the monthly withdrawal"
+                status={<ExpensesStatus profile={profile} />}
+              >
+                <ExpenseEditor
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
+              <PlanSection
+                num="04"
                 tone="navy"
                 title="Profile & Settings"
                 subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
@@ -192,7 +276,7 @@ export function Dashboard({
               </PlanSection>
 
               <PlanSection
-                num="02"
+                num="05"
                 tone="amber"
                 title="Demographics & Longevity"
                 subtitle="Current age, retirement age, life expectancy"
@@ -206,21 +290,7 @@ export function Dashboard({
               </PlanSection>
 
               <PlanSection
-                num="03"
-                tone="green"
-                title="Monthly Expenses"
-                subtitle="Essentials, lifestyle, healthcare, education"
-                status={<ExpensesStatus profile={profile} />}
-              >
-                <ExpenseEditor
-                  profile={profile}
-                  onProfileUpdate={onProfileUpdate}
-                  chrome="bare"
-                />
-              </PlanSection>
-
-              <PlanSection
-                num="04"
+                num="06"
                 tone="rose"
                 title="Inflation Assumptions"
                 subtitle="Split rates for general, healthcare, education"
@@ -233,6 +303,24 @@ export function Dashboard({
                 />
               </PlanSection>
             </div>
+
+            {/* 07 — Insurance Cover — full width */}
+            <PlanSection
+              num="07"
+              tone="rose"
+              title="Insurance Cover"
+              subtitle="3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term"
+              status={<InsuranceStatus profile={profile} />}
+            >
+              <InsuranceCover
+                profile={profile}
+                onProfileUpdate={onProfileUpdate}
+                chrome="bare"
+              />
+            </PlanSection>
+
+            {/* Cashflow summary + surplus deployment plan */}
+            <CashflowSummary profile={profile} buckets={buckets} />
           </div>
         )}
 
@@ -241,7 +329,7 @@ export function Dashboard({
             {/* Refill alerts */}
             <RefillAlert
               buckets={buckets}
-              monthlyWithdrawal={profile.monthlyWithdrawal}
+              monthlyWithdrawal={effectiveMonthlyDraw}
               returnAssumptions={returnAssumptions}
               onBucketsUpdate={onBucketsUpdate}
             />
@@ -291,7 +379,7 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-strategies" aria-labelledby="tab-strategies" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <StrategiesPanel
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
               />
@@ -303,24 +391,24 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-simulate" aria-labelledby="tab-simulate" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <CorpusPreservation
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
               />
               <MonteCarloPanel
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
               />
               <YearSimulator
                 buckets={buckets}
-                monthlyWithdrawal={profile.monthlyWithdrawal}
+                monthlyWithdrawal={effectiveMonthlyDraw}
                 inflationRate={profile.inflationRate}
                 returnAssumptions={returnAssumptions}
               />
               <SWPSimulator
                 buckets={buckets}
-                monthlyWithdrawal={profile.monthlyWithdrawal}
+                monthlyWithdrawal={effectiveMonthlyDraw}
                 inflationRate={profile.inflationRate}
                 returnAssumptions={returnAssumptions}
               />
@@ -332,7 +420,7 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-tax" aria-labelledby="tab-tax" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <TaxPanel
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 returnAssumptions={returnAssumptions}
               />
@@ -344,7 +432,7 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-ai" aria-labelledby="tab-ai" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
               <AIPortfolioOptimizer
-                profile={profile}
+                profile={effectiveProfile}
                 buckets={buckets}
                 marketData={marketData}
                 onReturnsUpdate={onReturnsUpdate}
@@ -403,6 +491,122 @@ function DemographicsStatus({ profile }: { profile: UserProfile }) {
       </div>
       <div className="text-[10px] text-slate-500 tabular-nums leading-tight">
         Horizon {Math.max(0, demo.lifeExpectancy - demo.currentAge)}y
+      </div>
+    </div>
+  )
+}
+
+function LoansStatus({ profile }: { profile: UserProfile }) {
+  const lp = profile.loanProfile
+  if (!lp) {
+    return (
+      <div className="text-right">
+        <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Outstanding</div>
+        <div className="text-sm font-bold text-slate-400 tabular-nums leading-tight">—</div>
+        <div className="text-[10px] text-slate-500 tabular-nums leading-tight">no loans entered</div>
+      </div>
+    )
+  }
+  let outstanding = 0, emi = 0, active = 0
+  for (const [k, v] of Object.entries(lp)) {
+    if (k === 'strategy' || !v || typeof v !== 'object') continue
+    const obj = v as { active?: boolean; outstanding?: number; emi?: number }
+    if (obj.active) {
+      active += 1
+      outstanding += obj.outstanding || 0
+      emi += obj.emi || 0
+    }
+  }
+  if (active === 0) {
+    return (
+      <div className="text-right">
+        <div className="text-[10px] text-emerald-700 uppercase tracking-wide leading-none font-bold">Debt-free</div>
+        <div className="text-sm font-bold text-emerald-700 tabular-nums leading-tight">✓ ₹0</div>
+        <div className="text-[10px] text-slate-500 tabular-nums leading-tight">protect this milestone</div>
+      </div>
+    )
+  }
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-rose-700 uppercase tracking-wide leading-none font-bold">Outstanding</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{CR(outstanding)}</div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">
+        {active} loan{active === 1 ? '' : 's'} · {INR(emi)}/mo EMI
+      </div>
+    </div>
+  )
+}
+
+function InsuranceStatus({ profile }: { profile: UserProfile }) {
+  const ic = profile.insuranceCover
+  if (!ic) {
+    return (
+      <div className="text-right">
+        <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Cover</div>
+        <div className="text-sm font-bold text-slate-400 tabular-nums leading-tight">—</div>
+        <div className="text-[10px] text-slate-500 tabular-nums leading-tight">no policies entered</div>
+      </div>
+    )
+  }
+  let totalCover = 0, totalPremium = 0, active = 0
+  for (const e of Object.values(ic)) {
+    if (!e || typeof e !== 'object') continue
+    const obj = e as { active?: boolean; cover?: number; premium?: number }
+    if (obj.active) {
+      active += 1
+      totalCover += obj.cover || 0
+      totalPremium += obj.premium || 0
+    }
+  }
+  if (active === 0) {
+    return (
+      <div className="text-right">
+        <div className="text-[10px] text-rose-700 uppercase tracking-wide leading-none font-bold">No active cover</div>
+        <div className="text-sm font-bold text-slate-400 tabular-nums leading-tight">—</div>
+        <div className="text-[10px] text-rose-600 tabular-nums leading-tight">activate at least one</div>
+      </div>
+    )
+  }
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-rose-700 uppercase tracking-wide leading-none font-bold">Active cover</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{CR(totalCover)}</div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">
+        {active} policies · {INR(totalPremium)}/yr
+      </div>
+    </div>
+  )
+}
+
+function AssetInventoryStatus({ profile }: { profile: UserProfile }) {
+  const inv = profile.assetInventory
+  if (!inv) {
+    return (
+      <div className="text-right">
+        <div className="text-[10px] text-slate-400 uppercase tracking-wide leading-none">Liquid Corpus</div>
+        <div className="text-sm font-bold text-slate-400 tabular-nums leading-tight">—</div>
+        <div className="text-[10px] text-slate-500 tabular-nums leading-tight">enter wealth</div>
+      </div>
+    )
+  }
+  let total = 0, liquid = 0, passive = 0
+  for (const e of Object.values(inv)) {
+    if (!e || typeof e !== 'object') continue
+    const obj = e as { amount?: number; status?: string; monthlyIncome?: number }
+    const amount = obj.amount || 0
+    total += amount
+    if (obj.status === 'liquid' || obj.status === 'liquidate') {
+      liquid += amount
+    } else {
+      passive += obj.monthlyIncome || 0
+    }
+  }
+  return (
+    <div className="text-right">
+      <div className="text-[10px] text-emerald-700 uppercase tracking-wide leading-none font-bold">Liquid Corpus</div>
+      <div className="text-sm font-bold text-slate-900 tabular-nums leading-tight">{CR(liquid)}</div>
+      <div className="text-[10px] text-slate-500 tabular-nums leading-tight">
+        Invested {CR(total - liquid)} · Passive {CR(passive)}/mo
       </div>
     </div>
   )

@@ -10,6 +10,7 @@ export interface ParsedPlan {
   profile?: Partial<UserProfile>
   buckets?: Partial<BucketState>
   rawTextSample: string
+  rawTextFull?: string  // full extracted text — populated for downstream parsers (e.g. CAS portfolio total)
   fileName: string
   fileFormat: string
   bytesRead: number
@@ -54,6 +55,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedPlan> {
         profile: obj.profile as Partial<UserProfile>,
         buckets: obj.buckets as Partial<BucketState>,
         rawTextSample: text.slice(0, 400),
+        rawTextFull: text,
         fileName: file.name,
         fileFormat: ext,
         bytesRead: text.length,
@@ -66,6 +68,7 @@ export async function parseUploadedFile(file: File): Promise<ParsedPlan> {
   return {
     ...extracted.data,
     rawTextSample: text.slice(0, 400),
+    rawTextFull: text,
     fileName: file.name,
     fileFormat: ext,
     bytesRead: text.length,
