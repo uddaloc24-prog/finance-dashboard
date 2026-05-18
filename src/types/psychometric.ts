@@ -103,4 +103,62 @@ export interface GoalDiscoveryState {
   visited: GoalDiscoveryBlockId[]                       // blocks the user has opened
   answers: Partial<Record<GoalDiscoveryBlockId, GdBlockAnswers>>
   completed: boolean
+  inference?: InferenceResult                           // phase 4 — derived from `answers`
+}
+
+// ─── Inference (phase 4) ──────────────────────────────────────────────────
+// Output of running persona + signal extraction over a GoalDiscoveryState.
+// Re-derivable from `answers` alone, but cached on the state so the adaptive
+// layer (phase 5) doesn't have to recompute on every render.
+
+export type PersonaId =
+  | 'P1' | 'P2' | 'P3' | 'P4' | 'P5' | 'P6' | 'P7' | 'P8' | 'P9'
+
+export type PersonaConfidence = 'high' | 'medium' | 'low' | 'unclassified'
+
+export interface PersonaHit {
+  id: PersonaId
+  name: string
+  score: number            // raw weighted score
+  evidence: string[]       // verbatim snippets / signals that contributed
+}
+
+export interface PersonaInference {
+  primary: PersonaHit | null
+  secondary: PersonaHit | null
+  confidence: PersonaConfidence
+  all: PersonaHit[]        // every persona that scored > 0, ranked
+}
+
+// Behavioural signals — 12 per v10. IDs and snake_case names match the
+// source verbatim so SIGNAL_PREFILLS lookups stay 1:1 with the original.
+// `protection_to_aspiration` and `overconfidence_marker` are declared but
+// not actively scored in v10; we keep them as placeholders.
+export type SignalId =
+  | 'money_script_avoidance'
+  | 'money_script_worship'
+  | 'money_script_status'
+  | 'money_script_vigilance'
+  | 'time_orientation_present'
+  | 'locus_of_control_internal'
+  | 'self_efficacy'
+  | 'family_obligation_weight'
+  | 'protection_to_aspiration'
+  | 'financial_anxiety_marker'
+  | 'herding_susceptibility'
+  | 'overconfidence_marker'
+
+export interface SignalHit {
+  id: SignalId
+  score: number | null     // 0..1; null means no signal detected
+  evidence: string[]       // verbatim snippets that drove the score
+}
+
+export type SignalMap = Record<SignalId, SignalHit>
+
+export interface InferenceResult {
+  persona: PersonaInference
+  signals: SignalMap
+  bridgeSentence: string   // generated intro to bridge GD → quiz
+  computedAt: string       // ISO
 }

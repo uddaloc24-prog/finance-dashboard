@@ -12,6 +12,7 @@ import type {
   GoalDiscoveryState,
 } from '../../types/psychometric'
 import { storage } from '../../lib/storage'
+import { runInference } from '../../lib/psychometric/inference'
 import { Button } from '../ui/Button'
 import {
   GD_BLOCKS,
@@ -86,8 +87,11 @@ export function GoalDiscoveryForm({ initialState, onComplete, onExit }: Props) {
   }
 
   function finish() {
-    persist({ ...state, completed: true })
-    onComplete({ ...state, completed: true })
+    const finalised = { ...state, completed: true }
+    const inference = runInference(finalised)
+    const withInference = { ...finalised, inference }
+    persist(withInference)
+    onComplete(withInference)
   }
 
   // ─── Header / tabs ─────────────────────────────────────────────────
