@@ -13,8 +13,10 @@ import type {
   V10QuizState,
 } from '../../types/psychometric'
 import type { RiskProfileId } from '../../types/profiles'
+import type { UserProfile } from '../../types'
 import { PSYCH_QUESTIONS, PSYCH_TOTAL_ITEMS } from '../../lib/data/psychometricBank'
 import { computeComposites } from '../../lib/psychometric/composites'
+import { deriveRiskCapacity } from '../../lib/psychometric/capacityInputs'
 import {
   buildAdaptivePrefills,
   buildAdaptiveSequence,
@@ -27,15 +29,16 @@ import { CompositesDashboard } from './CompositesDashboard'
 interface Props {
   initialState: V10QuizState | null
   inference: InferenceResult | null
+  userProfile: UserProfile
   currentAge: number
   retirementAge: number
   onComplete: (composites: CompositesResult, profileId: RiskProfileId) => void
   onExit: () => void
 }
 
-// Phase 2 uses neutral capacity defaults — phase 7 will plumb in real
-// savingsRate / DTI / emergency-months from the Plan tab inputs.
-const NEUTRAL_CAPACITY = { savingsRate: 0.15, debtToIncome: 0.15, emergencyMonths: 3 } as const
+// Risk-capacity inputs (savingsRate / DTI / emergency-months) are derived
+// from the user's Wealth Snapshot, Loans, and Budget data via
+// deriveRiskCapacity(userProfile). Phase 7.
 
 function makeSessionId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -56,7 +59,7 @@ function freshState(inference: InferenceResult | null): V10QuizState {
   }
 }
 
-export function V10Quiz({ initialState, inference, currentAge, retirementAge, onComplete, onExit }: Props) {
+export function V10Quiz({ initialState, inference, userProfile, currentAge, retirementAge, onComplete, onExit }: Props) {
   const [state, setState] = useState<V10QuizState>(() => initialState ?? freshState(inference))
   const [showReview, setShowReview] = useState(initialState?.completed === true)
   const [bridgeDismissed, setBridgeDismissed] = useState(false)
@@ -93,7 +96,7 @@ export function V10Quiz({ initialState, inference, currentAge, retirementAge, on
   function finish() {
     const composites = computeComposites({
       answers: state.answers,
-      capacity: NEUTRAL_CAPACITY,
+      capacity: deriveRiskCapacity(userProfile),
       life: { currentAge, retirementAge },
     })
     const next: V10QuizState = {

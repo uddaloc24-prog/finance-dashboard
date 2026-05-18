@@ -135,6 +135,11 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
                       · ✓ Detailed assessment complete
                     </span>
                   )}
+                  {v10State?.composites && (
+                    <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                      · v10 score <span className="tabular-nums">{Math.round(v10State.composites.riskProfile)}/100</span>
+                    </span>
+                  )}
                 </div>
               </div>
             ) : (
@@ -322,6 +327,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
         <V10Quiz
           initialState={v10State}
           inference={gdState?.inference ?? null}
+          userProfile={userProfile}
           currentAge={userProfile.demographics?.currentAge ?? DEFAULT_DEMOGRAPHICS.currentAge}
           retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
           onComplete={handleV10Complete}

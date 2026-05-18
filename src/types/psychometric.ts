@@ -69,6 +69,7 @@ export interface LifeStageInput {
 
 // Top-level state held during a v10 quiz session and persisted to localStorage.
 export interface V10QuizState {
+  schemaVersion?: number   // 1 since phase 7; older states default to 0 + migrate
   sessionId: string
   startedAt: string        // ISO
   updatedAt: string        // ISO
@@ -78,6 +79,8 @@ export interface V10QuizState {
   completed: boolean
   composites: CompositesResult | null
 }
+
+export const V10_SCHEMA_VERSION = 1
 
 // ─── Goal Discovery (phase 3) ────────────────────────────────────────────
 // 5-block intake form that runs *before* the psychometric quiz. Captures

@@ -3,6 +3,7 @@ import type { Goal, PlanResult, InterviewSession } from '../types/v2'
 import type { QuizState, RiskProfileId } from '../types/profiles'
 import type { UserIdentity } from '../types/identity'
 import type { V10QuizState, GoalDiscoveryState } from '../types/psychometric'
+import { V10_SCHEMA_VERSION } from '../types/psychometric'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
@@ -143,8 +144,18 @@ export const storage = {
   getQuizState: () => get<QuizState>(KEYS.QUIZ_STATE),
   setQuizState: (s: QuizState) => set(KEYS.QUIZ_STATE, s),
 
-  getV10QuizState: () => get<V10QuizState>(KEYS.V10_QUIZ_STATE),
-  setV10QuizState: (s: V10QuizState) => set(KEYS.V10_QUIZ_STATE, s),
+  getV10QuizState: (): V10QuizState | null => {
+    const stored = get<V10QuizState>(KEYS.V10_QUIZ_STATE)
+    if (!stored) return null
+    // Schema migration: stamp current version on legacy states. No
+    // structural change between v0 and v1 — the prefilled/prefillEvidence
+    // fields on PsychAnswer are additive and tolerated when absent.
+    if (!stored.schemaVersion || stored.schemaVersion < V10_SCHEMA_VERSION) {
+      return { ...stored, schemaVersion: V10_SCHEMA_VERSION }
+    }
+    return stored
+  },
+  setV10QuizState: (s: V10QuizState) => set(KEYS.V10_QUIZ_STATE, { ...s, schemaVersion: V10_SCHEMA_VERSION }),
   clearV10QuizState: () => remove(KEYS.V10_QUIZ_STATE),
 
   getGoalDiscovery: () => get<GoalDiscoveryState>(KEYS.V10_GOAL_DISCOVERY),
