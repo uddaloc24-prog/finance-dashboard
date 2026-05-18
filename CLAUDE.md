@@ -41,7 +41,7 @@
    - **06 Inflation Assumptions**
    - **07 Insurance Cover** — 3 groups · 14 policy types · MWP Act flag · smart-insights gap engine.
    - **Cashflow Summary** at bottom — surplus deployment plan keyed to risk profile.
-4. 👤 **Profile** — side-by-side Risk Profile + Risk Assessment cards; quick slider + 90s quiz + 15-question detailed assessment.
+4. 👤 **Profile** — side-by-side Risk Profile + Risk Assessment cards. Four assessment tools coexist (user picks): Quick 10-Q quiz, Deep 15-Q detailed assessment, Goal Discovery preflight (5 blocks · life context, goals, three Kinder questions, trade-offs, partner alignment), and Full v10 Adaptive Psychometric (74 items · 16 constructs · persona-driven reordering, prefills, and rephrasings · gauge dashboard with six composite scores).
 5. ⚖️ **Compare** (strategies) — strategy panel, cards, chart, table.
 6. 🪣 **Buckets** (assets) — bucket asset-class explorer with risk-profile-driven recommendations.
 7. 🔍 **Explorer** — side-by-side dropdowns, fund explorer.
@@ -68,6 +68,12 @@ src/
 │   ├── Shell.tsx        # V2 shell (chat-first)
 │   ├── Welcome*.tsx, Onboarding.tsx
 │   ├── plan/            # FundList, PlanReveal, VerdictBadge
+│   ├── profiles/
+│   │   ├── ProfilesPanel.tsx  # The Profile tab; mounts all 4 assessments
+│   │   ├── RiskQuiz.tsx       # Quick 10-Q (legacy)
+│   │   ├── GoalDiscoveryForm.tsx
+│   │   ├── V10Quiz.tsx        # Full 74-item adaptive
+│   │   └── CompositesDashboard.tsx  # Gauges + breakdowns for v10 results
 │   ├── buckets/         # BucketFundsExplorer
 │   ├── profiles/        # ProfileGrid, ProfileDetail, ProfileComparison, ProfilesPanel, RiskQuiz
 │   ├── strategies/      # StrategiesPanel, StrategyCard/Chart/Table
@@ -122,3 +128,4 @@ src/
 | 2026-04-04 | Project initialized, scope defined |
 | 2026-04-19 → 2026-05-07 | V1 dashboard built out: 3→4 bucket model, cascade explainer, V2 chat interview behind flag, strategies/profiles/tax/summary, guided onboarding, multi-frequency schedules, identity capture, asset-class explorer, 17 new asset classes, Overview/Welcome/Insights/Guide/Explorer tabs, multi-format export, Profile tab redesign, Plan-tab 7-section restructure, prod merge. |
 | 2026-05-17 | CLAUDE.md + tasks/todo.md refreshed to reflect current state. |
+| 2026-05-18 | v10 Adaptive Psychometric port complete across 7 phases (commits `422afb2` → `144dc37`): foundation → static UI → Goal Discovery preflight → persona+signal inference → adaptive layer → results dashboard → wire-up. Profile tab now has four assessment tools (Quick, Deep, Goal Discovery, Full v10). |

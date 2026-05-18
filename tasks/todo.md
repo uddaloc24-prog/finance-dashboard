@@ -1,6 +1,6 @@
 # Retirement Planner — Task List
 
-Last refreshed: 2026-05-17. Working tree clean, last commit `44a5915` (2026-05-07) merged prototype features into production.
+Last refreshed: 2026-05-18. Working tree clean, last commit `144dc37` (phase 7 of the v10 port).
 
 ## Current Sprint
 
@@ -8,8 +8,21 @@ Last refreshed: 2026-05-17. Working tree clean, last commit `44a5915` (2026-05-0
 
 ## Backlog — candidates for next sprint
 
-### A. Adaptive psychometric assessment (HIGH — work-in-progress locally)
-Local draft `RetireWise_Psychometric_Assessment_Tool_v10_Adaptive.html` (May 16) is more advanced than the in-app Risk Quiz. Port the adaptive flow into `src/components/profiles/RiskQuiz.tsx` (or a new `AdaptiveRiskAssessment.tsx`), wire it into the Profile tab, and have it write back into the existing risk-profile fields.
+### A. ~~Adaptive psychometric assessment~~ — DONE 2026-05-18
+Full v10 Adaptive Psychometric port shipped across 7 phases (commits `422afb2` → `144dc37`):
+- Phase 1 `422afb2` — Foundation (types, 74-item bank, composites)
+- Phase 2 `6a8b333` — Static 74-Q UI
+- Phase 3 `5974e45` — Goal Discovery preflight (5 blocks · block-3 deferred)
+- Phase 4 `1416d05` — Persona + 12-signal inference
+- Phase 5 `24094c8` — Adaptive layer (reorder / prefill / rephrase / bridge)
+- Phase 6 `d458faf` — Results dashboard (gauges + breakdowns)
+- Phase 7 `144dc37` — Wire-up: real capacity inputs, schema migration, cross-tab visibility
+
+Deferred sub-items (small, low-priority):
+- Block-3 per-goal interrogation (goal-type-specific probe catalog)
+- Audio uploads on Goal Discovery (Groq transcription dependency)
+- Goal-library catalog for block-1 in GD form
+- Surfacing the persona / signals / bridge sentence in a non-quiz UI (e.g., a "Profile insights" tab)
 
 ### B. Module A integration (HIGH — designed but not implemented)
 Local docs `MODULE_A_INTEGRATION.md` and `MODULE_A_PROMPT_REFERENCE.md` (May 16) describe a Module A integration not yet in the codebase. Read those docs, then implement.
