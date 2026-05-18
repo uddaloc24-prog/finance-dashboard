@@ -20,9 +20,9 @@ import {
   buildAdaptiveSequence,
   getQuestionText,
 } from '../../lib/psychometric/adaptive'
-import { profileById } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { Button } from '../ui/Button'
+import { CompositesDashboard } from './CompositesDashboard'
 
 interface Props {
   initialState: V10QuizState | null
@@ -115,12 +115,14 @@ export function V10Quiz({ initialState, inference, currentAge, retirementAge, on
 
   // ── Review screen ──────────────────────────────────────────────
   if (showReview && state.composites) {
-    return <ReviewScreen
-      composites={state.composites}
-      onAccept={() => onComplete(state.composites!, state.composites!.profileId)}
-      onRetake={restart}
-      onExit={onExit}
-    />
+    return (
+      <CompositesDashboard
+        composites={state.composites}
+        onAccept={() => onComplete(state.composites!, state.composites!.profileId)}
+        onRetake={restart}
+        onExit={onExit}
+      />
+    )
   }
 
   // ── Question screen ────────────────────────────────────────────
@@ -342,60 +344,3 @@ function state_chosenIndex(answer: PsychAnswer | undefined, question: PsychQuest
   return question.options.findIndex((o) => o.score === answer.value)
 }
 
-// ─── review screen ──────────────────────────────────────────────────────
-
-function ReviewScreen({
-  composites, onAccept, onRetake, onExit,
-}: { composites: CompositesResult; onAccept: () => void; onRetake: () => void; onExit: () => void }) {
-  const profile = profileById(composites.profileId)
-  const scriptLabel: Record<string, string> = {
-    avoidance: 'Money Avoidance',
-    worship:   'Money Worship',
-    status:    'Money Status',
-    vigilance: 'Money Vigilance',
-  }
-  return (
-    <div className="bg-white rounded-2xl border-2 border-blue-200 p-5 space-y-4">
-      <div className="text-center">
-        <span className="inline-block bg-blue-100 text-blue-800 text-[10px] font-bold tracking-[2px] uppercase px-3 py-1 rounded-full">
-          v10 assessment complete
-        </span>
-        <div className="text-4xl font-extrabold text-slate-900 mt-3 tabular-nums">
-          {Math.round(composites.riskProfile)}<span className="text-slate-400 text-2xl">/100</span>
-        </div>
-        <h3 className="text-lg font-bold text-blue-700 mt-1">{profile.name}</h3>
-        <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto leading-snug">{profile.tagline}</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 text-[11px]">
-        <Stat label="Risk appetite"   value={composites.riskAppetite} />
-        <Stat label="Risk capacity"   value={composites.riskCapacity} />
-        <Stat label="Bias index"      value={composites.biasIndex} />
-        <Stat label="Planning ready"  value={composites.planningReadiness} />
-        <Stat label="Scam vulnerability" value={composites.scamVulnerability} />
-        <Stat label="Dominant script" value={composites.dominantMoneyScript ? scriptLabel[composites.dominantMoneyScript] : '—'} raw />
-      </div>
-
-      <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
-        <Button variant="ghost" size="sm" onClick={onRetake}>Retake</Button>
-        <Button variant="ghost" size="sm" onClick={onExit}>Close</Button>
-        <Button onClick={onAccept}>Use this profile →</Button>
-      </div>
-
-      <p className="text-[10px] text-slate-500 text-center max-w-md mx-auto leading-snug">
-        Phase 2 result. The full gauge dashboard and construct breakdown will replace this screen in phase 6.
-      </p>
-    </div>
-  )
-}
-
-function Stat({ label, value, raw }: { label: string; value: number | string; raw?: boolean }) {
-  return (
-    <div className="border border-slate-200 rounded-md px-3 py-2 bg-slate-50/60">
-      <div className="text-[9px] font-bold tracking-[2px] uppercase text-slate-500">{label}</div>
-      <div className="text-sm font-bold text-slate-900 mt-0.5 tabular-nums">
-        {raw ? value : `${Math.round(value as number)}/100`}
-      </div>
-    </div>
-  )
-}
