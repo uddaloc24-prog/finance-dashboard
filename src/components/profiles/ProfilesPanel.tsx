@@ -1,13 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import type { UserProfile, BucketState } from '../../types'
 import type { QuizState, RiskProfileId } from '../../types/profiles'
-import type { V10QuizState, CompositesResult } from '../../types/psychometric'
+import type { V10QuizState, CompositesResult, GoalDiscoveryState } from '../../types/psychometric'
 import { profileById, profileFromScore } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { allocateBuckets, totalCorpus } from '../../lib/calculations'
 import { DEFAULT_DEMOGRAPHICS } from '../../constants'
 import { RiskQuiz } from './RiskQuiz'
 import { V10Quiz } from './V10Quiz'
+import { GoalDiscoveryForm } from './GoalDiscoveryForm'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
 
@@ -21,11 +22,13 @@ interface Props {
 export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBucketsUpdate }: Props) {
   const [quizState, setQuizState] = useState<QuizState | null>(() => storage.getQuizState())
   const [v10State, setV10State] = useState<V10QuizState | null>(() => storage.getV10QuizState())
+  const [gdState, setGdState] = useState<GoalDiscoveryState | null>(() => storage.getGoalDiscovery())
   const [chosenId, setChosenId] = useState<RiskProfileId | null>(
     () => storage.getRiskProfile() ?? quizState?.profileId ?? v10State?.composites?.profileId ?? null,
   )
   const [showQuiz, setShowQuiz] = useState(false)
   const [showV10, setShowV10] = useState(false)
+  const [showGd, setShowGd] = useState(false)
   const [showProfiler, setShowProfiler] = useState(false)
   const [profilerResult, setProfilerResult] = useState<RiskResult | null>(null)
 
@@ -40,6 +43,11 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       setChosenId(state.profileId)
     }
     setShowQuiz(false)
+  }
+
+  const handleGdComplete = (next: GoalDiscoveryState) => {
+    setGdState(next)
+    setShowGd(false)
   }
 
   const handleV10Complete = (_composites: CompositesResult, profileId: RiskProfileId) => {
@@ -214,6 +222,39 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
               </button>
             </div>
 
+            {/* Goal Discovery — preflight intake */}
+            <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Preflight · 5 blocks</span>
+                {gdState?.completed && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
+                )}
+                {gdState && !gdState.completed && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">In progress</span>
+                )}
+              </div>
+              <div className="text-sm font-extrabold tracking-tight text-slate-900">
+                Goal Discovery
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                A 5-block intake — life context, your goals, three Kinder reflections, trade-offs, partner alignment.
+                Personalizes the v10 assessment. ~15 minutes.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowGd((v) => !v)}
+                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-amber-700 text-white hover:bg-amber-800 transition-colors w-full"
+              >
+                {showGd
+                  ? 'Close Goal Discovery'
+                  : gdState?.completed
+                    ? 'Review / continue →'
+                    : gdState
+                      ? 'Resume Goal Discovery →'
+                      : 'Start Goal Discovery →'}
+              </button>
+            </div>
+
             {/* Full · v10 psychometric (74-item battery) */}
             <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
               <div className="flex items-baseline justify-between mb-1">
@@ -284,6 +325,14 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
           onComplete={handleV10Complete}
           onExit={() => setShowV10(false)}
+        />
+      )}
+
+      {showGd && (
+        <GoalDiscoveryForm
+          initialState={gdState}
+          onComplete={handleGdComplete}
+          onExit={() => setShowGd(false)}
         />
       )}
 

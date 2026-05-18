@@ -2,7 +2,7 @@ import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggest
 import type { Goal, PlanResult, InterviewSession } from '../types/v2'
 import type { QuizState, RiskProfileId } from '../types/profiles'
 import type { UserIdentity } from '../types/identity'
-import type { V10QuizState } from '../types/psychometric'
+import type { V10QuizState, GoalDiscoveryState } from '../types/psychometric'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
@@ -21,6 +21,7 @@ const KEYS = {
   SCHEMA_VERSION: 'rp_schema_version',
   QUIZ_STATE: 'rp_quiz_state',
   V10_QUIZ_STATE: 'rp_v10_quiz_state',
+  V10_GOAL_DISCOVERY: 'rp_v10_goal_discovery',
   RISK_PROFILE: 'rp_risk_profile',
   HAS_LAUNCHED: 'rp_has_launched',
   LAST_WELCOMED: 'rp_last_welcomed',  // ISO timestamp of last welcome view
@@ -145,6 +146,10 @@ export const storage = {
   getV10QuizState: () => get<V10QuizState>(KEYS.V10_QUIZ_STATE),
   setV10QuizState: (s: V10QuizState) => set(KEYS.V10_QUIZ_STATE, s),
   clearV10QuizState: () => remove(KEYS.V10_QUIZ_STATE),
+
+  getGoalDiscovery: () => get<GoalDiscoveryState>(KEYS.V10_GOAL_DISCOVERY),
+  setGoalDiscovery: (s: GoalDiscoveryState) => set(KEYS.V10_GOAL_DISCOVERY, s),
+  clearGoalDiscovery: () => remove(KEYS.V10_GOAL_DISCOVERY),
 
   getRiskProfile: () => get<RiskProfileId>(KEYS.RISK_PROFILE),
   setRiskProfile: (id: RiskProfileId) => set(KEYS.RISK_PROFILE, id),

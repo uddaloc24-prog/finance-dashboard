@@ -76,3 +76,31 @@ export interface V10QuizState {
   completed: boolean
   composites: CompositesResult | null
 }
+
+// ─── Goal Discovery (phase 3) ────────────────────────────────────────────
+// 5-block intake form that runs *before* the psychometric quiz. Captures
+// life-design context that phase 4 will mine for persona + behavioural
+// signals. The form holds free-text narratives + structured selections;
+// every field is local-only (no upload, no server).
+
+// The v10 spec uses block IDs 0..5. Phase 3 ships 0, 1, 2, 4, 5; block-3
+// (per-goal interrogation) is deferred but its ID stays reserved here so
+// later phases can fill it in without renumbering.
+export type GoalDiscoveryBlockId =
+  | 'block-0' | 'block-1' | 'block-2' | 'block-3' | 'block-4' | 'block-5'
+
+// A single field value. We allow string (free text), string[] (multi-select),
+// and number for sliders/ratings. Audio file refs are deferred to phase 3.5+.
+export type GdFieldValue = string | string[] | number | null
+
+export type GdBlockAnswers = Record<string, GdFieldValue>
+
+export interface GoalDiscoveryState {
+  sessionId: string
+  startedAt: string                                     // ISO
+  updatedAt: string                                     // ISO
+  currentBlock: GoalDiscoveryBlockId
+  visited: GoalDiscoveryBlockId[]                       // blocks the user has opened
+  answers: Partial<Record<GoalDiscoveryBlockId, GdBlockAnswers>>
+  completed: boolean
+}
