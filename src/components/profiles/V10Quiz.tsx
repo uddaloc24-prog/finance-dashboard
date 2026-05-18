@@ -4,16 +4,29 @@
 // gauge dashboard comes in phase 6.
 
 import { useMemo, useState } from 'react'
-import type { CompositesResult, PsychAnswer, PsychQuestion, V10QuizState } from '../../types/psychometric'
+import type {
+  CompositesResult,
+  InferenceResult,
+  PersonaId,
+  PsychAnswer,
+  PsychQuestion,
+  V10QuizState,
+} from '../../types/psychometric'
 import type { RiskProfileId } from '../../types/profiles'
 import { PSYCH_QUESTIONS, PSYCH_TOTAL_ITEMS } from '../../lib/data/psychometricBank'
 import { computeComposites } from '../../lib/psychometric/composites'
+import {
+  buildAdaptivePrefills,
+  buildAdaptiveSequence,
+  getQuestionText,
+} from '../../lib/psychometric/adaptive'
 import { profileById } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { Button } from '../ui/Button'
 
 interface Props {
   initialState: V10QuizState | null
+  inference: InferenceResult | null
   currentAge: number
   retirementAge: number
   onComplete: (composites: CompositesResult, profileId: RiskProfileId) => void
@@ -28,23 +41,27 @@ function makeSessionId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function freshState(): V10QuizState {
+function freshState(inference: InferenceResult | null): V10QuizState {
   const now = new Date().toISOString()
+  const personaId = inference?.persona.primary?.id ?? null
   return {
     sessionId: makeSessionId(),
     startedAt: now,
     updatedAt: now,
     currentIndex: 0,
-    questionSeq: PSYCH_QUESTIONS.map((q) => q.code),
-    answers: {},
+    questionSeq: buildAdaptiveSequence(personaId as PersonaId | null, PSYCH_QUESTIONS),
+    answers: buildAdaptivePrefills(inference),
     completed: false,
     composites: null,
   }
 }
 
-export function V10Quiz({ initialState, currentAge, retirementAge, onComplete, onExit }: Props) {
-  const [state, setState] = useState<V10QuizState>(() => initialState ?? freshState())
+export function V10Quiz({ initialState, inference, currentAge, retirementAge, onComplete, onExit }: Props) {
+  const [state, setState] = useState<V10QuizState>(() => initialState ?? freshState(inference))
   const [showReview, setShowReview] = useState(initialState?.completed === true)
+  const [bridgeDismissed, setBridgeDismissed] = useState(false)
+  const personaId = (inference?.persona.primary?.id ?? null) as PersonaId | null
+  const persona = inference?.persona.primary
 
   const questions = useMemo<PsychQuestion[]>(
     () => state.questionSeq.map((code) => PSYCH_QUESTIONS.find((q) => q.code === code)!).filter(Boolean),
@@ -90,9 +107,10 @@ export function V10Quiz({ initialState, currentAge, retirementAge, onComplete, o
   }
 
   function restart() {
-    const fresh = freshState()
+    const fresh = freshState(inference)
     persist(fresh)
     setShowReview(false)
+    setBridgeDismissed(false)
   }
 
   // ── Review screen ──────────────────────────────────────────────
@@ -117,6 +135,8 @@ export function V10Quiz({ initialState, currentAge, retirementAge, onComplete, o
   const answered = answer && !answer.skipped &&
     (Array.isArray(answer.value) ? answer.value.length > 0 : typeof answer.value === 'number')
   const isLast = idx === total - 1
+  const textInfo = getQuestionText(q, personaId)
+  const showBridge = !bridgeDismissed && idx === 0 && !!inference?.bridgeSentence
 
   // Section bookkeeping — show "Construct k of N · <name>"
   const constructsInOrder = useMemo(() => {
@@ -136,6 +156,31 @@ export function V10Quiz({ initialState, currentAge, retirementAge, onComplete, o
 
   return (
     <div className="bg-white rounded-2xl border-2 border-blue-200 p-5 space-y-4">
+      {/* ── Personalisation banner ─────────────────────────────── */}
+      {persona && (
+        <div className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 flex items-baseline gap-2 flex-wrap">
+          <span className="text-[10px] font-bold tracking-[2px] uppercase text-indigo-800">Tailored</span>
+          <span className="text-[11px] text-indigo-900 leading-snug">
+            Sequence and wording adjusted for the <strong>{persona.name}</strong> persona
+            inferred from your Goal Discovery answers ({inference?.persona.confidence} confidence).
+          </span>
+        </div>
+      )}
+
+      {/* ── Bridge sentence (Q1 only, dismissable) ─────────────── */}
+      {showBridge && (
+        <div className="rounded-md border-2 border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] text-amber-900 leading-relaxed">
+          {inference?.bridgeSentence}
+          <button
+            type="button"
+            onClick={() => setBridgeDismissed(true)}
+            className="block mt-1.5 text-[10px] font-bold uppercase tracking-wider text-amber-700 hover:text-amber-900"
+          >
+            Got it →
+          </button>
+        </div>
+      )}
+
       {/* ── Header / progress ─────────────────────────────────── */}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-3">
@@ -162,7 +207,24 @@ export function V10Quiz({ initialState, currentAge, retirementAge, onComplete, o
       </div>
 
       {/* ── Question ──────────────────────────────────────────── */}
-      <h3 className="text-base font-semibold text-slate-900 leading-snug">{q.question}</h3>
+      <div className="space-y-1.5">
+        {textInfo.isRephrased && (
+          <span className="inline-block text-[9px] font-bold tracking-[2px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+            Rephrased for you
+          </span>
+        )}
+        <h3 className="text-base font-semibold text-slate-900 leading-snug">{textInfo.text}</h3>
+      </div>
+
+      {/* ── Prefill banner ─────────────────────────────────────── */}
+      {answer?.prefilled && (
+        <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-900 leading-snug">
+          <span className="font-bold">Pre-filled from your earlier responses.</span> Adjust if you'd like.
+          {answer.prefillEvidence && (
+            <span className="block mt-0.5 italic text-amber-800">"{answer.prefillEvidence}"</span>
+          )}
+        </div>
+      )}
 
       {/* ── Options ───────────────────────────────────────────── */}
       <OptionList

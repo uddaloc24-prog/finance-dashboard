@@ -321,6 +321,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       {showV10 && (
         <V10Quiz
           initialState={v10State}
+          inference={gdState?.inference ?? null}
           currentAge={userProfile.demographics?.currentAge ?? DEFAULT_DEMOGRAPHICS.currentAge}
           retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
           onComplete={handleV10Complete}
