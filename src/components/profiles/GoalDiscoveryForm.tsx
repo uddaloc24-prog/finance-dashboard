@@ -4,7 +4,7 @@
 // deferred). No audio upload (Groq path). No inference yet — phase 4 will
 // mine the saved answers for persona + behavioural signals.
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type {
   GdBlockAnswers,
   GdFieldValue,
@@ -13,6 +13,7 @@ import type {
 } from '../../types/psychometric'
 import { storage } from '../../lib/storage'
 import { runInference } from '../../lib/psychometric/inference'
+import { transcribeAudio, TranscribeError } from '../../lib/psychometric/audioTranscribe'
 import { Button } from '../ui/Button'
 import {
   BLOCK3_PROBES,
@@ -37,6 +38,7 @@ import {
 
 interface Props {
   initialState: GoalDiscoveryState | null
+  groqApiKey?: string
   onComplete: (state: GoalDiscoveryState) => void
   onExit: () => void
 }
@@ -62,7 +64,7 @@ function freshState(): GoalDiscoveryState {
 
 const BLOCK_IDS: GoalDiscoveryBlockId[] = GD_BLOCKS.map((b) => b.id as GoalDiscoveryBlockId)
 
-export function GoalDiscoveryForm({ initialState, onComplete, onExit }: Props) {
+export function GoalDiscoveryForm({ initialState, groqApiKey, onComplete, onExit }: Props) {
   const [state, setState] = useState<GoalDiscoveryState>(() => initialState ?? freshState())
 
   function persist(next: GoalDiscoveryState) {
@@ -147,9 +149,9 @@ export function GoalDiscoveryForm({ initialState, onComplete, onExit }: Props) {
 
       {/* ─── Block body ────────────────────────────────────────────── */}
       <div className="pt-1">
-        {state.currentBlock === 'block-0' && <BlockZero get={(k) => getField('block-0', k)} set={(k, v) => setBlockField('block-0', k, v)} />}
+        {state.currentBlock === 'block-0' && <BlockZero get={(k) => getField('block-0', k)} set={(k, v) => setBlockField('block-0', k, v)} groqApiKey={groqApiKey} />}
         {state.currentBlock === 'block-1' && <BlockOne get={(k) => getField('block-1', k)} set={(k, v) => setBlockField('block-1', k, v)} />}
-        {state.currentBlock === 'block-2' && <BlockTwo get={(k) => getField('block-2', k)} set={(k, v) => setBlockField('block-2', k, v)} />}
+        {state.currentBlock === 'block-2' && <BlockTwo get={(k) => getField('block-2', k)} set={(k, v) => setBlockField('block-2', k, v)} groqApiKey={groqApiKey} />}
         {state.currentBlock === 'block-3' && <BlockThree get={(k) => getField('block-3', k)} set={(k, v) => setBlockField('block-3', k, v)} goals={readGoals(state.answers['block-1'])} />}
         {state.currentBlock === 'block-4' && <BlockFour get={(k) => getField('block-4', k)} set={(k, v) => setBlockField('block-4', k, v)} goals={readGoals(state.answers['block-1'])} />}
         {state.currentBlock === 'block-5' && <BlockFive get={(k) => getField('block-5', k)} set={(k, v) => setBlockField('block-5', k, v)} goals={readGoals(state.answers['block-1'])} />}
@@ -180,7 +182,7 @@ interface BlockProps {
   set: (key: string, value: GdFieldValue) => void
 }
 
-function BlockZero({ get, set }: BlockProps) {
+function BlockZero({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }) {
   const tags = (get<string[]>('tags') ?? []) as string[]
   const showOther = tags.includes('other')
 
@@ -216,16 +218,22 @@ function BlockZero({ get, set }: BlockProps) {
         })}
       </div>
       {showOther && (
-        <label className="block">
-          <span className="text-xs font-bold text-slate-700">✏️ Describe your "Other" situation</span>
-          <textarea
-            rows={3}
-            value={(get<string>('notes') as string) ?? ''}
-            onChange={(e) => set('notes', e.target.value)}
-            placeholder="e.g. Expecting our first grandchild next month and want to set up an education trust."
-            className="mt-1 w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-100 outline-none text-sm"
+        <div className="space-y-1.5">
+          <label className="block">
+            <span className="text-xs font-bold text-slate-700">✏️ Describe your "Other" situation</span>
+            <textarea
+              rows={3}
+              value={(get<string>('notes') as string) ?? ''}
+              onChange={(e) => set('notes', e.target.value)}
+              placeholder="e.g. Expecting our first grandchild next month and want to set up an education trust."
+              className="mt-1 w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 focus:ring-1 focus:ring-amber-100 outline-none text-sm"
+            />
+          </label>
+          <AudioInput
+            groqApiKey={groqApiKey}
+            onTranscribed={(text) => set('notes', appendTranscribed((get<string>('notes') as string) ?? '', text))}
           />
-        </label>
+        </div>
       )}
     </div>
   )
@@ -307,17 +315,19 @@ function BlockOne({ get, set }: BlockProps) {
 
 // ─── Block 2 ─────────────────────────────────────────────────────────────
 
-function BlockTwo({ get, set }: BlockProps) {
+function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }) {
   return (
     <div className="space-y-5">
       <KinderItem
         meta={KINDER_Q1}
+        groqApiKey={groqApiKey}
         textValue={(get<string>('q1Text') as string) ?? ''}
         onTextChange={(v) => set('q1Text', v)}
         extra={null}
       />
       <KinderItem
         meta={KINDER_Q2}
+        groqApiKey={groqApiKey}
         textValue={(get<string>('q2Text') as string) ?? ''}
         onTextChange={(v) => set('q2Text', v)}
         extra={
@@ -329,6 +339,7 @@ function BlockTwo({ get, set }: BlockProps) {
       />
       <KinderItem
         meta={KINDER_Q3}
+        groqApiKey={groqApiKey}
         textValue={(get<string>('q3Text') as string) ?? ''}
         onTextChange={(v) => set('q3Text', v)}
         extra={
@@ -342,12 +353,13 @@ function BlockTwo({ get, set }: BlockProps) {
 }
 
 function KinderItem({
-  meta, textValue, onTextChange, extra,
+  meta, textValue, onTextChange, extra, groqApiKey,
 }: {
   meta: { badge: string; tagline: string; prompt: string; placeholder: string }
   textValue: string
   onTextChange: (v: string) => void
   extra: React.ReactNode
+  groqApiKey?: string
 }) {
   return (
     <div className="rounded-md border-2 border-amber-100 bg-amber-50/30 p-3 space-y-2">
@@ -363,7 +375,86 @@ function KinderItem({
         placeholder={meta.placeholder}
         className="w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 outline-none text-sm bg-white"
       />
+      <AudioInput
+        groqApiKey={groqApiKey}
+        onTranscribed={(text) => onTextChange(appendTranscribed(textValue, text))}
+      />
       {extra}
+    </div>
+  )
+}
+
+// ─── shared audio input (Groq Whisper) ──────────────────────────────────
+
+function appendTranscribed(current: string, transcribed: string): string {
+  const t = transcribed.trim()
+  if (!t) return current
+  return current.trim() ? `${current.trim()}\n\n${t}` : t
+}
+
+function AudioInput({
+  groqApiKey, onTranscribed,
+}: { groqApiKey?: string; onTranscribed: (text: string) => void }) {
+  const [status, setStatus] = useState<'idle' | 'busy' | 'error'>('idle')
+  const [message, setMessage] = useState<string>('')
+  const inputRef = useRef<HTMLInputElement>(null)
+  const disabled = !groqApiKey || status === 'busy'
+
+  async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (inputRef.current) inputRef.current.value = ''  // allow re-selecting same file later
+    if (!file || !groqApiKey) return
+    setStatus('busy')
+    setMessage(`Transcribing ${file.name}…`)
+    try {
+      const text = await transcribeAudio(file, groqApiKey)
+      if (text) {
+        onTranscribed(text)
+        setStatus('idle')
+        setMessage('')
+      } else {
+        setStatus('error')
+        setMessage('No speech detected.')
+      }
+    } catch (err) {
+      setStatus('error')
+      if (err instanceof TranscribeError) setMessage(err.message)
+      else setMessage(err instanceof Error ? err.message : 'Transcription failed')
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap text-[11px]">
+      <label
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border-2 transition-colors ${
+          disabled
+            ? 'border-slate-200 text-slate-400 bg-slate-50 cursor-not-allowed'
+            : 'border-amber-300 text-amber-800 bg-white hover:bg-amber-50 cursor-pointer'
+        }`}
+        title={!groqApiKey ? 'Set Groq API key in Profile / Onboarding to enable' : undefined}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="audio/*"
+          onChange={handleFile}
+          disabled={disabled}
+          className="hidden"
+        />
+        <span aria-hidden="true">🎤</span>
+        <span className="font-semibold">
+          {status === 'busy' ? 'Transcribing…' : 'Upload audio'}
+        </span>
+      </label>
+      {!groqApiKey && (
+        <span className="text-slate-500 italic">Needs Groq API key (set in Onboarding)</span>
+      )}
+      {status === 'error' && message && (
+        <span className="text-rose-700">{message}</span>
+      )}
+      {status === 'idle' && message && (
+        <span className="text-emerald-700">{message}</span>
+      )}
     </div>
   )
 }

@@ -338,6 +338,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       {showGd && (
         <GoalDiscoveryForm
           initialState={gdState}
+          groqApiKey={userProfile.groqApiKey}
           onComplete={handleGdComplete}
           onExit={() => setShowGd(false)}
         />
