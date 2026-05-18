@@ -2,6 +2,7 @@ import type { UserProfile, BucketState, MarketData, ReturnAssumptions, AISuggest
 import type { Goal, PlanResult, InterviewSession } from '../types/v2'
 import type { QuizState, RiskProfileId } from '../types/profiles'
 import type { UserIdentity } from '../types/identity'
+import type { V10QuizState } from '../types/psychometric'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
 
@@ -19,6 +20,7 @@ const KEYS = {
   INTERVIEW: 'rp_v2_interview',
   SCHEMA_VERSION: 'rp_schema_version',
   QUIZ_STATE: 'rp_quiz_state',
+  V10_QUIZ_STATE: 'rp_v10_quiz_state',
   RISK_PROFILE: 'rp_risk_profile',
   HAS_LAUNCHED: 'rp_has_launched',
   LAST_WELCOMED: 'rp_last_welcomed',  // ISO timestamp of last welcome view
@@ -139,6 +141,10 @@ export const storage = {
 
   getQuizState: () => get<QuizState>(KEYS.QUIZ_STATE),
   setQuizState: (s: QuizState) => set(KEYS.QUIZ_STATE, s),
+
+  getV10QuizState: () => get<V10QuizState>(KEYS.V10_QUIZ_STATE),
+  setV10QuizState: (s: V10QuizState) => set(KEYS.V10_QUIZ_STATE, s),
+  clearV10QuizState: () => remove(KEYS.V10_QUIZ_STATE),
 
   getRiskProfile: () => get<RiskProfileId>(KEYS.RISK_PROFILE),
   setRiskProfile: (id: RiskProfileId) => set(KEYS.RISK_PROFILE, id),

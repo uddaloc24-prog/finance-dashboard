@@ -1,10 +1,13 @@
 import { useState, type ReactNode } from 'react'
 import type { UserProfile, BucketState } from '../../types'
 import type { QuizState, RiskProfileId } from '../../types/profiles'
+import type { V10QuizState, CompositesResult } from '../../types/psychometric'
 import { profileById, profileFromScore } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { allocateBuckets, totalCorpus } from '../../lib/calculations'
+import { DEFAULT_DEMOGRAPHICS } from '../../constants'
 import { RiskQuiz } from './RiskQuiz'
+import { V10Quiz } from './V10Quiz'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
 
@@ -17,10 +20,12 @@ interface Props {
 
 export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBucketsUpdate }: Props) {
   const [quizState, setQuizState] = useState<QuizState | null>(() => storage.getQuizState())
+  const [v10State, setV10State] = useState<V10QuizState | null>(() => storage.getV10QuizState())
   const [chosenId, setChosenId] = useState<RiskProfileId | null>(
-    () => storage.getRiskProfile() ?? quizState?.profileId ?? null,
+    () => storage.getRiskProfile() ?? quizState?.profileId ?? v10State?.composites?.profileId ?? null,
   )
   const [showQuiz, setShowQuiz] = useState(false)
+  const [showV10, setShowV10] = useState(false)
   const [showProfiler, setShowProfiler] = useState(false)
   const [profilerResult, setProfilerResult] = useState<RiskResult | null>(null)
 
@@ -35,6 +40,24 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       setChosenId(state.profileId)
     }
     setShowQuiz(false)
+  }
+
+  const handleV10Complete = (_composites: CompositesResult, profileId: RiskProfileId) => {
+    // Phase 2 wiring: set the matched profile and align bucket allocation to
+    // it. Composites are persisted inside V10QuizState; phase 7 will plumb
+    // them deeper into the engine.
+    setV10State(storage.getV10QuizState())
+    storage.setRiskProfile(profileId)
+    setChosenId(profileId)
+    const matched = profileById(profileId)
+    const allocFractions = { ...matched.bucketShare }
+    const newBuckets = allocateBuckets(corpus, allocFractions)
+    const updated: UserProfile = { ...userProfile, bucketAllocation: allocFractions }
+    storage.setProfile(updated)
+    onProfileUpdate(updated)
+    storage.setBuckets(newBuckets)
+    onBucketsUpdate(newBuckets)
+    setShowV10(false)
   }
 
   const handleChoose = (id: RiskProfileId) => {
@@ -190,6 +213,41 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
                 {showProfiler ? 'Close assessment' : 'Take detailed assessment →'}
               </button>
             </div>
+
+            {/* Full · v10 psychometric (74-item battery) */}
+            <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
+              <div className="flex items-baseline justify-between mb-1">
+                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Full · v10 · 74 items</span>
+                {v10State?.completed && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
+                )}
+                {v10State && !v10State.completed && (
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                    {v10State.currentIndex}/74 in progress
+                  </span>
+                )}
+              </div>
+              <div className="text-sm font-extrabold tracking-tight text-slate-900">
+                Psychometric assessment
+              </div>
+              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                74 questions across 16 constructs — risk tolerance, loss aversion, money scripts, biases,
+                financial literacy, scam vulnerability. Produces six composite scores. ~20 minutes.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowV10((v) => !v)}
+                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800 hover:to-indigo-800 transition-colors w-full"
+              >
+                {showV10
+                  ? 'Close assessment'
+                  : v10State?.completed
+                    ? 'Review / retake →'
+                    : v10State
+                      ? 'Resume assessment →'
+                      : 'Take v10 assessment →'}
+              </button>
+            </div>
           </div>
         </ToneCard>
       </div>
@@ -216,6 +274,16 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           initialState={quizState}
           onComplete={handleQuizComplete}
           onSkipToProfile={(id) => { handleChoose(id); setShowQuiz(false) }}
+        />
+      )}
+
+      {showV10 && (
+        <V10Quiz
+          initialState={v10State}
+          currentAge={userProfile.demographics?.currentAge ?? DEFAULT_DEMOGRAPHICS.currentAge}
+          retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
+          onComplete={handleV10Complete}
+          onExit={() => setShowV10(false)}
         />
       )}
 
