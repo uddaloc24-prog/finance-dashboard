@@ -92,7 +92,12 @@ src/
 │   ├── uploadParser.ts  # PDF/DOCX/XLSX → text + rawTextFull
 │   ├── pdf.ts, comprehensiveReport.ts
 │   ├── exporters/       # PDF/DOCX/PPTX/MD/CSV
-│   └── data/            # Static data
+│   ├── data/            # Static data — incl. psychometricBank, personas, goalDiscovery
+│   └── psychometric/    # v10 Adaptive engine
+│       ├── composites.ts        # 0–100 composite scores
+│       ├── inference.ts         # Persona + 12-signal extraction from GD answers
+│       ├── adaptive.ts          # Reorder / prefill / rephrase application
+│       └── capacityInputs.ts    # Derives RiskCapacityInput from Plan-tab data
 ├── hooks/               # useInterview, useMarketData, useStorage
 ├── types/               # index, identity, profiles, strategies, v2, shims
 └── constants/
