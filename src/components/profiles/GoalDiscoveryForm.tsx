@@ -15,6 +15,7 @@ import { storage } from '../../lib/storage'
 import { runInference } from '../../lib/psychometric/inference'
 import { Button } from '../ui/Button'
 import {
+  BLOCK3_PROBES,
   GD_BLOCKS,
   GD_GOAL_AMOUNTS,
   GD_GOAL_HORIZONS,
@@ -31,6 +32,7 @@ import {
   PARTNER_INVOLVEMENT,
   TRADEOFF_FUND_OPTIONS,
   type OptionLite,
+  type ProbeDef,
 } from '../../lib/data/goalDiscovery'
 
 interface Props {
@@ -148,6 +150,7 @@ export function GoalDiscoveryForm({ initialState, onComplete, onExit }: Props) {
         {state.currentBlock === 'block-0' && <BlockZero get={(k) => getField('block-0', k)} set={(k, v) => setBlockField('block-0', k, v)} />}
         {state.currentBlock === 'block-1' && <BlockOne get={(k) => getField('block-1', k)} set={(k, v) => setBlockField('block-1', k, v)} />}
         {state.currentBlock === 'block-2' && <BlockTwo get={(k) => getField('block-2', k)} set={(k, v) => setBlockField('block-2', k, v)} />}
+        {state.currentBlock === 'block-3' && <BlockThree get={(k) => getField('block-3', k)} set={(k, v) => setBlockField('block-3', k, v)} goals={readGoals(state.answers['block-1'])} />}
         {state.currentBlock === 'block-4' && <BlockFour get={(k) => getField('block-4', k)} set={(k, v) => setBlockField('block-4', k, v)} goals={readGoals(state.answers['block-1'])} />}
         {state.currentBlock === 'block-5' && <BlockFive get={(k) => getField('block-5', k)} set={(k, v) => setBlockField('block-5', k, v)} goals={readGoals(state.answers['block-1'])} />}
       </div>
@@ -361,6 +364,59 @@ function KinderItem({
         className="w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 outline-none text-sm bg-white"
       />
       {extra}
+    </div>
+  )
+}
+
+// ─── Block 3 ─────────────────────────────────────────────────────────────
+
+function BlockThree({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
+  const namedGoals = goals.filter((g) => g.name.trim().length > 0 && g.type)
+
+  if (namedGoals.length === 0) {
+    return (
+      <div className="text-xs text-slate-500 italic">
+        Add at least one goal on the previous block before answering the per-goal probes.
+      </div>
+    )
+  }
+
+  // Answers are keyed `${goalIndex}.${probeKey}` so they're stable across
+  // edits to the goal list. Renaming or reordering goals does not invalidate
+  // existing probe answers tied to the original index.
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-slate-600 leading-snug">
+        A few short follow-ups per goal. Pick what you would actually say — leave blank if uncertain.
+      </p>
+      {namedGoals.map((g, i) => {
+        const probes: ProbeDef[] = BLOCK3_PROBES[g.type] ?? []
+        return (
+          <div key={i} className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3 space-y-2">
+            <div className="flex items-baseline justify-between">
+              <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-500">
+                Goal {i + 1} · {GD_GOAL_TYPES.find((t) => t.value === g.type)?.label ?? g.type}
+              </div>
+              <div className="text-[11px] font-semibold text-slate-800 truncate max-w-[60%]">{g.name}</div>
+            </div>
+            {probes.length === 0 ? (
+              <p className="text-[11px] text-slate-500 italic">No probes defined for this goal type yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {probes.map((probe) => (
+                  <SelectField
+                    key={probe.key}
+                    label={probe.label}
+                    value={(get<string>(`${i}.${probe.key}`) as string) ?? ''}
+                    options={probe.options}
+                    onChange={(v) => set(`${i}.${probe.key}`, v)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
