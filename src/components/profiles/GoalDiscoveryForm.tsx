@@ -269,24 +269,51 @@ function BlockOne({ get, set }: BlockProps) {
     set('goals', next as unknown as GdFieldValue)
   }
 
+  function entryFromItem(item: GoalLibraryItem): GoalEntry {
+    return {
+      name: item.label,
+      type: item.type,
+      amount: item.defaultAmount ?? '',
+      horizon: item.defaultHorizon ?? '',
+      priority: item.defaultPriority ?? '',
+    }
+  }
+
   function addFromLibrary(item: GoalLibraryItem) {
     if (goals.length >= GD_MAX_GOALS) return
-    const next: GoalEntry[] = [
-      ...goals,
-      {
-        name: item.label,
-        type: item.type,
-        amount: item.defaultAmount ?? '',
-        horizon: item.defaultHorizon ?? '',
-        priority: item.defaultPriority ?? '',
-      },
-    ]
-    set('goals', next as unknown as GdFieldValue)
+    set('goals', [...goals, entryFromItem(item)] as unknown as GdFieldValue)
   }
 
   function remove(i: number) {
     const next = goals.filter((_, idx) => idx !== i)
     set('goals', next as unknown as GdFieldValue)
+  }
+
+  // Smart one-click handler for library items:
+  //  - already in goals → remove it (toggle)
+  //  - complementary conflict → swap in place (replace conflicting entry)
+  //  - otherwise → add normally
+  function handleLibraryClick(item: GoalLibraryItem) {
+    // Case 1: already added → remove
+    const existingIdx = goals.findIndex((g) => g.name.trim() === item.label)
+    if (existingIdx >= 0) {
+      remove(existingIdx)
+      return
+    }
+    // Case 2: complementary conflict → swap in place so the user's
+    // position in the list (and any custom amount/horizon/priority they
+    // may have adjusted on the conflict's card) is preserved positionally.
+    const conflict = conflictingLabel(item.id)
+    if (conflict) {
+      const idx = goals.findIndex((g) => g.name.trim() === conflict)
+      if (idx >= 0) {
+        const next = goals.map((g, i) => (i === idx ? { ...entryFromItem(item), amount: g.amount, horizon: g.horizon, priority: g.priority } : g))
+        set('goals', next as unknown as GdFieldValue)
+        return
+      }
+    }
+    // Case 3: plain add (respecting the cap)
+    addFromLibrary(item)
   }
 
   const libraryByType = GD_GOAL_LIBRARY.reduce<Record<string, GoalLibraryItem[]>>((acc, item) => {
@@ -382,30 +409,32 @@ function BlockOne({ get, set }: BlockProps) {
                         {items.map((item) => {
                           const already = addedLibraryLabels.has(item.label)
                           const conflict = already ? null : conflictingLabel(item.id)
-                          const atCap = goals.length >= GD_MAX_GOALS
-                          const disabled = already || !!conflict || atCap
+                          const atCap = !already && !conflict && goals.length >= GD_MAX_GOALS
                           const title = already
-                            ? 'Already in your goals'
+                            ? `Already in your goals — click to remove`
                             : conflict
-                              ? `Conflicts with "${conflict}" already in your goals`
+                              ? `Click to swap with "${conflict}"`
                               : atCap
                                 ? `Max ${GD_MAX_GOALS} goals reached`
-                                : item.description
-                          const prefix = already ? '✓' : conflict ? '⊘' : '+'
+                                : item.description ?? 'Click to add'
+                          // Three live states + atCap. None is "truly disabled"
+                          // except atCap (which blocks even adds).
+                          const prefix = already ? '✓' : conflict ? '⇄' : '+'
+                          const stateClass = already
+                            ? 'bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200/70'
+                            : conflict
+                              ? 'bg-amber-50/40 text-amber-700 border-amber-200/70 hover:bg-amber-100/60 hover:border-amber-300 italic'
+                              : atCap
+                                ? 'bg-slate-100 text-slate-400 cursor-not-allowed border-transparent'
+                                : 'bg-white text-slate-700 border-transparent hover:bg-amber-100/70 hover:text-amber-900 hover:border-amber-200'
                           return (
                             <button
                               key={item.id}
                               type="button"
-                              disabled={disabled}
-                              onClick={() => addFromLibrary(item)}
+                              disabled={atCap}
+                              onClick={() => handleLibraryClick(item)}
                               title={title}
-                              className={`text-left text-[11px] leading-snug px-2 py-1 rounded transition-colors ${
-                                already
-                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                  : conflict
-                                    ? 'bg-slate-50 text-slate-400 cursor-not-allowed line-through decoration-slate-300'
-                                    : 'bg-white text-slate-700 hover:bg-amber-100/70 hover:text-amber-900 border border-transparent hover:border-amber-200'
-                              }`}
+                              className={`text-left text-[11px] leading-snug px-2 py-1 rounded border transition-colors ${stateClass}`}
                             >
                               <span className="font-semibold mr-0.5">{prefix}</span> {item.label}
                             </button>
