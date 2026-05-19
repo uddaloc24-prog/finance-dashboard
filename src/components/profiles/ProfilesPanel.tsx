@@ -11,6 +11,7 @@ import { V10Quiz } from './V10Quiz'
 import { GoalDiscoveryForm } from './GoalDiscoveryForm'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
+import { Modal } from '../ui/Modal'
 
 interface Props {
   userProfile: UserProfile
@@ -262,32 +263,60 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
         </div>
       </ToneCard>
 
-      {/* ── Inline expanded panels ────────────────────────── */}
-      {showProfiler && (
-        <div className="bg-white rounded-lg border-[3px] border-amber-400 ring-1 ring-inset ring-amber-100 overflow-hidden relative">
-          <div className="absolute top-0 left-0 right-0 h-1 bg-amber-600" aria-hidden="true" />
-          <div className="px-4 sm:px-5 pt-5 pb-2 border-b-2 border-amber-100">
-            <div className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700 mb-1">Detailed Assessment · 15 questions</div>
-            <div className="text-base font-bold tracking-tight text-slate-900">Calibrate your risk profile</div>
-          </div>
-          <div className="p-4 sm:p-5">
-            <RiskProfiler
-              onComplete={handleProfilerComplete}
-              onSkip={closeAll}
-            />
-          </div>
-        </div>
-      )}
-
-      {showQuiz && (
+      {/* ── Modals — assessments render in pop-up windows ── */}
+      <Modal
+        open={showQuiz}
+        title="Quick · 10-question risk quiz"
+        subtitle="Time horizon · capacity · goals — scores you 10–50"
+        accent="amber"
+        size="lg"
+        onClose={closeAll}
+      >
         <RiskQuiz
           initialState={quizState}
           onComplete={handleQuizComplete}
           onSkipToProfile={(id) => { handleChoose(id); closeAll() }}
         />
-      )}
+      </Modal>
 
-      {showV10 && (
+      <Modal
+        open={showProfiler}
+        title="Deep · 15-question detailed assessment"
+        subtitle="Demographics, finances, psychology — auto-tunes your bucket allocation"
+        accent="amber"
+        size="xl"
+        onClose={closeAll}
+      >
+        <RiskProfiler
+          onComplete={handleProfilerComplete}
+          onSkip={closeAll}
+        />
+      </Modal>
+
+      <Modal
+        open={showGd}
+        title="Goal Discovery"
+        subtitle="5-block preflight — life context, goals, three Kinder reflections, trade-offs, partner alignment"
+        accent="indigo"
+        size="2xl"
+        onClose={closeAll}
+      >
+        <GoalDiscoveryForm
+          initialState={gdState}
+          groqApiKey={userProfile.groqApiKey}
+          onComplete={handleGdComplete}
+          onExit={closeAll}
+        />
+      </Modal>
+
+      <Modal
+        open={showV10}
+        title="Psychometric Assessment"
+        subtitle="74 items · 16 constructs · adaptive ordering driven by Goal Discovery"
+        accent="indigo"
+        size="2xl"
+        onClose={closeAll}
+      >
         <V10Quiz
           initialState={v10State}
           inference={gdState?.inference ?? null}
@@ -297,16 +326,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           onComplete={handleV10Complete}
           onExit={closeAll}
         />
-      )}
-
-      {showGd && (
-        <GoalDiscoveryForm
-          initialState={gdState}
-          groqApiKey={userProfile.groqApiKey}
-          onComplete={handleGdComplete}
-          onExit={closeAll}
-        />
-      )}
+      </Modal>
 
       {/* Hint banner — when quiz done but profile not selected */}
       {!showQuiz && quizProfile && !chosenId && (
