@@ -122,190 +122,145 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       {/* ── Hero strip ────────────────────────────────────── */}
       <ProfileHero />
 
-      {/* ── 01 + 02 — side-by-side tone cards ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-stretch">
-        {/* 01 — Risk Profile (current match) */}
-        <ToneCard num="01" tone="navy" title="Risk Profile" subtitle="Your current setting and match">
-          <div className="space-y-3">
-            {matchedProfile ? (
-              <div className="rounded-lg border-2 border-blue-200 bg-blue-50/60 p-3">
-                <div className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">Current match</div>
-                <div className="text-lg font-extrabold tracking-tight text-slate-900 mt-0.5">
-                  {matchedProfile.name}
+      {/* ── 01 — Goal Discovery & Psychometric Assessment (indigo) */}
+      <ToneCard num="01" tone="indigo" title="Goal Discovery & Psychometric Assessment" subtitle="Adaptive intelligence · the deeper tools that personalise your plan">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Goal Discovery */}
+          <AssessmentCard
+            tone="indigo"
+            eyebrow={
+              gdState?.completed ? 'Preflight · 5 blocks · ✓ Done' :
+              gdState ? 'Preflight · 5 blocks · In progress' : 'Preflight · 5 blocks'
+            }
+            stateLabel={gdState?.completed ? 'done' : gdState ? 'progress' : null}
+            title="Goal Discovery"
+            blurb="Life context, your goals, three Kinder reflections, trade-offs, partner alignment. Personalises the psychometric assessment. ~15 min."
+            buttonLabel={
+              showGd ? 'Close Goal Discovery'
+                : gdState?.completed ? 'Review / continue →'
+                  : gdState ? 'Resume Goal Discovery →'
+                    : 'Start Goal Discovery →'
+            }
+            onClick={() => toggleOpen('gd')}
+            active={showGd}
+          />
+          {/* Full · v10 psychometric (74-item battery) */}
+          <AssessmentCard
+            tone="indigo"
+            eyebrow={
+              v10State?.completed ? 'Full · 74 items · ✓ Done' :
+              v10State ? `Full · 74 items · ${v10State.currentIndex}/74 in progress` : 'Full · 74 items'
+            }
+            stateLabel={v10State?.completed ? 'done' : v10State ? 'progress' : null}
+            title="Psychometric Assessment"
+            blurb="74 questions across 16 constructs — risk tolerance, loss aversion, money scripts, biases, financial literacy, scam vulnerability. Six composite scores. ~20 min."
+            buttonLabel={
+              showV10 ? 'Close assessment'
+                : v10State?.completed ? 'Review / retake →'
+                  : v10State ? 'Resume assessment →'
+                    : 'Take psychometric assessment →'
+            }
+            onClick={() => toggleOpen('v10')}
+            active={showV10}
+            buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
+          />
+        </div>
+      </ToneCard>
+
+      {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
+      <ToneCard num="02" tone="navy" title="Risk Profile & Risk Assessment" subtitle="Your current setting and quick / detailed calibration">
+        <div className="space-y-4">
+          {/* ── Subheader: Risk Profile ─── */}
+          <section>
+            <SubHeader tone="navy" eyebrow="Risk Profile" subtitle="Current match · slider · score history" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              {matchedProfile ? (
+                <div className="rounded-lg border-2 border-blue-200 bg-blue-50/60 p-3">
+                  <div className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">Current match</div>
+                  <div className="text-lg font-extrabold tracking-tight text-slate-900 mt-0.5">
+                    {matchedProfile.name}
+                  </div>
+                  <div className="text-[11px] text-slate-600 mt-1 leading-snug">
+                    {quizState?.completed ? (
+                      <>Quiz score <span className="tabular-nums font-semibold">{quizState.totalScore}/50</span></>
+                    ) : (
+                      <>Selected manually — take a quiz to validate.</>
+                    )}
+                    {profilerResult && (
+                      <span className="block mt-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
+                        ✓ Detailed assessment complete
+                      </span>
+                    )}
+                    {v10State?.composites && (
+                      <span className="block mt-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                        v10 score <span className="tabular-nums">{Math.round(v10State.composites.riskProfile)}/100</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="text-[11px] text-slate-600 mt-1 leading-snug">
-                  {quizState?.completed ? (
-                    <>Quiz score <span className="tabular-nums font-semibold">{quizState.totalScore}/50</span></>
-                  ) : (
-                    <>Selected manually — take the quiz to validate your match.</>
-                  )}
-                  {profilerResult && (
-                    <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                      · ✓ Detailed assessment complete
-                    </span>
-                  )}
-                  {v10State?.composites && (
-                    <span className="ml-1 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
-                      · v10 score <span className="tabular-nums">{Math.round(v10State.composites.riskProfile)}/100</span>
-                    </span>
-                  )}
+              ) : (
+                <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/40 p-3 text-center flex flex-col justify-center">
+                  <div className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">No match yet</div>
+                  <div className="text-sm font-bold text-slate-800 mt-1">Pick a profile to load its plan</div>
+                  <div className="text-[11px] text-slate-600 mt-1 leading-snug">
+                    Use an assessment below or pick from the five profiles further down.
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-lg border-2 border-dashed border-blue-200 bg-blue-50/40 p-3 text-center">
-                <div className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">No match yet</div>
-                <div className="text-sm font-bold text-slate-800 mt-1">Pick a profile to load its plan</div>
-                <div className="text-[11px] text-slate-600 mt-1">
-                  Use the assessment on the right or pick from the five profiles below.
-                </div>
-              </div>
-            )}
-
-            {/* Quick slider (kept here as the primary "current setting") */}
-            <div className="rounded-lg border-2 border-blue-200 bg-white p-3">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">Risk appetite</span>
-                <span className="text-sm font-extrabold text-blue-700 tabular-nums">
-                  {riskLabel} · {userProfile.riskAppetite}/5
-                </span>
-              </div>
-              <input
-                type="range"
-                min={1}
-                max={5}
-                value={userProfile.riskAppetite}
-                onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
-                aria-label="Risk appetite"
-                className="w-full accent-blue-600 mt-1"
-              />
-              <div className="flex justify-between text-[9px] text-slate-500 mt-0.5 font-medium">
-                <span>Conservative</span>
-                <span>Moderate</span>
-                <span>Aggressive</span>
-              </div>
-            </div>
-          </div>
-        </ToneCard>
-
-        {/* 02 — Risk Assessment (tools to refine the match) */}
-        <ToneCard num="02" tone="amber" title="Risk Assessment" subtitle="Calibrate by quiz or detailed assessment">
-          <div className="space-y-3">
-            {/* 90-second quiz */}
-            <div className="rounded-lg border-2 border-amber-200 bg-amber-50/60 p-3 flex flex-col">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Quick · 90 seconds</span>
-                {quizState?.completed && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-white border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
-                )}
-              </div>
-              <div className="text-sm font-extrabold tracking-tight text-slate-900">
-                10-question risk quiz
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                Time horizon, capacity, goals — scores you 10–50 and maps to one of five profiles.
-              </p>
-              <button
-                type="button"
-                onClick={() => toggleOpen('quiz')}
-                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors w-full"
-              >
-                {showQuiz ? 'Close quiz' : quizState?.completed ? 'Retake quiz →' : 'Take risk quiz →'}
-              </button>
-            </div>
-
-            {/* Detailed 15-question assessment */}
-            <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Deep · 15 questions</span>
-                {profilerResult && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
-                )}
-              </div>
-              <div className="text-sm font-extrabold tracking-tight text-slate-900">
-                Detailed assessment
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                Demographics, finances, market psychology, goals — auto-tunes your bucket allocation.
-              </p>
-              <button
-                type="button"
-                onClick={() => toggleOpen('profiler')}
-                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 transition-colors w-full"
-              >
-                {showProfiler ? 'Close assessment' : 'Take detailed assessment →'}
-              </button>
-            </div>
-
-            {/* Goal Discovery — preflight intake */}
-            <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Preflight · 5 blocks</span>
-                {gdState?.completed && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
-                )}
-                {gdState && !gdState.completed && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">In progress</span>
-                )}
-              </div>
-              <div className="text-sm font-extrabold tracking-tight text-slate-900">
-                Goal Discovery
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                A 5-block intake — life context, your goals, three Kinder reflections, trade-offs, partner alignment.
-                Personalizes the v10 assessment. ~15 minutes.
-              </p>
-              <button
-                type="button"
-                onClick={() => toggleOpen('gd')}
-                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-amber-700 text-white hover:bg-amber-800 transition-colors w-full"
-              >
-                {showGd
-                  ? 'Close Goal Discovery'
-                  : gdState?.completed
-                    ? 'Review / continue →'
-                    : gdState
-                      ? 'Resume Goal Discovery →'
-                      : 'Start Goal Discovery →'}
-              </button>
-            </div>
-
-            {/* Full · v10 psychometric (74-item battery) */}
-            <div className="rounded-lg border-2 border-amber-200 bg-white p-3 flex flex-col">
-              <div className="flex items-baseline justify-between mb-1">
-                <span className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">Full · v10 · 74 items</span>
-                {v10State?.completed && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
-                )}
-                {v10State && !v10State.completed && (
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
-                    {v10State.currentIndex}/74 in progress
+              )}
+              <div className="rounded-lg border-2 border-blue-200 bg-white p-3">
+                <div className="flex items-baseline justify-between mb-1">
+                  <span className="text-[10px] font-bold tracking-[2px] uppercase text-blue-700">Risk appetite</span>
+                  <span className="text-sm font-extrabold text-blue-700 tabular-nums">
+                    {riskLabel} · {userProfile.riskAppetite}/5
                   </span>
-                )}
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={5}
+                  value={userProfile.riskAppetite}
+                  onChange={(e) => handleSliderChange(parseInt(e.target.value, 10))}
+                  aria-label="Risk appetite"
+                  className="w-full accent-blue-600 mt-1"
+                />
+                <div className="flex justify-between text-[9px] text-slate-500 mt-0.5 font-medium">
+                  <span>Conservative</span>
+                  <span>Moderate</span>
+                  <span>Aggressive</span>
+                </div>
               </div>
-              <div className="text-sm font-extrabold tracking-tight text-slate-900">
-                Psychometric assessment
-              </div>
-              <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
-                74 questions across 16 constructs — risk tolerance, loss aversion, money scripts, biases,
-                financial literacy, scam vulnerability. Produces six composite scores. ~20 minutes.
-              </p>
-              <button
-                type="button"
-                onClick={() => toggleOpen('v10')}
-                className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800 hover:to-indigo-800 transition-colors w-full"
-              >
-                {showV10
-                  ? 'Close assessment'
-                  : v10State?.completed
-                    ? 'Review / retake →'
-                    : v10State
-                      ? 'Resume assessment →'
-                      : 'Take v10 assessment →'}
-              </button>
             </div>
-          </div>
-        </ToneCard>
-      </div>
+          </section>
+
+          {/* ── Subheader: Risk Assessment ─── */}
+          <section>
+            <SubHeader tone="amber" eyebrow="Risk Assessment" subtitle="Calibrate quickly · 90 seconds or a deeper 15-question pass" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+              <AssessmentCard
+                tone="amber"
+                eyebrow={quizState?.completed ? 'Quick · 90s · ✓ Done' : 'Quick · 90 seconds'}
+                stateLabel={quizState?.completed ? 'done' : null}
+                title="10-question risk quiz"
+                blurb="Time horizon, capacity, goals — scores you 10–50 and maps to one of five profiles."
+                buttonLabel={showQuiz ? 'Close quiz' : quizState?.completed ? 'Retake quiz →' : 'Take risk quiz →'}
+                onClick={() => toggleOpen('quiz')}
+                active={showQuiz}
+              />
+              <AssessmentCard
+                tone="amber"
+                eyebrow={profilerResult ? 'Deep · 15 questions · ✓ Done' : 'Deep · 15 questions'}
+                stateLabel={profilerResult ? 'done' : null}
+                title="Detailed assessment"
+                blurb="Demographics, finances, market psychology, goals — auto-tunes your bucket allocation."
+                buttonLabel={showProfiler ? 'Close assessment' : 'Take detailed assessment →'}
+                onClick={() => toggleOpen('profiler')}
+                active={showProfiler}
+                buttonClass="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700"
+              />
+            </div>
+          </section>
+        </div>
+      </ToneCard>
 
       {/* ── Inline expanded panels ────────────────────────── */}
       {showProfiler && (
@@ -406,22 +361,96 @@ function ProfileHero() {
       <h2 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 leading-tight">
         Find <em className="not-italic font-extrabold text-blue-700">your match</em>.
       </h2>
-      <p className="text-[11px] sm:text-xs text-slate-600 mt-1.5 leading-snug max-w-2xl">
-        Pick a profile manually, take a 90-second quiz, or run the 15-question detailed assessment — every choice flows
-        through to bucket allocation, fund picks, and the strategy comparison.
+      <p className="text-[11px] sm:text-xs text-slate-600 mt-1.5 leading-snug max-w-3xl">
+        Four ways to land your risk profile, ordered roughly by depth:
+        a <strong className="text-indigo-700">Goal Discovery</strong> intake and a 74-item{' '}
+        <strong className="text-indigo-700">psychometric assessment</strong> (deeper, adaptive);
+        a <strong className="text-amber-700">90-second quiz</strong> or 15-question{' '}
+        <strong className="text-amber-700">detailed assessment</strong> (faster);
+        or manually picking from the five canonical profiles below. Every choice flows through to bucket
+        allocation, fund picks, and the strategy comparison.
       </p>
     </div>
   )
 }
 
-type Tone = 'navy' | 'amber' | 'green'
+type Tone = 'navy' | 'amber' | 'green' | 'indigo'
 
 const TONES: Record<Tone, {
   border: string; ring: string; bar: string; text: string; numBg: string; numBorder: string
 }> = {
-  navy:  { border: 'border-blue-400',    ring: 'ring-blue-100',    bar: 'bg-blue-700',    text: 'text-blue-700',    numBg: 'bg-blue-50',    numBorder: 'border-blue-300' },
-  amber: { border: 'border-amber-400',   ring: 'ring-amber-100',   bar: 'bg-amber-600',   text: 'text-amber-700',   numBg: 'bg-amber-50',   numBorder: 'border-amber-300' },
-  green: { border: 'border-emerald-400', ring: 'ring-emerald-100', bar: 'bg-emerald-600', text: 'text-emerald-700', numBg: 'bg-emerald-50', numBorder: 'border-emerald-300' },
+  navy:   { border: 'border-blue-400',    ring: 'ring-blue-100',    bar: 'bg-blue-700',    text: 'text-blue-700',    numBg: 'bg-blue-50',    numBorder: 'border-blue-300' },
+  amber:  { border: 'border-amber-400',   ring: 'ring-amber-100',   bar: 'bg-amber-600',   text: 'text-amber-700',   numBg: 'bg-amber-50',   numBorder: 'border-amber-300' },
+  green:  { border: 'border-emerald-400', ring: 'ring-emerald-100', bar: 'bg-emerald-600', text: 'text-emerald-700', numBg: 'bg-emerald-50', numBorder: 'border-emerald-300' },
+  indigo: { border: 'border-indigo-400',  ring: 'ring-indigo-100',  bar: 'bg-indigo-700',  text: 'text-indigo-700',  numBg: 'bg-indigo-50',  numBorder: 'border-indigo-300' },
+}
+
+// ── SubHeader — used to mark subsections inside a ToneCard ─────────────
+
+interface SubHeaderProps {
+  eyebrow: string
+  subtitle?: string
+  tone: Tone
+}
+
+function SubHeader({ eyebrow, subtitle, tone }: SubHeaderProps) {
+  const t = TONES[tone]
+  return (
+    <div className="flex items-baseline gap-3">
+      <span className={`text-[10px] font-bold tracking-[3px] uppercase ${t.text} shrink-0`}>{eyebrow}</span>
+      {subtitle && (
+        <span className="text-[10px] text-slate-500 italic truncate hidden sm:inline">
+          {subtitle}
+        </span>
+      )}
+      <span className={`h-px flex-1 ${t.bar} opacity-30`} aria-hidden="true" />
+    </div>
+  )
+}
+
+// ── AssessmentCard — uniform card shell for each assessment tool ───────
+
+interface AssessmentCardProps {
+  tone: Tone
+  eyebrow: string
+  stateLabel: 'done' | 'progress' | null
+  title: string
+  blurb: string
+  buttonLabel: string
+  onClick: () => void
+  active: boolean
+  buttonClass?: string
+}
+
+function AssessmentCard({
+  tone, eyebrow, stateLabel, title, blurb, buttonLabel, onClick, active, buttonClass,
+}: AssessmentCardProps) {
+  const t = TONES[tone]
+  const accentBg = tone === 'amber' ? 'bg-amber-600' : tone === 'indigo' ? 'bg-indigo-700' : tone === 'navy' ? 'bg-blue-700' : 'bg-emerald-600'
+  const accentHover = tone === 'amber' ? 'hover:bg-amber-700' : tone === 'indigo' ? 'hover:bg-indigo-800' : tone === 'navy' ? 'hover:bg-blue-800' : 'hover:bg-emerald-700'
+  const defaultBtn = `${accentBg} ${accentHover}`
+  return (
+    <div className={`relative rounded-lg border-2 ${active ? t.border + ' bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300'} p-3 flex flex-col transition-all`}>
+      <div className="flex items-baseline justify-between gap-2 mb-1">
+        <span className={`text-[10px] font-bold tracking-[2px] uppercase ${t.text}`}>{eyebrow}</span>
+        {stateLabel === 'done' && (
+          <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded">Done</span>
+        )}
+        {stateLabel === 'progress' && (
+          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">In progress</span>
+        )}
+      </div>
+      <div className="text-sm font-extrabold tracking-tight text-slate-900">{title}</div>
+      <p className="text-[11px] text-slate-600 mt-0.5 leading-snug flex-1">{blurb}</p>
+      <button
+        type="button"
+        onClick={onClick}
+        className={`mt-2.5 px-3 py-2 rounded-md text-xs font-bold text-white transition-colors w-full ${buttonClass ?? defaultBtn}`}
+      >
+        {buttonLabel}
+      </button>
+    </div>
+  )
 }
 
 interface ToneCardProps {
@@ -440,7 +469,7 @@ function ToneCard({ num, title, subtitle, tone, framed = false, children }: Tone
       className={`relative bg-white rounded-lg border-[3px] ${t.border} ring-1 ring-inset ${t.ring} overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow`}
     >
       <div className={`absolute top-0 left-0 right-0 h-1 ${t.bar}`} aria-hidden="true" />
-      <header className="px-4 sm:px-5 pt-5 pb-3 border-b-2 border-slate-100">
+      <header className="px-4 sm:px-5 pt-4 pb-3 border-b-2 border-slate-100">
         <div className="flex items-center gap-3">
           <span
             className={`shrink-0 w-10 h-10 rounded-md ${t.numBg} ${t.text} font-serif text-lg font-extralight tabular-nums flex items-center justify-center border-2 ${t.numBorder}`}
@@ -452,16 +481,16 @@ function ToneCard({ num, title, subtitle, tone, framed = false, children }: Tone
             <div className={`text-[10px] font-bold tracking-[2px] uppercase ${t.text} mb-0.5`}>
               Section {parseInt(num, 10)}
             </div>
-            <h3 className="text-sm sm:text-base font-bold tracking-tight text-slate-900 leading-tight">
+            <h3 className="font-serif text-base sm:text-lg font-extralight tracking-tight text-slate-900 leading-tight">
               {title}
             </h3>
             {subtitle && (
-              <p className="text-[11px] text-slate-500 truncate mt-0.5 leading-snug">{subtitle}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{subtitle}</p>
             )}
           </div>
         </div>
       </header>
-      <div className={framed ? 'p-3 sm:p-4 flex-1' : 'px-4 sm:px-5 py-4 flex-1'}>
+      <div className={framed ? 'p-3 sm:p-4 flex-1' : 'px-4 sm:px-5 py-3.5 flex-1'}>
         {children}
       </div>
     </section>
