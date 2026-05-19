@@ -213,11 +213,19 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
 
       {/* ── Question ──────────────────────────────────────────── */}
       <div className="space-y-1.5">
-        {textInfo.isRephrased && (
-          <span className="inline-block text-[9px] font-bold tracking-[2px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-            Rephrased for you
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span
+            className="inline-flex items-center text-[9px] font-bold tracking-[1.5px] uppercase text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded"
+            title={`This question measures ${q.constructName} (${q.construct}). Code: ${q.code}.`}
+          >
+            {q.construct} · {q.constructName}
           </span>
-        )}
+          {textInfo.isRephrased && (
+            <span className="inline-block text-[9px] font-bold tracking-[2px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+              Rephrased for you
+            </span>
+          )}
+        </div>
         <h3 className="text-base font-semibold text-slate-900 leading-snug">{textInfo.text}</h3>
       </div>
 

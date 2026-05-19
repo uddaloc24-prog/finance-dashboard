@@ -123,29 +123,28 @@ export function GoalDiscoveryForm({ initialState, groqApiKey, onComplete, onExit
           <span className="text-[10px] text-slate-500 italic">{meta.time}</span>
         </div>
 
-        {/* Tab strip */}
-        <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1">
-          {GD_BLOCKS.map((b, i) => {
+        {/* Progress rings */}
+        <div className="grid grid-cols-6 gap-1.5">
+          {GD_BLOCKS.map((b) => {
             const id = b.id as GoalDiscoveryBlockId
             const isActive = id === state.currentBlock
-            const isVisited = state.visited.includes(id)
+            const pct = blockProgress(id, state.answers)
             return (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => goTo(id)}
-                className={`flex-1 min-w-[110px] text-left px-3 py-2 rounded-md border-2 transition-colors text-[11px] font-medium ${
-                  isActive
-                    ? 'border-amber-500 bg-amber-50 text-amber-900'
-                    : isVisited
-                      ? 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                      : 'border-dashed border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300'
+                title={`${b.title} · ${Math.round(pct)}% complete`}
+                className={`flex flex-col items-center gap-1 p-1.5 rounded-md transition-colors ${
+                  isActive ? 'bg-amber-50' : 'hover:bg-slate-50'
                 }`}
-                title={b.title}
               >
-                <span className="text-base mr-1">{b.tab}</span>
-                <span className="hidden sm:inline">{b.title}</span>
-                <span className="sm:hidden">{i + 1}</span>
+                <ProgressRing pct={pct} icon={b.tab} active={isActive} />
+                <span className={`text-[9px] font-semibold tracking-tight text-center leading-tight ${
+                  isActive ? 'text-amber-900' : 'text-slate-600'
+                }`}>
+                  {b.title}
+                </span>
               </button>
             )
           })}
@@ -492,6 +491,78 @@ function KinderItem({
       {extra}
     </div>
   )
+}
+
+// ─── progress ring (header step indicator) ──────────────────────────────
+
+function ProgressRing({ pct, icon, active }: { pct: number; icon: string; active: boolean }) {
+  const r = 14
+  const stroke = 3
+  const c = 2 * Math.PI * r
+  const dash = (Math.max(0, Math.min(100, pct)) / 100) * c
+  const trackColor = active ? '#fcd34d' : '#e2e8f0'
+  const fillColor = pct > 0 ? '#b45309' : trackColor
+  return (
+    <span className="relative inline-flex items-center justify-center" style={{ width: 36, height: 36 }}>
+      <svg width={36} height={36} viewBox="0 0 36 36" className="-rotate-90" aria-hidden="true">
+        <circle cx={18} cy={18} r={r} stroke={trackColor} strokeWidth={stroke} fill="none" />
+        <circle
+          cx={18} cy={18} r={r}
+          stroke={fillColor}
+          strokeWidth={stroke}
+          fill="none"
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+        />
+      </svg>
+      <span className="absolute text-base leading-none select-none" style={{ transform: 'translate(0, 0)' }}>
+        {icon}
+      </span>
+    </span>
+  )
+}
+
+function blockProgress(blockId: GoalDiscoveryBlockId, answers: GoalDiscoveryState['answers']): number {
+  const a = answers[blockId] ?? {}
+  switch (blockId) {
+    case 'block-0': {
+      const tags = (a['tags'] as string[]) ?? []
+      const notes = (a['notes'] as string) ?? ''
+      if (tags.length > 0 || notes.trim().length > 0) return 100
+      return 0
+    }
+    case 'block-1': {
+      const goals = (a['goals'] as unknown as GoalEntry[]) ?? []
+      const named = goals.filter((g) => g.name.trim().length > 0).length
+      if (named === 0) return 0
+      return Math.min(100, Math.round((named / 3) * 100))
+    }
+    case 'block-2': {
+      const keys = ['q1Text', 'q2Text', 'q3Text'] as const
+      const filled = keys.filter((k) => ((a[k] as string) ?? '').trim().length >= 20).length
+      return Math.round((filled / keys.length) * 100)
+    }
+    case 'block-3': {
+      const probeKeys = Object.keys(a)
+      return probeKeys.length > 0 ? 100 : 0
+    }
+    case 'block-4': {
+      const keys = ['pushBack', 'reduce', 'fund'] as const
+      const filled = keys.filter((k) => !!((a[k] as string) ?? '')).length
+      return Math.round((filled / keys.length) * 100)
+    }
+    case 'block-5': {
+      const applicable = (a['applicable'] as string) ?? ''
+      if (!applicable) return 0
+      if (applicable === 'no') return 100
+      const userTop = ((a['userTop3'] as string) ?? '').trim()
+      const partnerTop = ((a['partnerTop3'] as string) ?? '').trim()
+      const filled = [userTop, partnerTop].filter(Boolean).length
+      return Math.min(100, 25 + Math.round((filled / 2) * 75))
+    }
+    default:
+      return 0
+  }
 }
 
 // ─── picture-card grid (multi-select, used by Kinder Q1) ───────────────
