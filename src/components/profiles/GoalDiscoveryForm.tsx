@@ -253,6 +253,9 @@ function readGoals(block: GdBlockAnswers | undefined): GoalEntry[] {
 function BlockOne({ get, set }: BlockProps) {
   const goals = (get('goals') as unknown as GoalEntry[]) ?? []
   const [libraryOpen, setLibraryOpen] = useState(goals.length === 0)
+  // Single-open accordion: only one category expands at a time. Click the
+  // same header again to collapse. null = all collapsed.
+  const [openCategory, setOpenCategory] = useState<string | null>(null)
 
   function update(i: number, patch: Partial<GoalEntry>) {
     const next = goals.map((g, idx) => (idx === i ? { ...g, ...patch } : g))
@@ -298,13 +301,17 @@ function BlockOne({ get, set }: BlockProps) {
         Add 3–7 financial goals (up to {GD_MAX_GOALS}). Don't worry about exact numbers — ranges are fine.
       </p>
 
-      {/* ─── Goal library ──────────────────────────────────────── */}
+      {/* ─── Goal library (collapsible, accordion subsections) ── */}
       {GD_GOAL_LIBRARY.length > 0 && (
-        <div className="rounded-md border-2 border-amber-200 bg-amber-50/40">
+        <div className="rounded-md border-2 border-amber-200 bg-amber-50/40 overflow-hidden">
           <button
             type="button"
-            onClick={() => setLibraryOpen((v) => !v)}
-            className="w-full flex items-center justify-between px-3 py-2 text-left"
+            onClick={() => {
+              const next = !libraryOpen
+              setLibraryOpen(next)
+              if (!next) setOpenCategory(null)
+            }}
+            className="w-full flex items-center justify-between px-3 py-2 text-left hover:bg-amber-50 transition-colors"
             aria-expanded={libraryOpen}
           >
             <div>
@@ -320,37 +327,62 @@ function BlockOne({ get, set }: BlockProps) {
             <span className="text-amber-700 text-lg" aria-hidden="true">{libraryOpen ? '–' : '+'}</span>
           </button>
           {libraryOpen && (
-            <div className="px-3 pb-3 space-y-3">
+            <div className="divide-y divide-amber-200/70 border-t-2 border-amber-200/70 bg-white">
               {libraryTypeOrder.map((typeId) => {
                 const typeLabel = GD_GOAL_TYPES.find((t) => t.value === typeId)?.label ?? typeId
+                const items = libraryByType[typeId]
+                const isOpen = openCategory === typeId
                 return (
-                  <div key={typeId}>
-                    <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-500 mb-1">
-                      {typeLabel}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {libraryByType[typeId].map((item) => {
-                        const already = addedLibraryLabels.has(item.label)
-                        return (
-                          <button
-                            key={item.id}
-                            type="button"
-                            disabled={already || goals.length >= GD_MAX_GOALS}
-                            onClick={() => addFromLibrary(item)}
-                            title={item.description}
-                            className={`text-left text-xs px-2.5 py-1.5 rounded-md border-2 transition-colors ${
-                              already
-                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
-                                : 'border-amber-200 bg-white text-slate-700 hover:border-amber-400 hover:bg-amber-50'
-                            }`}
-                          >
-                            <span className="font-semibold">{already ? '✓ ' : '+ '}</span>
-                            {item.label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
+                  <section key={typeId}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenCategory(isOpen ? null : typeId)}
+                      className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 text-left transition-colors ${
+                        isOpen ? 'bg-amber-100/60' : 'bg-white hover:bg-amber-50/40'
+                      }`}
+                      aria-expanded={isOpen}
+                    >
+                      <span className="flex items-baseline gap-2 min-w-0">
+                        <span className={`text-xs font-bold tracking-tight truncate ${
+                          isOpen ? 'text-amber-900' : 'text-slate-800'
+                        }`}>
+                          {typeLabel}
+                        </span>
+                        <span className="text-[9px] tabular-nums text-slate-400">{items.length}</span>
+                      </span>
+                      <span
+                        className={`text-[12px] leading-none text-slate-400 transition-transform ${
+                          isOpen ? 'rotate-90' : ''
+                        }`}
+                        aria-hidden="true"
+                      >
+                        ›
+                      </span>
+                    </button>
+                    {isOpen && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 px-3 pb-2.5 pt-1.5 bg-amber-50/30">
+                        {items.map((item) => {
+                          const already = addedLibraryLabels.has(item.label)
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              disabled={already || goals.length >= GD_MAX_GOALS}
+                              onClick={() => addFromLibrary(item)}
+                              title={item.description}
+                              className={`text-left text-[11px] leading-snug px-2 py-1 rounded transition-colors ${
+                                already
+                                  ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                  : 'bg-white text-slate-700 hover:bg-amber-100/70 hover:text-amber-900 border border-transparent hover:border-amber-200'
+                              }`}
+                            >
+                              <span className="font-semibold mr-0.5">{already ? '✓' : '+'}</span> {item.label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </section>
                 )
               })}
             </div>
@@ -567,11 +599,24 @@ function blockProgress(blockId: GoalDiscoveryBlockId, answers: GoalDiscoveryStat
 
 // ─── picture-card grid (multi-select, used by Kinder Q1) ───────────────
 
+// "alone"-style values in picture grids should be exclusive with the rest:
+// picking "alone / solitude" clears everything else; picking anything else
+// clears the exclusive value.
+const EXCLUSIVE_PICTURE_VALUES = new Set(['alone'])
+
 function PictureGrid({
   label, options, selected, onChange,
 }: { label: string; options: OptionLite[]; selected: string[]; onChange: (next: string[]) => void }) {
   function toggle(value: string) {
-    const next = selected.includes(value) ? selected.filter((s) => s !== value) : [...selected, value]
+    const isOn = selected.includes(value)
+    let next: string[]
+    if (isOn) {
+      next = selected.filter((s) => s !== value)
+    } else if (EXCLUSIVE_PICTURE_VALUES.has(value)) {
+      next = [value]
+    } else {
+      next = [...selected.filter((s) => !EXCLUSIVE_PICTURE_VALUES.has(s)), value]
+    }
     onChange(next)
   }
   return (

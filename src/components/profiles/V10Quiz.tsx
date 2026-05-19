@@ -279,13 +279,28 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
 
 // ─── option lists ────────────────────────────────────────────────────────
 
+// Labels that should behave as exclusive ("either-or") inside a multi-select.
+// Picking one of these clears the rest; picking anything else clears these.
+const EXCLUSIVE_LABEL_RE = /^(none\b|nothing\b)/i
+
 function OptionList({
   question, answer, onPick,
 }: { question: PsychQuestion; answer: PsychAnswer | undefined; onPick: (a: PsychAnswer) => void }) {
   if (question.scale === 'multi-select') {
     const selected = Array.isArray(answer?.value) ? (answer!.value as number[]) : []
+    const exclusiveIndexes = new Set(
+      question.options.map((o, i) => (EXCLUSIVE_LABEL_RE.test(o.label) ? i : -1)).filter((i) => i >= 0),
+    )
     function toggle(i: number) {
-      const next = selected.includes(i) ? selected.filter((x) => x !== i) : [...selected, i]
+      const isCurrentlySelected = selected.includes(i)
+      let next: number[]
+      if (isCurrentlySelected) {
+        next = selected.filter((x) => x !== i)
+      } else if (exclusiveIndexes.has(i)) {
+        next = [i]                                                      // exclusive — clear all
+      } else {
+        next = [...selected.filter((x) => !exclusiveIndexes.has(x)), i] // regular — drop any exclusive
+      }
       onPick({ value: next, skipped: false })
     }
     return (
