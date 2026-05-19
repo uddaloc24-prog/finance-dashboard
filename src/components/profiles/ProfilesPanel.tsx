@@ -26,10 +26,19 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
   const [chosenId, setChosenId] = useState<RiskProfileId | null>(
     () => storage.getRiskProfile() ?? quizState?.profileId ?? v10State?.composites?.profileId ?? null,
   )
-  const [showQuiz, setShowQuiz] = useState(false)
-  const [showV10, setShowV10] = useState(false)
-  const [showGd, setShowGd] = useState(false)
-  const [showProfiler, setShowProfiler] = useState(false)
+  // Single-open assessment row — only one of {Quick / Deep / Goal Discovery
+  // / Full v10} renders at a time. Clicking the open card's button closes
+  // it (toggle-off); clicking a different card's button switches.
+  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10'
+  const [openAssessment, setOpenAssessment] = useState<AssessmentKind | null>(null)
+  const showQuiz = openAssessment === 'quiz'
+  const showProfiler = openAssessment === 'profiler'
+  const showGd = openAssessment === 'gd'
+  const showV10 = openAssessment === 'v10'
+  function toggleOpen(kind: AssessmentKind) {
+    setOpenAssessment((cur) => (cur === kind ? null : kind))
+  }
+  function closeAll() { setOpenAssessment(null) }
   const [profilerResult, setProfilerResult] = useState<RiskResult | null>(null)
 
   const matchedProfile = chosenId ? profileById(chosenId) : null
@@ -42,12 +51,12 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
       storage.setRiskProfile(state.profileId)
       setChosenId(state.profileId)
     }
-    setShowQuiz(false)
+    closeAll()
   }
 
   const handleGdComplete = (next: GoalDiscoveryState) => {
     setGdState(next)
-    setShowGd(false)
+    closeAll()
   }
 
   const handleV10Complete = (_composites: CompositesResult, profileId: RiskProfileId) => {
@@ -65,7 +74,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
     onProfileUpdate(updated)
     storage.setBuckets(newBuckets)
     onBucketsUpdate(newBuckets)
-    setShowV10(false)
+    closeAll()
   }
 
   const handleChoose = (id: RiskProfileId) => {
@@ -101,7 +110,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
     onProfileUpdate(updated)
     storage.setBuckets(newBuckets)
     onBucketsUpdate(newBuckets)
-    setShowProfiler(false)
+    closeAll()
   }
 
   const riskLabel =
@@ -197,7 +206,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
               </p>
               <button
                 type="button"
-                onClick={() => setShowQuiz((v) => !v)}
+                onClick={() => toggleOpen('quiz')}
                 className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-amber-600 text-white hover:bg-amber-700 transition-colors w-full"
               >
                 {showQuiz ? 'Close quiz' : quizState?.completed ? 'Retake quiz →' : 'Take risk quiz →'}
@@ -220,7 +229,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
               </p>
               <button
                 type="button"
-                onClick={() => setShowProfiler((v) => !v)}
+                onClick={() => toggleOpen('profiler')}
                 className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-gradient-to-r from-amber-600 to-orange-600 text-white hover:from-amber-700 hover:to-orange-700 transition-colors w-full"
               >
                 {showProfiler ? 'Close assessment' : 'Take detailed assessment →'}
@@ -247,7 +256,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
               </p>
               <button
                 type="button"
-                onClick={() => setShowGd((v) => !v)}
+                onClick={() => toggleOpen('gd')}
                 className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-amber-700 text-white hover:bg-amber-800 transition-colors w-full"
               >
                 {showGd
@@ -282,7 +291,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
               </p>
               <button
                 type="button"
-                onClick={() => setShowV10((v) => !v)}
+                onClick={() => toggleOpen('v10')}
                 className="mt-2 px-3 py-2 rounded-md text-xs font-bold bg-gradient-to-r from-blue-700 to-indigo-700 text-white hover:from-blue-800 hover:to-indigo-800 transition-colors w-full"
               >
                 {showV10
@@ -309,7 +318,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           <div className="p-4 sm:p-5">
             <RiskProfiler
               onComplete={handleProfilerComplete}
-              onSkip={() => setShowProfiler(false)}
+              onSkip={closeAll}
             />
           </div>
         </div>
@@ -319,7 +328,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
         <RiskQuiz
           initialState={quizState}
           onComplete={handleQuizComplete}
-          onSkipToProfile={(id) => { handleChoose(id); setShowQuiz(false) }}
+          onSkipToProfile={(id) => { handleChoose(id); closeAll() }}
         />
       )}
 
@@ -331,7 +340,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           currentAge={userProfile.demographics?.currentAge ?? DEFAULT_DEMOGRAPHICS.currentAge}
           retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
           onComplete={handleV10Complete}
-          onExit={() => setShowV10(false)}
+          onExit={closeAll}
         />
       )}
 
@@ -340,7 +349,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
           initialState={gdState}
           groqApiKey={userProfile.groqApiKey}
           onComplete={handleGdComplete}
-          onExit={() => setShowGd(false)}
+          onExit={closeAll}
         />
       )}
 
