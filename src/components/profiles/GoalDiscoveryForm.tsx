@@ -26,6 +26,9 @@ import {
   GD_MAX_GOALS,
   GD_SCENE_TAGS,
   KINDER_Q1,
+  KINDER_Q1_ACTIVITY,
+  KINDER_Q1_WHERE,
+  KINDER_Q1_WHOM,
   KINDER_Q2,
   KINDER_Q2_START,
   KINDER_Q2_STOP,
@@ -408,7 +411,29 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
         groqApiKey={groqApiKey}
         textValue={(get<string>('q1Text') as string) ?? ''}
         onTextChange={(v) => set('q1Text', v)}
-        extra={null}
+        extra={
+          <div className="space-y-2 mt-2">
+            <div className="text-[11px] text-slate-500 italic">Or pick the closest visual options.</div>
+            <PictureGrid
+              label="Where would you be?"
+              options={KINDER_Q1_WHERE}
+              selected={(get<string[]>('q1Where') as string[]) ?? []}
+              onChange={(v) => set('q1Where', v)}
+            />
+            <PictureGrid
+              label="With whom?"
+              options={KINDER_Q1_WHOM}
+              selected={(get<string[]>('q1Whom') as string[]) ?? []}
+              onChange={(v) => set('q1Whom', v)}
+            />
+            <PictureGrid
+              label="Doing what?"
+              options={KINDER_Q1_ACTIVITY}
+              selected={(get<string[]>('q1Activity') as string[]) ?? []}
+              onChange={(v) => set('q1Activity', v)}
+            />
+          </div>
+        }
       />
       <KinderItem
         meta={KINDER_Q2}
@@ -465,6 +490,42 @@ function KinderItem({
         onTranscribed={(text) => onTextChange(appendTranscribed(textValue, text))}
       />
       {extra}
+    </div>
+  )
+}
+
+// ─── picture-card grid (multi-select, used by Kinder Q1) ───────────────
+
+function PictureGrid({
+  label, options, selected, onChange,
+}: { label: string; options: OptionLite[]; selected: string[]; onChange: (next: string[]) => void }) {
+  function toggle(value: string) {
+    const next = selected.includes(value) ? selected.filter((s) => s !== value) : [...selected, value]
+    onChange(next)
+  }
+  return (
+    <div>
+      <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-500 mb-1">{label}</div>
+      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
+        {options.map((o) => {
+          const isOn = selected.includes(o.value)
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => toggle(o.value)}
+              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-2 rounded-md border-2 transition-colors text-center ${
+                isOn
+                  ? 'bg-amber-50 border-amber-400 text-amber-900'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              <span className="text-xl" aria-hidden="true">{o.icon ?? '•'}</span>
+              <span className="text-[10px] leading-tight">{o.label}</span>
+            </button>
+          )
+        })}
+      </div>
     </div>
   )
 }

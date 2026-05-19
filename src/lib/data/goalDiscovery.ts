@@ -298,6 +298,48 @@ export const KINDER_Q3 = {
     "e.g. 'I never wrote that book I always wanted to. Never told my brother how much he meant. Never spent enough time with my parents in their last decade.'\n\nWhat's still unsaid? Who did you not become?",
 }
 
+// Q1 visual-card grids — "Or pick the closest visual options". Three
+// independent multi-selects (where / whom / activity) complement the
+// free-text answer. v10 uses image cards; we use emoji+label cards.
+export const KINDER_Q1_WHERE: OptionLite[] = [
+  { value: 'home',         icon: '🏠',  label: 'Own home' },
+  { value: 'nature',       icon: '🌳',  label: 'In nature / outdoors' },
+  { value: 'beach',        icon: '🏖️',  label: 'Beach / coast' },
+  { value: 'mountains',    icon: '⛰️',  label: 'Hills / mountains' },
+  { value: 'worship',      icon: '🛕',  label: 'Place of worship' },
+  { value: 'abroad',       icon: '✈️',  label: 'Travelling abroad' },
+  { value: 'hometown',     icon: '🏘️',  label: 'Hometown / ancestral' },
+  { value: 'studio',       icon: '🎨',  label: 'Studio / workspace' },
+  { value: 'vacation-home', icon: '🌅', label: 'Vacation home' },
+  { value: 'urban',        icon: '🌆',  label: 'Urban centre' },
+]
+
+export const KINDER_Q1_WHOM: OptionLite[] = [
+  { value: 'spouse',     icon: '👫', label: 'Spouse / partner' },
+  { value: 'grandchild', icon: '👶', label: 'Grandchildren' },
+  { value: 'children',   icon: '👨‍👩‍👧', label: 'Children + family' },
+  { value: 'parents',    icon: '👴', label: 'Parents' },
+  { value: 'friends',    icon: '👯', label: 'Friends / community' },
+  { value: 'alone',      icon: '🧘', label: 'Alone / solitude' },
+  { value: 'pets',       icon: '🐕', label: 'Pets' },
+  { value: 'spiritual',  icon: '🕊️', label: 'Spiritual community' },
+]
+
+export const KINDER_Q1_ACTIVITY: OptionLite[] = [
+  { value: 'reading',    icon: '📚', label: 'Reading / learning' },
+  { value: 'creating',   icon: '🎨', label: 'Creating / making' },
+  { value: 'exercise',   icon: '🏃', label: 'Exercise / sport' },
+  { value: 'meditation', icon: '🧘', label: 'Meditation / yoga' },
+  { value: 'cooking',    icon: '🍳', label: 'Cooking' },
+  { value: 'gardening',  icon: '🌱', label: 'Gardening' },
+  { value: 'writing',    icon: '✍️', label: 'Writing' },
+  { value: 'teaching',   icon: '👨‍🏫', label: 'Teaching / mentoring' },
+  { value: 'music',      icon: '🎵', label: 'Music' },
+  { value: 'travel',     icon: '🌍', label: 'Travelling' },
+  { value: 'volunteer',  icon: '🤝', label: 'Volunteering / seva' },
+  { value: 'hobbies',    icon: '🎯', label: 'Hobbies / collecting' },
+]
+
 export const KINDER_Q2_STOP: OptionLite[] = [
   { value: 'Working entirely',                 label: 'Working entirely' },
   { value: 'Long-distance commutes',           label: 'Long-distance commutes' },
