@@ -225,9 +225,60 @@ const SIGNAL_RULES: SignalRule[] = [
     id: 'herding_susceptibility', score: 0.7,
     test: (c) => reMatch(/\b(everyone|friend|colleague|whatsapp|told me|group|tip)\b/i, c.text),
   },
-  // protection_to_aspiration and overconfidence_marker: placeholders in
-  // v10 source — no inference rule defined yet.
+  // overconfidence_marker — v10 source declares but doesn't score. We
+  // detect prediction/outperformance/never-wrong language. Maps to C-12
+  // via SIGNAL_PREFILLS so the corresponding quiz item gets pre-filled
+  // toward the overconfident answer.
+  {
+    id: 'overconfidence_marker', score: 0.7,
+    test: (c) => reMatch(
+      /\b(beat the market|outperform|better than most|always pick|i can time|always right|i never lose|won['']t happen to me|i know which (?:stock|fund))\b/i,
+      c.text,
+    ),
+  },
 ]
+
+// ─── protection_to_aspiration (composite signal) ─────────────────────────
+// Balance between "protect what I have" goals/language vs "grow / achieve"
+// goals/language. Score 0..1: higher = more aspiration-oriented; 0.5 = balanced;
+// null when neither side has any evidence. v10 declares this as a composite
+// placeholder; we derive it from goal-type mix + free-text keywords.
+
+const PROTECTION_GOAL_TYPES = new Set(['legacy', 'parent_care', 'health'])
+const ASPIRATION_GOAL_TYPES = new Set(['business', 'lifestyle', 'retirement'])
+const PROTECTION_TEXT_RE = /\b(preserve|protect|safety|safe|guaranteed|don['']t lose|fixed deposit|fd|stable|conservative)\b/i
+const ASPIRATION_TEXT_RE = /\b(grow|build|achieve|fire|financial independence|freedom|ambition|early retire|early retirement)\b/i
+
+function computeProtectionToAspiration(ctx: SignalCtx): SignalHit {
+  const evidence: string[] = []
+  let protection = 0
+  let aspiration = 0
+
+  for (const g of ctx.goals) {
+    if (g.type && PROTECTION_GOAL_TYPES.has(g.type)) {
+      protection += 1
+      evidence.push(`protect:${g.type}`)
+    }
+    if (g.type && ASPIRATION_GOAL_TYPES.has(g.type)) {
+      aspiration += 1
+      evidence.push(`aspire:${g.type}`)
+    }
+  }
+  const pHit = ctx.text.match(PROTECTION_TEXT_RE)
+  if (pHit) { protection += 1; evidence.push(`protect:"${pHit[0]}"`) }
+  const aHit = ctx.text.match(ASPIRATION_TEXT_RE)
+  if (aHit) { aspiration += 1; evidence.push(`aspire:"${aHit[0]}"`) }
+
+  const total = protection + aspiration
+  if (total === 0) {
+    return { id: 'protection_to_aspiration', score: null, evidence: [] }
+  }
+  return {
+    id: 'protection_to_aspiration',
+    score: aspiration / total,
+    evidence: evidence.slice(0, 3),
+  }
+}
 
 export function inferSignals(gd: GoalDiscoveryState): SignalMap {
   const text = readText(gd)
@@ -250,6 +301,8 @@ export function inferSignals(gd: GoalDiscoveryState): SignalMap {
       out[rule.id] = { id: rule.id, score: rule.score, evidence: [ev] }
     }
   }
+  // protection_to_aspiration is a composite, not a simple regex hit.
+  out['protection_to_aspiration'] = computeProtectionToAspiration(ctx)
   return out
 }
 

@@ -167,4 +167,11 @@ export const SIGNAL_PREFILLS: Partial<Record<SignalId, SignalPrefillRule>> = {
   locus_of_control_internal: { items: ['C5-Q1','C5-Q2'], value: 5, kind: 'fc' },
   self_efficacy:             { items: ['C4-Q1'], value: 6 },
   time_orientation_present:  { items: ['C3-Q2'], value: 1, kind: 'fc' },
+  // overconfidence_marker — when detected during GD, seed C-12 toward the
+  // overconfident answer (value 1 = "Well above average" on C12-Q2; value 1
+  // = "I can pick winning stocks…strongly agree" on C12-Q3 once inverted).
+  overconfidence_marker:     { items: ['C12-Q2','C12-Q3'], value: 1, kind: 'fc' },
+  // protection_to_aspiration is a composite summary signal, intentionally
+  // left without a prefill rule. It surfaces in the dashboard / persona
+  // notes but does not auto-fill any quiz item.
 }
