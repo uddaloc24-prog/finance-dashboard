@@ -20,6 +20,7 @@ import {
   GD_BLOCKS,
   GD_GOAL_AMOUNTS,
   GD_GOAL_HORIZONS,
+  GD_GOAL_LIBRARY,
   GD_GOAL_PRIORITIES,
   GD_GOAL_TYPES,
   GD_MAX_GOALS,
@@ -32,6 +33,7 @@ import {
   KINDER_Q3_THEMES,
   PARTNER_INVOLVEMENT,
   TRADEOFF_FUND_OPTIONS,
+  type GoalLibraryItem,
   type OptionLite,
   type ProbeDef,
 } from '../../lib/data/goalDiscovery'
@@ -248,6 +250,7 @@ function readGoals(block: GdBlockAnswers | undefined): GoalEntry[] {
 
 function BlockOne({ get, set }: BlockProps) {
   const goals = (get('goals') as unknown as GoalEntry[]) ?? []
+  const [libraryOpen, setLibraryOpen] = useState(goals.length === 0)
 
   function update(i: number, patch: Partial<GoalEntry>) {
     const next = goals.map((g, idx) => (idx === i ? { ...g, ...patch } : g))
@@ -260,10 +263,32 @@ function BlockOne({ get, set }: BlockProps) {
     set('goals', next as unknown as GdFieldValue)
   }
 
+  function addFromLibrary(item: GoalLibraryItem) {
+    if (goals.length >= GD_MAX_GOALS) return
+    const next: GoalEntry[] = [
+      ...goals,
+      {
+        name: item.label,
+        type: item.type,
+        amount: item.defaultAmount ?? '',
+        horizon: item.defaultHorizon ?? '',
+        priority: item.defaultPriority ?? '',
+      },
+    ]
+    set('goals', next as unknown as GdFieldValue)
+  }
+
   function remove(i: number) {
     const next = goals.filter((_, idx) => idx !== i)
     set('goals', next as unknown as GdFieldValue)
   }
+
+  const libraryByType = GD_GOAL_LIBRARY.reduce<Record<string, GoalLibraryItem[]>>((acc, item) => {
+    ;(acc[item.type] ||= []).push(item)
+    return acc
+  }, {})
+  const libraryTypeOrder = GD_GOAL_TYPES.map((t) => t.value).filter((id) => libraryByType[id]?.length)
+  const addedLibraryLabels = new Set(goals.map((g) => g.name.trim()).filter(Boolean))
 
   return (
     <div className="space-y-3">
@@ -271,10 +296,70 @@ function BlockOne({ get, set }: BlockProps) {
         Add 3–7 financial goals (up to {GD_MAX_GOALS}). Don't worry about exact numbers — ranges are fine.
       </p>
 
+      {/* ─── Goal library ──────────────────────────────────────── */}
+      {GD_GOAL_LIBRARY.length > 0 && (
+        <div className="rounded-md border-2 border-amber-200 bg-amber-50/40">
+          <button
+            type="button"
+            onClick={() => setLibraryOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-3 py-2 text-left"
+            aria-expanded={libraryOpen}
+          >
+            <div>
+              <div className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">
+                Goal library
+              </div>
+              <div className="text-xs text-slate-700 leading-snug">
+                {libraryOpen ? 'Hide' : 'Browse'} our goal library ·{' '}
+                <span className="tabular-nums">{GD_GOAL_LIBRARY.length}</span> pre-defined goals across{' '}
+                <span className="tabular-nums">{libraryTypeOrder.length}</span> categories
+              </div>
+            </div>
+            <span className="text-amber-700 text-lg" aria-hidden="true">{libraryOpen ? '–' : '+'}</span>
+          </button>
+          {libraryOpen && (
+            <div className="px-3 pb-3 space-y-3">
+              {libraryTypeOrder.map((typeId) => {
+                const typeLabel = GD_GOAL_TYPES.find((t) => t.value === typeId)?.label ?? typeId
+                return (
+                  <div key={typeId}>
+                    <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-500 mb-1">
+                      {typeLabel}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      {libraryByType[typeId].map((item) => {
+                        const already = addedLibraryLabels.has(item.label)
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            disabled={already || goals.length >= GD_MAX_GOALS}
+                            onClick={() => addFromLibrary(item)}
+                            title={item.description}
+                            className={`text-left text-xs px-2.5 py-1.5 rounded-md border-2 transition-colors ${
+                              already
+                                ? 'border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed'
+                                : 'border-amber-200 bg-white text-slate-700 hover:border-amber-400 hover:bg-amber-50'
+                            }`}
+                          >
+                            <span className="font-semibold">{already ? '✓ ' : '+ '}</span>
+                            {item.label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {goals.length === 0 && (
         <div className="rounded-md border-2 border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center">
           <div className="text-xs text-slate-500 mb-2">No goals yet</div>
-          <Button size="sm" onClick={add}>+ Add your first goal</Button>
+          <Button size="sm" onClick={add}>+ Add a custom goal</Button>
         </div>
       )}
 
@@ -307,7 +392,7 @@ function BlockOne({ get, set }: BlockProps) {
       ))}
 
       {goals.length > 0 && goals.length < GD_MAX_GOALS && (
-        <Button size="sm" variant="ghost" onClick={add}>+ Add another goal</Button>
+        <Button size="sm" variant="ghost" onClick={add}>+ Add a custom goal</Button>
       )}
     </div>
   )

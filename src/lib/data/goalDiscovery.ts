@@ -65,6 +65,211 @@ export const GD_GOAL_PRIORITIES: OptionLite[] = [
 
 export const GD_MAX_GOALS = 25
 
+// Pre-defined library of common Indian-context retirement-adjacent goals.
+// Picking a library item seeds a new goal card with type/amount/horizon/
+// priority defaults already filled. Catalog populated below.
+export interface GoalLibraryItem {
+  id: string
+  label: string
+  type: string                      // matches GD_GOAL_TYPES values
+  defaultAmount?: string            // matches GD_GOAL_AMOUNTS values
+  defaultHorizon?: string           // matches GD_GOAL_HORIZONS values
+  defaultPriority?: 'must' | 'nice'
+  description?: string
+}
+
+// Full 16-category goal library, ported from v10 source. Items map to the
+// 9 GD_GOAL_TYPES values; subtype is the source category label and is used
+// for grouping in the UI. IDs are deduplicated (v10 uses
+// `${category}::${label}` runtime keys; we use stable lowercase-hyphen IDs
+// with `-tax` / `-exec` suffixes on the two collisions: coaching, family-trust).
+export const GD_GOAL_LIBRARY: GoalLibraryItem[] = [
+  // Retirement & Financial Independence
+  { id: 'retire-55', label: 'Retire at 55 (very early)', type: 'retirement' },
+  { id: 'retire-58', label: 'Retire at 58', type: 'retirement' },
+  { id: 'retire-60', label: 'Retire at 60 (standard)', type: 'retirement' },
+  { id: 'retire-62', label: 'Retire at 62', type: 'retirement' },
+  { id: 'retire-65', label: 'Retire at 65', type: 'retirement' },
+  { id: 'fire-40', label: 'Achieve Financial Independence (FIRE) by 40', type: 'retirement' },
+  { id: 'fire-45', label: 'Achieve Financial Independence (FIRE) by 45', type: 'retirement' },
+  { id: 'fire-50', label: 'Achieve Financial Independence (FIRE) by 50', type: 'retirement' },
+  { id: 'lean-fire', label: 'Build Lean FIRE corpus (~₹3 Cr)', type: 'retirement' },
+  { id: 'fat-fire', label: 'Build Fat FIRE corpus (₹10 Cr+)', type: 'retirement' },
+  { id: 'coast-fire', label: 'Coast FIRE — let existing investments grow', type: 'retirement' },
+  { id: 'lifestyle-retirement', label: 'Maintain current lifestyle in retirement', type: 'retirement' },
+  { id: 'inflation-retire', label: 'Inflation-proof retirement income', type: 'retirement' },
+  { id: 'retire-travel', label: 'Retirement travel & leisure fund', type: 'retirement' },
+  { id: 'retire-healthcare', label: 'Healthcare reserve for retirement (₹50 L+)', type: 'retirement' },
+  { id: 'semi-retire', label: 'Part-time / semi-retired transition', type: 'retirement' },
+  { id: 'intl-retire', label: 'International retirement (move abroad)', type: 'retirement' },
+
+  // Children's Education
+  { id: 'school-k12',     label: 'School fees (K-12)', type: 'education' },
+  { id: 'ug-india',       label: 'Undergraduate degree (India — IIT/IIM/NIT)', type: 'education' },
+  { id: 'ug-abroad',      label: 'Undergraduate degree abroad (US / UK / Singapore)', type: 'education' },
+  { id: 'pg-india',       label: 'Postgraduate / MBA (India)', type: 'education' },
+  { id: 'pg-abroad',      label: 'Postgraduate / MBA (abroad)', type: 'education' },
+  { id: 'medical',        label: 'Medical degree (MBBS / MD / abroad)', type: 'education' },
+  { id: 'law',            label: 'Law / professional degree', type: 'education' },
+  { id: 'phd',            label: 'PhD / research career support', type: 'education' },
+  { id: 'coaching',       label: 'Coaching / entrance exam preparation', type: 'education' },
+  { id: 'extracurr',      label: 'Extracurricular (sports, music, arts)', type: 'education' },
+  { id: 'intl-school',    label: 'International school fees', type: 'education' },
+  { id: 'multi-edu',      label: "Multiple children's education", type: 'education' },
+  { id: 'grandchild-edu', label: "Grandchild's education fund", type: 'education' },
+
+  // Children's Life Events (mapped to lifestyle in v10)
+  { id: 'daughter-wedding-modest', label: "Daughter's wedding (modest)", type: 'lifestyle' },
+  { id: 'daughter-wedding-elab',   label: "Daughter's wedding (traditional / elaborate)", type: 'lifestyle' },
+  { id: 'son-wedding',             label: "Son's wedding", type: 'lifestyle' },
+  { id: 'multi-weddings',          label: "Multiple children's weddings", type: 'lifestyle' },
+  { id: 'grandchild-celebration',  label: 'First grandchild celebration', type: 'lifestyle' },
+  { id: 'children-relocation',     label: "Children's settling-down / relocation support", type: 'lifestyle' },
+
+  // Real Estate — Purchase
+  { id: 'first-home-apt',   label: 'First home purchase (apartment)', type: 'real_estate' },
+  { id: 'first-home-house', label: 'First home purchase (independent house)', type: 'real_estate' },
+  { id: 'upgrade-primary',  label: 'Upgrade primary residence', type: 'real_estate' },
+  { id: 'second-home-city', label: 'Second home (city)', type: 'real_estate' },
+  { id: 'vacation-home',    label: 'Hill-station / vacation home', type: 'real_estate' },
+  { id: 'beach-home',       label: 'Beach / coastal home', type: 'real_estate' },
+  { id: 'farmhouse',        label: 'Farm house / agricultural land', type: 'real_estate' },
+  { id: 'rental-property',  label: 'Investment property (rental income)', type: 'real_estate' },
+  { id: 'commercial',       label: 'Commercial property', type: 'real_estate' },
+  { id: 'plot-land',        label: 'Plot of land', type: 'real_estate' },
+  { id: 'ancestral-reno',   label: 'Ancestral home renovation / upgrade', type: 'real_estate' },
+  { id: 'hometown-tier2',   label: 'Hometown / Tier-2 property', type: 'real_estate' },
+  { id: 'nri-property',     label: 'NRI Indian property purchase', type: 'real_estate' },
+
+  // Real Estate — Loans (mapped to "other")
+  { id: 'payoff-homeloan',    label: 'Pay off home loan early', type: 'other' },
+  { id: 'prepay-homeloan',    label: 'Prepay home loan principal in chunks', type: 'other' },
+  { id: 'refinance-homeloan', label: 'Refinance home loan to lower rate', type: 'other' },
+  { id: 'payoff-lap',         label: 'Pay off LAP / property-backed loan', type: 'other' },
+
+  // Business & Career
+  { id: 'start-business',  label: 'Start a new business / venture', type: 'business' },
+  { id: 'expand-business', label: 'Expand existing business', type: 'business' },
+  { id: 'buyout-partner',  label: 'Buy out partner / consolidate ownership', type: 'business' },
+  { id: 'sell-business',   label: 'Sell business for liquidity', type: 'business' },
+  { id: 'succession',      label: 'Business succession planning', type: 'business' },
+  { id: 'family-business', label: 'Family business continuation', type: 'business' },
+  { id: 'franchise',       label: 'Franchise acquisition', type: 'business' },
+  { id: 'payoff-biz-loan', label: 'Pay off business loans', type: 'business' },
+  { id: 'side-venture',    label: 'Bootstrap a side venture', type: 'business' },
+  { id: 'angel-investing', label: 'Angel / startup investing fund', type: 'business' },
+  { id: 'career-pivot',    label: 'Career pivot — re-skilling fund', type: 'business' },
+  { id: 'certification',   label: 'Professional certification (CFA / CFP / CA)', type: 'business' },
+
+  // Parent & Family Care
+  { id: 'parent-medical',       label: "Parents' medical expenses fund", type: 'parent_care' },
+  { id: 'parent-senior-living', label: "Parents' senior living / assisted care", type: 'parent_care' },
+  { id: 'parent-insurance',     label: "Parents' health insurance premium", type: 'parent_care' },
+  { id: 'inlaw-care',           label: "In-laws' care fund", type: 'parent_care' },
+  { id: 'parent-tour',          label: "Parents' world tour / fulfillment fund", type: 'parent_care' },
+  { id: 'caregiver',            label: 'Full-time caregiver fund', type: 'parent_care' },
+  { id: 'multigenerational',    label: 'Multi-generational support fund', type: 'parent_care' },
+  { id: 'sibling-support',      label: 'Sibling / extended family support', type: 'parent_care' },
+
+  // Lifestyle & Experiences
+  { id: 'world-tour',       label: 'World tour / extended travel', type: 'lifestyle' },
+  { id: 'intl-vacation',    label: 'Annual international vacation', type: 'lifestyle' },
+  { id: 'domestic-getaway', label: 'Annual domestic getaway', type: 'lifestyle' },
+  { id: 'char-dham',        label: 'Pilgrimage — Char Dham', type: 'lifestyle' },
+  { id: 'intl-pilgrimage',  label: 'Pilgrimage — international religious sites', type: 'lifestyle' },
+  { id: 'adventure-travel', label: 'Adventure travel (treks, safaris, expeditions)', type: 'lifestyle' },
+  { id: 'sabbatical',       label: 'Sabbatical / mini-retirement (3–12 months)', type: 'lifestyle' },
+  { id: 'hobby-fund',       label: 'Hobby fund (photography, music, gardening)', type: 'lifestyle' },
+  { id: 'luxury-car',       label: 'Luxury car purchase', type: 'lifestyle' },
+  { id: 'watch-jewelry',    label: 'Premium watch / jewelry', type: 'lifestyle' },
+  { id: 'collectibles',     label: 'Wine cellar / collectibles', type: 'lifestyle' },
+  { id: 'digital-nomad',    label: 'Digital nomad / multi-month travel', type: 'lifestyle' },
+  { id: 'arts-culture',     label: 'Cultural arts (theatre, concerts, exhibitions)', type: 'lifestyle' },
+  { id: 'wellness-retreat', label: 'Wellness retreats / spa', type: 'lifestyle' },
+
+  // Health & Medical
+  { id: 'health-insurance',   label: 'Lifetime health insurance premium', type: 'health' },
+  { id: 'critical-illness',   label: 'Critical illness reserve (₹25 L+)', type: 'health' },
+  { id: 'major-surgery',      label: 'Major surgery / treatment fund', type: 'health' },
+  { id: 'ltc-reserve',        label: 'Long-term care (LTC) reserve', type: 'health' },
+  { id: 'wellness',           label: 'Wellness / preventive care budget', type: 'health' },
+  { id: 'mental-health',      label: 'Mental health / therapy fund', type: 'health' },
+  { id: 'treatment-abroad',   label: 'Specialty treatment abroad', type: 'health' },
+  { id: 'dental-cosmetic',    label: 'Dental / orthodontic / cosmetic care', type: 'health' },
+  { id: 'disability-income',  label: 'Disability income protection', type: 'health' },
+  { id: 'eldercare-premium',  label: 'Eldercare medical premium', type: 'health' },
+
+  // Legacy & Estate
+  { id: 'inheritance',       label: 'Inheritance corpus for children', type: 'legacy' },
+  { id: 'charitable-trust',  label: 'Charitable trust / endowment', type: 'legacy' },
+  { id: 'religious-donation', label: 'Religious institution donation', type: 'legacy' },
+  { id: 'educational-fund',  label: 'Educational foundation / scholarship', type: 'legacy' },
+  { id: 'healthcare-fund',   label: 'Healthcare foundation / hospital donation', type: 'legacy' },
+  { id: 'biz-succession',    label: 'Family business succession plan', type: 'legacy' },
+  { id: 'pet-care',          label: 'Pet care after lifetime', type: 'legacy' },
+  { id: 'named-legacy',      label: 'Specific named legacy gift', type: 'legacy' },
+  { id: 'family-trust',      label: 'Family trust formation', type: 'legacy' },
+  { id: 'wealth-transfer',   label: 'Inter-generational wealth transfer', type: 'legacy' },
+
+  // Debt Repayment (other)
+  { id: 'edu-loan',      label: 'Pay off education loan', type: 'other' },
+  { id: 'personal-loan', label: 'Pay off personal loans', type: 'other' },
+  { id: 'cc-debt',       label: 'Clear credit card debt', type: 'other' },
+  { id: 'vehicle-loan',  label: 'Pay off vehicle loan', type: 'other' },
+  { id: 'clear-all',     label: 'Clear all debts before retirement', type: 'other' },
+  { id: 'family-loan',   label: 'Pay off family loan', type: 'other' },
+  { id: 'gold-loan',     label: 'Pay off gold loan', type: 'other' },
+
+  // Safety & Emergency (other)
+  { id: 'emergency-6m',       label: 'Emergency fund — 6 months expenses', type: 'other' },
+  { id: 'emergency-12m',      label: 'Emergency fund — 12 months expenses', type: 'other' },
+  { id: 'job-loss-buffer',    label: 'Job loss buffer', type: 'other' },
+  { id: 'spouse-income-loss', label: 'Spouse income loss buffer', type: 'other' },
+  { id: 'crisis-reserve',     label: 'Family crisis reserve', type: 'other' },
+  { id: 'pet-emergency',      label: 'Pet emergency fund', type: 'other' },
+  { id: 'disability-fund',    label: 'Disability / accident fund', type: 'other' },
+
+  // Personal Growth (other) — `coaching` collides with education; rename to `exec-coaching`
+  { id: 'self-higher-edu', label: 'Higher education for self', type: 'other' },
+  { id: 'skill-dev',       label: 'Skill development / re-skilling', type: 'other' },
+  { id: 'mid-career-sab',  label: 'Mid-career sabbatical', type: 'other' },
+  { id: 'exec-coaching',   label: 'Executive coaching / mentor fund', type: 'other' },
+  { id: 'therapy',         label: 'Therapy / personal development', type: 'other' },
+  { id: 'learning-subs',   label: 'Books, courses, learning subscriptions', type: 'other' },
+
+  // Wealth Building Targets (other)
+  { id: 'corpus-1cr',     label: 'Build ₹1 Cr corpus', type: 'other' },
+  { id: 'corpus-3cr',     label: 'Build ₹3 Cr corpus', type: 'other' },
+  { id: 'corpus-5cr',     label: 'Build ₹5 Cr corpus', type: 'other' },
+  { id: 'corpus-10cr',    label: 'Build ₹10 Cr corpus', type: 'other' },
+  { id: 'networth-target', label: 'Achieve specific net-worth target', type: 'other' },
+  { id: 'passive-income',  label: 'Passive income target (₹/month)', type: 'other' },
+  { id: 'income-streams',  label: 'Multiple income streams (3+)', type: 'other' },
+  { id: 'diversify',       label: 'Asset diversification (equity / debt / gold / RE)', type: 'other' },
+  { id: 'nps-tier1',       label: 'NPS Tier-I corpus maximization', type: 'other' },
+  { id: 'epf-vpf',         label: 'EPF / VPF maximization', type: 'other' },
+  { id: 'ppf-maturity',    label: 'PPF 15-year maturity', type: 'other' },
+  { id: 'sukanya',         label: 'Sukanya Samriddhi maturity (daughter)', type: 'other' },
+  { id: 'scss',            label: 'SCSS at 60 maximization', type: 'other' },
+
+  // Religious & Spiritual (lifestyle)
+  { id: 'charitable-giving', label: 'Charitable giving / dāna fund', type: 'lifestyle' },
+  { id: 'temple-support',    label: 'Temple / mosque / church support', type: 'lifestyle' },
+  { id: 'spiritual-journey', label: 'Spiritual journey funding', type: 'lifestyle' },
+  { id: 'pooja',             label: 'Pooja / ritual obligations', type: 'lifestyle' },
+  { id: 'religious-holiday', label: 'Religious holiday observances', type: 'lifestyle' },
+  { id: 'seva',              label: 'Seva / community service fund', type: 'lifestyle' },
+
+  // Tax & Compliance (other) — `family-trust` collides with legacy; rename to `family-trust-tax`
+  { id: 'deduction-80c',     label: 'Maximize 80C deductions (₹1.5 L)', type: 'other' },
+  { id: 'deduction-80d',     label: 'Maximize 80D health deductions', type: 'other' },
+  { id: 'nps-80ccd',         label: 'NPS additional 80CCD(1B) — ₹50k', type: 'other' },
+  { id: 'huf-formation',     label: 'HUF formation', type: 'other' },
+  { id: 'family-trust-tax',  label: 'Family trust setup', type: 'other' },
+  { id: 'nri-tax-planning',  label: 'NRI tax planning (RNOR transition)', type: 'other' },
+  { id: 'ltcg-harvesting',   label: 'LTCG harvesting strategy', type: 'other' },
+]
+
 // ─── Block 2 — Kinder questions ──────────────────────────────────────────
 
 export const KINDER_Q1 = {
