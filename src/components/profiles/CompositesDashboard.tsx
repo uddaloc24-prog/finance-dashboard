@@ -116,6 +116,11 @@ export function CompositesDashboard({ composites, onAccept, onRetake, onExit }: 
         </div>
       </section>
 
+      {/* ─── Response consistency (acquiescence) ─────────────── */}
+      {composites.acquiescenceIndex != null && (
+        <ConsistencyCard value={composites.acquiescenceIndex} />
+      )}
+
       {/* ─── Construct breakdown ──────────────────────────────── */}
       <section className="rounded-md border-2 border-slate-200 p-3 space-y-2">
         <h4 className="text-xs font-bold tracking-[2px] uppercase text-slate-700">Construct Breakdown</h4>
@@ -144,6 +149,43 @@ export function CompositesDashboard({ composites, onAccept, onRetake, onExit }: 
         <Button onClick={onAccept}>Use this profile →</Button>
       </div>
     </div>
+  )
+}
+
+// ─── Response-consistency indicator ─────────────────────────────────────
+
+function ConsistencyCard({ value }: { value: number }) {
+  // value = mean gap (0..100) between forward and reverse items per construct
+  const label = value < 15 ? 'Consistent' : value < 30 ? 'Some inconsistency' : 'Possible acquiescence'
+  const tone = value < 15 ? 'emerald' : value < 30 ? 'amber' : 'rose'
+  const palette = {
+    emerald: { fg: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+    amber:   { fg: '#92400e', bg: '#fffbeb', border: '#fde68a' },
+    rose:    { fg: '#9f1239', bg: '#fff1f2', border: '#fecdd3' },
+  }[tone]
+  return (
+    <section
+      className="rounded-md border-2 p-3 flex items-baseline justify-between gap-3"
+      style={{ borderColor: palette.border, background: palette.bg }}
+    >
+      <div>
+        <h4 className="text-xs font-bold tracking-[2px] uppercase" style={{ color: palette.fg }}>
+          Response consistency
+        </h4>
+        <p className="text-[11px] text-slate-700 mt-0.5 leading-snug max-w-2xl">
+          Gap between forward and reverse-coded items in the same construct. Lower is better. High values may indicate
+          yea-saying — re-review answers if uncertain.
+        </p>
+      </div>
+      <div className="text-right">
+        <div className="text-xl font-extrabold tabular-nums" style={{ color: palette.fg }}>
+          {Math.round(value)}
+        </div>
+        <div className="text-[10px] font-bold tracking-[1.5px] uppercase" style={{ color: palette.fg }}>
+          {label}
+        </div>
+      </div>
+    </section>
   )
 }
 

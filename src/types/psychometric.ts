@@ -53,6 +53,7 @@ export interface CompositesResult {
   dominantMoneyScript: MoneyScriptId | null
   moneyScripts: Record<MoneyScriptId, number>  // C-6, C-7, C-8, C-9 normalized
   constructScores: Partial<Record<ConstructId, number>>  // null/missing if no answers
+  acquiescenceIndex: number | null // 0..100; gap between forward and reverse items in same construct. null = can't compute
   profileId: RiskProfileId
 }
 

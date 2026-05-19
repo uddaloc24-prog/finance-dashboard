@@ -48,6 +48,48 @@ function invert(score: number): number {
   return 100 - score
 }
 
+// ─── acquiescence / consistency check ──────────────────────────────────
+// Reverse-coded items have pre-inverted scores in the bank so all items
+// read "higher = more of the construct". For a sincere respondent, the
+// forward-item mean and the reverse-item mean inside the same construct
+// should be close. A yea-saying / acquiescing respondent picks the same
+// "agree" labels regardless of phrasing, which produces a large gap on
+// our normalized 0..100 scale. We average those gaps across all
+// constructs that have at least one forward AND one reverse item
+// answered. Higher index = more inconsistency.
+
+const REVERSE_ITEM_CODES = new Set<string>([
+  'C1-R1', 'C2-R1', 'C4-R1', 'C11-R1', 'C14-R1',
+  // C16-Q3 is reverse-coded in the bank ("…rarely do" with pre-inverted scores)
+  'C16-Q3',
+])
+
+export function computeAcquiescenceIndex(answers: PsychAnswers): number | null {
+  // Group answered, scorable items by construct, splitting forward vs reverse.
+  const byConstruct = new Map<ConstructId, { forward: number[]; reverse: number[] }>()
+  for (const [code, ans] of Object.entries(answers)) {
+    if (ans.skipped || typeof ans.value !== 'number') continue
+    const q = PSYCH_BANK_BY_CODE[code]
+    if (!q || q.scale === 'multi-select' || q.scale === 'knowledge-mcq') continue
+    const norm = normalize(ans.value, q.scale)
+    if (norm == null) continue
+    const bucket = byConstruct.get(q.construct) ?? { forward: [], reverse: [] }
+    if (REVERSE_ITEM_CODES.has(code)) bucket.reverse.push(norm)
+    else bucket.forward.push(norm)
+    byConstruct.set(q.construct, bucket)
+  }
+
+  const gaps: number[] = []
+  for (const { forward, reverse } of byConstruct.values()) {
+    if (forward.length === 0 || reverse.length === 0) continue
+    const fMean = forward.reduce((s, v) => s + v, 0) / forward.length
+    const rMean = reverse.reduce((s, v) => s + v, 0) / reverse.length
+    gaps.push(Math.abs(fMean - rMean))
+  }
+  if (gaps.length === 0) return null
+  return gaps.reduce((s, v) => s + v, 0) / gaps.length
+}
+
 // ─── per-construct mean ─────────────────────────────────────────────────
 
 /**
@@ -232,6 +274,7 @@ export function computeComposites({ answers, capacity, life }: ComputeComposites
     dominantMoneyScript: dominant,
     moneyScripts: scripts,
     constructScores,
+    acquiescenceIndex: computeAcquiescenceIndex(answers),
     profileId: profileBandFromScore(rp),
   }
 }
