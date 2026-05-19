@@ -616,6 +616,46 @@ export const BLOCK3_PROBES: Record<string, ProbeDef[]> = {
   ],
 }
 
+// ─── Goal-library complementary groups ──────────────────────────────────
+// Items in the same group are mutually exclusive: once one is added to
+// the user's goals, the others render as disabled in the library. Groups
+// are defined by library-item id (see GD_GOAL_LIBRARY above). Items not
+// listed here have no exclusivity constraint.
+
+export const GD_LIBRARY_COMPLEMENTARY_GROUPS: string[][] = [
+  // Retirement target age — pick one
+  ['retire-55', 'retire-58', 'retire-60', 'retire-62', 'retire-65'],
+  // FIRE target age — pick one
+  ['fire-40', 'fire-45', 'fire-50'],
+  // FIRE corpus style — pick one
+  ['lean-fire', 'fat-fire', 'coast-fire'],
+  // First-home style — apartment vs independent house
+  ['first-home-apt', 'first-home-house'],
+  // Daughter's wedding style — modest vs traditional
+  ['daughter-wedding-modest', 'daughter-wedding-elab'],
+  // Home-loan strategy — payoff vs prepay vs refinance
+  ['payoff-homeloan', 'prepay-homeloan', 'refinance-homeloan'],
+  // Emergency-fund target — 6 vs 12 months
+  ['emergency-6m', 'emergency-12m'],
+  // Wealth corpus target — pick one
+  ['corpus-1cr', 'corpus-3cr', 'corpus-5cr', 'corpus-10cr'],
+  // Education path — India vs abroad (UG)
+  ['ug-india', 'ug-abroad'],
+  // Education path — India vs abroad (PG)
+  ['pg-india', 'pg-abroad'],
+]
+
+// Reverse lookup: library id → set of complementary ids (excluding self).
+export const GD_LIBRARY_COMPLEMENTARY_BY_ID: Record<string, Set<string>> = (() => {
+  const out: Record<string, Set<string>> = {}
+  for (const group of GD_LIBRARY_COMPLEMENTARY_GROUPS) {
+    for (const id of group) {
+      out[id] = new Set(group.filter((other) => other !== id))
+    }
+  }
+  return out
+})()
+
 // ─── Block 4 — Trade-offs ────────────────────────────────────────────────
 
 export const TRADEOFF_FUND_OPTIONS: OptionLite[] = [

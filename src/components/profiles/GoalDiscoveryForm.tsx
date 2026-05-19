@@ -23,6 +23,7 @@ import {
   GD_GOAL_LIBRARY,
   GD_GOAL_PRIORITIES,
   GD_GOAL_TYPES,
+  GD_LIBRARY_COMPLEMENTARY_BY_ID,
   GD_MAX_GOALS,
   GD_SCENE_TAGS,
   KINDER_Q1,
@@ -295,6 +296,23 @@ function BlockOne({ get, set }: BlockProps) {
   const libraryTypeOrder = GD_GOAL_TYPES.map((t) => t.value).filter((id) => libraryByType[id]?.length)
   const addedLibraryLabels = new Set(goals.map((g) => g.name.trim()).filter(Boolean))
 
+  // For complementary disabling: build the set of library-item ids whose
+  // label is currently in the goals list. Then, an item with a non-empty
+  // intersection between its complementary set and this set is blocked.
+  const addedLibraryIds = new Set(
+    GD_GOAL_LIBRARY.filter((it) => addedLibraryLabels.has(it.label)).map((it) => it.id),
+  )
+  function conflictingLabel(itemId: string): string | null {
+    const comp = GD_LIBRARY_COMPLEMENTARY_BY_ID[itemId]
+    if (!comp) return null
+    for (const otherId of comp) {
+      if (addedLibraryIds.has(otherId)) {
+        return GD_GOAL_LIBRARY.find((li) => li.id === otherId)?.label ?? otherId
+      }
+    }
+    return null
+  }
+
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-600 leading-snug">
@@ -363,20 +381,33 @@ function BlockOne({ get, set }: BlockProps) {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 px-3 pb-2.5 pt-1.5 bg-amber-50/30">
                         {items.map((item) => {
                           const already = addedLibraryLabels.has(item.label)
+                          const conflict = already ? null : conflictingLabel(item.id)
+                          const atCap = goals.length >= GD_MAX_GOALS
+                          const disabled = already || !!conflict || atCap
+                          const title = already
+                            ? 'Already in your goals'
+                            : conflict
+                              ? `Conflicts with "${conflict}" already in your goals`
+                              : atCap
+                                ? `Max ${GD_MAX_GOALS} goals reached`
+                                : item.description
+                          const prefix = already ? '✓' : conflict ? '⊘' : '+'
                           return (
                             <button
                               key={item.id}
                               type="button"
-                              disabled={already || goals.length >= GD_MAX_GOALS}
+                              disabled={disabled}
                               onClick={() => addFromLibrary(item)}
-                              title={item.description}
+                              title={title}
                               className={`text-left text-[11px] leading-snug px-2 py-1 rounded transition-colors ${
                                 already
                                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                                  : 'bg-white text-slate-700 hover:bg-amber-100/70 hover:text-amber-900 border border-transparent hover:border-amber-200'
+                                  : conflict
+                                    ? 'bg-slate-50 text-slate-400 cursor-not-allowed line-through decoration-slate-300'
+                                    : 'bg-white text-slate-700 hover:bg-amber-100/70 hover:text-amber-900 border border-transparent hover:border-amber-200'
                               }`}
                             >
-                              <span className="font-semibold mr-0.5">{already ? '✓' : '+'}</span> {item.label}
+                              <span className="font-semibold mr-0.5">{prefix}</span> {item.label}
                             </button>
                           )
                         })}
