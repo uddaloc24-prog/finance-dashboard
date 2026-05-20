@@ -172,6 +172,42 @@ export async function exportPptx(ctx: ExportContext): Promise<void> {
     })
   }
 
+  // ── Slide 8a — v10 Behavioural Assessment (optional) ────
+  const { getV10ReportSections } = await import('./v10Report')
+  const v10Sections = getV10ReportSections()
+  if (v10Sections.length > 0) {
+    const beh = pptx.addSlide()
+    beh.background = { color: 'FFFFFF' }
+    beh.addText('Behavioural Assessment (v10)', {
+      x: 0.6, y: 0.5, w: 12, h: 0.7, fontSize: 28, bold: false, color: NAVY, fontFace: 'Cambria',
+    })
+    let yOffset = 1.4
+    for (const section of v10Sections) {
+      if (yOffset > 6.5) break  // don't overflow slide
+      beh.addText(section.heading, {
+        x: 0.6, y: yOffset, w: 12, h: 0.35, fontSize: 14, bold: true, color: NAVY, fontFace: 'Calibri',
+      })
+      yOffset += 0.4
+      const rows = section.rows.slice(0, 8) // cap per section
+      for (const [k, v] of rows) {
+        beh.addText(`${k}: ${v}`, {
+          x: 0.9, y: yOffset, w: 11.5, h: 0.25, fontSize: 11, color: '475569', fontFace: 'Calibri',
+        })
+        yOffset += 0.27
+      }
+      if (section.notes) {
+        for (const n of section.notes) {
+          if (yOffset > 6.7) break
+          beh.addText(n, {
+            x: 0.9, y: yOffset, w: 11.5, h: 0.5, fontSize: 10, italic: true, color: '64748B', fontFace: 'Calibri',
+          })
+          yOffset += 0.5
+        }
+      }
+      yOffset += 0.2
+    }
+  }
+
   // ── Slide 8 — Closing ───────────────────────────────────
   const close = pptx.addSlide()
   close.background = { color: NAVY }

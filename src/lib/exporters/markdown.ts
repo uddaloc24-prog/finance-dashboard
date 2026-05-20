@@ -1,5 +1,6 @@
 import type { ExportContext } from './index'
 import { buildAnalytics, fmtINR, fmtPct, fileSlugFor, dateStamp, downloadBlob } from './analytics'
+import { v10MarkdownBlock } from './v10Report'
 
 export async function exportMarkdown(ctx: ExportContext): Promise<void> {
   const a = buildAnalytics(ctx)
@@ -173,8 +174,12 @@ export async function exportMarkdown(ctx: ExportContext): Promise<void> {
   })
   w()
 
-  // 9. Disclaimers
-  w('## 9. Methodology and Disclaimers')
+  // 9. v10 behavioural assessment (optional, only if data present)
+  const v10Md = v10MarkdownBlock()
+  if (v10Md) w(v10Md)
+
+  // 10. Disclaimers
+  w('## 10. Methodology and Disclaimers')
   w()
   w('This is an analytical aid, not financial advice or tax preparation. Returns are modelled, not predicted. Validate any major action with a SEBI-registered investment advisor or a Chartered Accountant.')
   w()

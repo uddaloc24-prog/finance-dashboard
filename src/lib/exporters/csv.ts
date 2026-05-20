@@ -5,6 +5,7 @@
 
 import type { ExportContext } from './index'
 import { buildAnalytics, fileSlugFor, dateStamp, downloadBlob } from './analytics'
+import { v10CsvBlock } from './v10Report'
 
 function csvEscape(v: unknown): string {
   if (v == null) return ''
@@ -113,6 +114,13 @@ export async function exportCsv(ctx: ExportContext): Promise<void> {
       w(row(b.taxClass, b.grossAnnual, b.tax, b.netAnnual, b.note))
     })
     w(row('Total', a.postTax.grossMonthly * 12, a.postTax.annualTax, a.postTax.netMonthly * 12, `${(a.postTax.effectiveTaxRate * 100).toFixed(1)}% effective`))
+    w()
+  }
+
+  // v10 behavioural assessment (if data present)
+  const v10Csv = v10CsvBlock()
+  if (v10Csv) {
+    w(v10Csv)
     w()
   }
 

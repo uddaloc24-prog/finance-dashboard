@@ -14,6 +14,7 @@ import { simulateRefillLinked, runCrashStressTest } from './refillStrategy'
 import { runAllStrategies } from './calculations/strategyEngine'
 import { runMonteCarlo } from './calculations/monteCarlo'
 import { profileById } from './data/riskProfiles'
+import { getV10ReportSections } from './exporters/v10Report'
 import { storage } from './storage'
 import { computePostTax, classifyInstrument, type TaxSlab, type TaxRegime } from './calculations/taxEngine'
 
@@ -161,6 +162,8 @@ export async function exportComprehensiveReport(ctx: ExportContext): Promise<voi
   doc.addPage(); renderProjectionTable(doc, report)
   doc.addPage(); renderActions(doc, report)
   doc.addPage(); renderDisclaimers(doc, report)
+  // Only adds a page if v10/GD data exists
+  renderV10BehaviouralIfPresent(doc, report)
 
   // Insert TOC at page 2; everything else shifts by +1
   doc.insertPage(2)
@@ -715,6 +718,46 @@ function renderActions(doc: import('jspdf').jsPDF, r: Report) {
     const wrapped = doc.splitTextToSize(a.body, 165)
     doc.text(wrapped, 30, y)
     y += wrapped.length * 5 + 6
+  }
+}
+
+function renderV10BehaviouralIfPresent(doc: import('jspdf').jsPDF, r: Report) {
+  const sections = getV10ReportSections()
+  if (sections.length === 0) return
+  doc.addPage()
+  recordSection(doc, r.toc, 1, '10', 'Behavioural Assessment (v10)')
+  pageTitle(doc, '10', 'Behavioural Assessment (v10)')
+
+  let y = 50
+  for (const section of sections) {
+    if (y > 250) break
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(12)
+    doc.setTextColor(...NAVY)
+    doc.text(section.heading, 22, y)
+    y += 7
+
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(...SLATE)
+    for (const [k, v] of section.rows) {
+      if (y > 270) break
+      const line = `${k}: ${v}`
+      const wrapped = doc.splitTextToSize(line, 160)
+      doc.text(wrapped, 28, y)
+      y += wrapped.length * 5
+    }
+    if (section.notes) {
+      doc.setFont('helvetica', 'italic')
+      doc.setTextColor(...GRAY)
+      for (const n of section.notes) {
+        if (y > 270) break
+        const wrapped = doc.splitTextToSize(n, 160)
+        doc.text(wrapped, 28, y)
+        y += wrapped.length * 5 + 2
+      }
+    }
+    y += 4
   }
 }
 

@@ -6,6 +6,7 @@ import { buildAnalytics, fmtINR, fmtPct, fileSlugFor, dateStamp, downloadBlob } 
 
 export async function exportDocx(ctx: ExportContext): Promise<void> {
   const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } = await import('docx')
+  const { getV10ReportSections } = await import('./v10Report')
   const a = buildAnalytics(ctx)
   const id = ctx.identity
   const userName = id?.fullName?.trim() || 'Personal'
@@ -230,8 +231,23 @@ export async function exportDocx(ctx: ExportContext): Promise<void> {
     ]),
   ))
 
+  // ── v10 Behavioural Assessment (only if data present) ──────
+  const v10Sections = getV10ReportSections()
+  if (v10Sections.length > 0) {
+    children.push(heading1('9', 'Behavioural Assessment (v10)'))
+    for (const section of v10Sections) {
+      children.push(para(section.heading, { bold: true, size: 22, color: NAVY }))
+      if (section.rows.length > 0) {
+        children.push(table(['Field', 'Value'], section.rows))
+      }
+      if (section.notes) {
+        for (const n of section.notes) children.push(para(n, { align: 'justify', size: 20 }))
+      }
+    }
+  }
+
   // ── Methodology ────────────────────────────────────────────
-  children.push(heading1('9', 'Methodology and Disclaimers'))
+  children.push(heading1(v10Sections.length > 0 ? '10' : '9', 'Methodology and Disclaimers'))
   const disclaimers: Array<[string, string]> = [
     ['Methodology', 'The four-bucket refill-linked strategy implements the academic Indian retirement income framework. Withdrawals draw from B1 cash first, then B3 stability, then B4 growth (skipped in losing years). B2 is a 5-year fixed-deposit ladder, held to maturity and renewed, never drawn or refilled.'],
     ['Tax engine', 'FY 2024-25 rules: equity LTCG 12.5% above ₹1,25,000 annual exemption; debt MF gains taxed at slab (post-Apr 2023); FD/SCSS/PMVVY interest at slab; 80TTB ₹50k exemption for seniors; PPF tax-free.'],
