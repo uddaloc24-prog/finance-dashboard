@@ -25,6 +25,7 @@ import { FORMATS } from '../lib/exporters'
 
 // Heavy panels stay lazy
 const ProfilesPanel = lazy(() => import('./profiles/ProfilesPanel').then((m) => ({ default: m.ProfilesPanel })))
+const BehaviouralActions = lazy(() => import('./profiles/BehaviouralActions').then((m) => ({ default: m.BehaviouralActions })))
 const StrategiesPanel = lazy(() => import('./strategies/StrategiesPanel').then((m) => ({ default: m.StrategiesPanel })))
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then((m) => ({ default: m.BucketFundsExplorer })))
 const CorpusPreservation = lazy(() => import('./CorpusPreservation').then((m) => ({ default: m.CorpusPreservation })))
@@ -175,6 +176,21 @@ export function InsightsPage({
             onBucketsUpdate={onBucketsUpdate}
           />
         </Suspense>
+
+        <div className="mt-8">
+          <div className="flex items-baseline gap-3 mb-4">
+            <span className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-700">
+              Behavioural Action Insights
+            </span>
+            <span className="h-px flex-1 bg-indigo-300/40" aria-hidden="true" />
+          </div>
+          <p className="text-sm text-slate-600 mb-3 max-w-2xl leading-relaxed">
+            Rule-driven recommendations derived from your Goal Discovery responses and v10 composite scores. Each card maps a detected pattern to one concrete action.
+          </p>
+          <Suspense fallback={<SectionLoading />}>
+            <BehaviouralActions />
+          </Suspense>
+        </div>
       </Section>
 
       {/* ── 04 — Strategy comparison ──────────────────────────── */}
