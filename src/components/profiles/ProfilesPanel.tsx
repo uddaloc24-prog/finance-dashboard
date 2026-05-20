@@ -12,6 +12,7 @@ import { GoalDiscoveryForm } from './GoalDiscoveryForm'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
 import { GoalDiscoveryDashboard } from './GoalDiscoveryDashboard'
+import { RiskAssessmentDashboard } from './RiskAssessmentDashboard'
 import { Modal } from '../ui/Modal'
 
 interface Props {
@@ -270,6 +271,15 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             </div>
           </section>
         </div>
+        <RiskAssessmentDashboard
+          userProfile={userProfile}
+          buckets={buckets}
+          returnAssumptions={returnAssumptions}
+          quizState={quizState}
+          v10State={v10State}
+          gdState={gdState}
+          deepRiskPercent={profilerResult ? profilerResult.riskScore : null}
+        />
       </ToneCard>
 
       {/* ── Modals — assessments render in pop-up windows ── */}
