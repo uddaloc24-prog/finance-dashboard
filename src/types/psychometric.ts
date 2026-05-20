@@ -27,6 +27,7 @@ export interface PsychQuestion {
   question: string
   options: PsychOption[]
   correctIndex?: number        // knowledge-mcq only
+  explanation?: string         // 1–2 line context shown below the question
 }
 
 // Single-select: value is the chosen option's score.

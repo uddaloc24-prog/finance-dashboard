@@ -15,6 +15,7 @@ import type {
 import type { RiskProfileId } from '../../types/profiles'
 import type { UserProfile } from '../../types'
 import { PSYCH_QUESTIONS, PSYCH_TOTAL_ITEMS } from '../../lib/data/psychometricBank'
+import { PSYCH_EXPLANATIONS } from '../../lib/data/psychometricExplanations'
 import { computeComposites } from '../../lib/psychometric/composites'
 import { deriveRiskCapacity } from '../../lib/psychometric/capacityInputs'
 import {
@@ -227,6 +228,11 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
           )}
         </div>
         <h3 className="text-base font-semibold text-slate-900 leading-snug">{textInfo.text}</h3>
+        {PSYCH_EXPLANATIONS[q.code] && (
+          <p className="text-[11px] text-slate-500 italic leading-relaxed mt-1 max-w-3xl">
+            {PSYCH_EXPLANATIONS[q.code]}
+          </p>
+        )}
       </div>
 
       {/* ── Prefill banner ─────────────────────────────────────── */}
