@@ -1,9 +1,74 @@
 import { useState } from 'react'
 import type { UserProfile, MarketData, ReturnAssumptions, BucketState } from '../types'
+import type { GoalDiscoveryState, V10QuizState, SignalId } from '../types/psychometric'
+import { storage } from '../lib/storage'
 import { Card, CardHeader, CardTitle } from './ui/Card'
 import { Button } from './ui/Button'
 import { simulateSWP, totalCorpus } from '../lib/calculations'
 import { BUCKET_ALLOCATION, PRESERVATION_YEARS } from '../constants'
+
+const SIGNAL_HUMAN: Record<SignalId, string> = {
+  money_script_avoidance:    'money avoidance script',
+  money_script_worship:      'money worship script',
+  money_script_status:       'money status script',
+  money_script_vigilance:    'money vigilance script',
+  time_orientation_present:  'present-biased time orientation',
+  locus_of_control_internal: 'internal locus of control',
+  self_efficacy:             'high financial self-efficacy',
+  family_obligation_weight:  'high family-obligation weight',
+  protection_to_aspiration:  'protection-vs-aspiration tilt',
+  financial_anxiety_marker:  'financial anxiety markers',
+  herding_susceptibility:    'herd-susceptibility',
+  overconfidence_marker:     'overconfidence marker',
+}
+
+function buildBehaviouralContext(gd: GoalDiscoveryState | null, v10: V10QuizState | null): string {
+  const inference = gd?.inference ?? null
+  const composites = v10?.composites ?? null
+  if (!inference && !composites) return ''
+
+  const lines: string[] = ['', 'BEHAVIOURAL CONTEXT (from Goal Discovery + v10 psychometric assessment):']
+
+  if (inference?.persona.primary) {
+    lines.push(
+      `- Inferred persona: ${inference.persona.primary.name} (${inference.persona.confidence} confidence). Use this to calibrate tone and recommendations.`,
+    )
+  }
+
+  if (composites) {
+    lines.push(
+      `- Composite scores (0–100): Risk Profile ${Math.round(composites.riskProfile)}, Risk Appetite ${Math.round(composites.riskAppetite)}, Risk Capacity ${Math.round(composites.riskCapacity)}, Bias Index ${Math.round(composites.biasIndex)}, Planning Readiness ${Math.round(composites.planningReadiness)}, Scam Vulnerability ${Math.round(composites.scamVulnerability)}.`,
+    )
+    if (composites.dominantMoneyScript) {
+      lines.push(`- Dominant money script: ${composites.dominantMoneyScript}. Frame guidance accordingly.`)
+    }
+  }
+
+  if (inference) {
+    const activeSignals = (Object.entries(inference.signals)
+      .filter(([, sig]) => sig.score != null && sig.score >= 0.7)
+      .map(([id]) => SIGNAL_HUMAN[id as SignalId])
+    )
+    if (activeSignals.length) {
+      lines.push(`- Active behavioural signals: ${activeSignals.join(', ')}.`)
+    }
+    if (inference.partnerDivergence) {
+      const d = inference.partnerDivergence
+      if (d.diverged) {
+        lines.push(
+          `- Partner alignment: DIVERGENT — user would drop "${d.userPick}", thinks partner would drop "${d.partnerPick}". Worth flagging the discussion in the rationale.`,
+        )
+      } else {
+        lines.push(`- Partner alignment: aligned on drop-goal ("${d.userPick}").`)
+      }
+    }
+  }
+
+  lines.push(
+    '- Use this context to nuance recommendations (tone, instrument choice, tax framing). Do not output the persona name verbatim back to the user; use it internally.',
+  )
+  return lines.join('\n')
+}
 
 interface Instrument {
   name: string
@@ -46,7 +111,13 @@ const CR = (n: number) => {
   return '₹' + Math.round(n).toLocaleString('en-IN')
 }
 
-function buildPrompt(profile: UserProfile, buckets: BucketState, market: MarketData | null): string {
+function buildPrompt(
+  profile: UserProfile,
+  buckets: BucketState,
+  market: MarketData | null,
+  gd: GoalDiscoveryState | null,
+  v10: V10QuizState | null,
+): string {
   const alloc = profile.bucketAllocation ?? BUCKET_ALLOCATION
   const corpus = totalCorpus(buckets)
   const annualWithdrawal = profile.monthlyWithdrawal * 12
@@ -96,6 +167,8 @@ B1 (liquid, capital safety): Liquid MF, Overnight MF, Money Market MF, SCSS (if 
 B2 (fixed income, locked principal): SCSS, Bank FD (senior citizen rates), RBI Floating Rate Bonds, Post Office Time Deposit, Short Duration MF, Corporate Bond MF, InvIT
 B3 (hybrid, auto-rebalancing): Balanced Advantage Fund (BAF), Aggressive Hybrid MF, Multi-Asset Allocation MF, Dynamic Asset Allocation MF
 B4 (equity, long-term growth): Nifty 50 Index Fund, Nifty Next 50 Index Fund, Flexi Cap MF, Gold ETF (10-20% of B4 as hedge), International ETF (only for aggressive risk)
+
+${buildBehaviouralContext(gd, v10)}
 
 TASK: Recommend optimal instruments for each bucket. Prioritize:
 1. Corpus preservation (return > inflation + withdrawal rate pressure)
@@ -285,7 +358,7 @@ export function AIPortfolioOptimizer({ profile, buckets, marketData, onReturnsUp
     setApplied(false)
 
     try {
-      const prompt = buildPrompt(profile, buckets, marketData)
+      const prompt = buildPrompt(profile, buckets, marketData, storage.getGoalDiscovery(), storage.getV10QuizState())
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
