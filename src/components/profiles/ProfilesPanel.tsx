@@ -11,6 +11,7 @@ import { V10Quiz } from './V10Quiz'
 import { GoalDiscoveryForm } from './GoalDiscoveryForm'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
+import { AdaptiveInsights } from './AdaptiveInsights'
 import { Modal } from '../ui/Modal'
 
 interface Props {
@@ -166,6 +167,7 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
             buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
           />
         </div>
+        <AdaptiveInsights gdState={gdState} v10State={v10State} />
       </ToneCard>
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
