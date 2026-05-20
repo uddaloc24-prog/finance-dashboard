@@ -1,27 +1,28 @@
 import { useState, type ReactNode } from 'react'
-import type { UserProfile, BucketState } from '../../types'
+import type { UserProfile, BucketState, ReturnAssumptions } from '../../types'
 import type { QuizState, RiskProfileId } from '../../types/profiles'
 import type { V10QuizState, CompositesResult, GoalDiscoveryState } from '../../types/psychometric'
 import { profileById, profileFromScore } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { allocateBuckets, totalCorpus } from '../../lib/calculations'
-import { DEFAULT_DEMOGRAPHICS } from '../../constants'
+import { DEFAULT_DEMOGRAPHICS, DEFAULT_RETURN_ASSUMPTIONS } from '../../constants'
 import { RiskQuiz } from './RiskQuiz'
 import { V10Quiz } from './V10Quiz'
 import { GoalDiscoveryForm } from './GoalDiscoveryForm'
 import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
-import { AdaptiveInsights } from './AdaptiveInsights'
+import { GoalDiscoveryDashboard } from './GoalDiscoveryDashboard'
 import { Modal } from '../ui/Modal'
 
 interface Props {
   userProfile: UserProfile
   buckets: BucketState
+  returnAssumptions?: ReturnAssumptions
   onProfileUpdate: (p: UserProfile) => void
   onBucketsUpdate: (b: BucketState) => void
 }
 
-export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBucketsUpdate }: Props) {
+export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAULT_RETURN_ASSUMPTIONS, onProfileUpdate, onBucketsUpdate }: Props) {
   const [quizState, setQuizState] = useState<QuizState | null>(() => storage.getQuizState())
   const [v10State, setV10State] = useState<V10QuizState | null>(() => storage.getV10QuizState())
   const [gdState, setGdState] = useState<GoalDiscoveryState | null>(() => storage.getGoalDiscovery())
@@ -167,7 +168,13 @@ export function ProfilesPanel({ userProfile, buckets, onProfileUpdate, onBuckets
             buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
           />
         </div>
-        <AdaptiveInsights gdState={gdState} v10State={v10State} />
+        <GoalDiscoveryDashboard
+          gdState={gdState}
+          v10State={v10State}
+          userProfile={userProfile}
+          buckets={buckets}
+          returnAssumptions={returnAssumptions}
+        />
       </ToneCard>
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
