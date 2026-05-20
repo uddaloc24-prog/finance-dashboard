@@ -30,15 +30,16 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   const [chosenId, setChosenId] = useState<RiskProfileId | null>(
     () => storage.getRiskProfile() ?? quizState?.profileId ?? v10State?.composites?.profileId ?? null,
   )
-  // Single-open assessment row — only one of {Quick / Deep / Goal Discovery
-  // / Full v10} renders at a time. Clicking the open card's button closes
-  // it (toggle-off); clicking a different card's button switches.
-  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10'
+  // Single-open assessment / dashboard row. Quiz modals AND dashboard
+  // popups all share this state so only one floats at a time.
+  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10' | 'gd-dash' | 'risk-dash'
   const [openAssessment, setOpenAssessment] = useState<AssessmentKind | null>(null)
   const showQuiz = openAssessment === 'quiz'
   const showProfiler = openAssessment === 'profiler'
   const showGd = openAssessment === 'gd'
   const showV10 = openAssessment === 'v10'
+  const showGdDash = openAssessment === 'gd-dash'
+  const showRiskDash = openAssessment === 'risk-dash'
   function toggleOpen(kind: AssessmentKind) {
     setOpenAssessment((cur) => (cur === kind ? null : kind))
   }
@@ -169,13 +170,20 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
           />
         </div>
-        <GoalDiscoveryDashboard
-          gdState={gdState}
-          v10State={v10State}
-          userProfile={userProfile}
-          buckets={buckets}
-          returnAssumptions={returnAssumptions}
-        />
+        {/* Open Goal Discovery dashboard as a popup */}
+        {(gdState?.inference || v10State?.composites) && (
+          <div className="mt-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => toggleOpen('gd-dash')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold bg-indigo-700 text-white hover:bg-indigo-800 transition-colors"
+            >
+              <span aria-hidden="true">📊</span>
+              View Goal Discovery dashboard
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        )}
       </ToneCard>
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
@@ -271,15 +279,20 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             </div>
           </section>
         </div>
-        <RiskAssessmentDashboard
-          userProfile={userProfile}
-          buckets={buckets}
-          returnAssumptions={returnAssumptions}
-          quizState={quizState}
-          v10State={v10State}
-          gdState={gdState}
-          deepRiskPercent={profilerResult ? profilerResult.riskScore : null}
-        />
+        {/* Open Risk Profile & Risk Assessment dashboard as a popup */}
+        {(chosenId || quizState?.completed || profilerResult || v10State?.composites) && (
+          <div className="mt-3 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => toggleOpen('risk-dash')}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold bg-blue-700 text-white hover:bg-blue-800 transition-colors"
+            >
+              <span aria-hidden="true">📊</span>
+              View Risk Assessment dashboard
+              <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+        )}
       </ToneCard>
 
       {/* ── Modals — assessments render in pop-up windows ── */}
@@ -344,6 +357,42 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
           retirementAge={userProfile.demographics?.retirementAge ?? DEFAULT_DEMOGRAPHICS.retirementAge}
           onComplete={handleV10Complete}
           onExit={closeAll}
+        />
+      </Modal>
+
+      <Modal
+        open={showGdDash}
+        title="Goal Discovery Dashboard"
+        subtitle="Persona · signals · divergence · scripts · downloads"
+        accent="indigo"
+        size="2xl"
+        onClose={closeAll}
+      >
+        <GoalDiscoveryDashboard
+          gdState={gdState}
+          v10State={v10State}
+          userProfile={userProfile}
+          buckets={buckets}
+          returnAssumptions={returnAssumptions}
+        />
+      </Modal>
+
+      <Modal
+        open={showRiskDash}
+        title="Risk Profile & Risk Assessment Dashboard"
+        subtitle="Appetite · capacity · allocation · assessment history · downloads"
+        accent="navy"
+        size="2xl"
+        onClose={closeAll}
+      >
+        <RiskAssessmentDashboard
+          userProfile={userProfile}
+          buckets={buckets}
+          returnAssumptions={returnAssumptions}
+          quizState={quizState}
+          v10State={v10State}
+          gdState={gdState}
+          deepRiskPercent={profilerResult ? profilerResult.riskScore : null}
         />
       </Modal>
 
