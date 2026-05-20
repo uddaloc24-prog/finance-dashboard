@@ -4,6 +4,7 @@
 import type {
   GoalDiscoveryState,
   InferenceResult,
+  PartnerDivergence,
   PersonaConfidence,
   PersonaHit,
   PersonaInference,
@@ -331,10 +332,24 @@ export function generateBridgeSentence(gd: GoalDiscoveryState): string {
 
 // ─── top-level ─────────────────────────────────────────────────────────
 
+// ─── partner drop-goal divergence ────────────────────────────────────────
+
+export function computePartnerDivergence(gd: GoalDiscoveryState): PartnerDivergence | null {
+  const block5 = gd.answers['block-5']
+  if (!block5) return null
+  const applicable = block5['applicable']
+  if (applicable !== 'yes' && applicable !== 'partial') return null
+  const userPick = ((block5['dropGoalUser'] as string | undefined) ?? '').trim()
+  const partnerPick = ((block5['dropGoalPartner'] as string | undefined) ?? '').trim()
+  if (!userPick || !partnerPick) return null
+  return { userPick, partnerPick, diverged: userPick !== partnerPick }
+}
+
 export function runInference(gd: GoalDiscoveryState): InferenceResult {
   return {
     persona: inferPersona(gd),
     signals: inferSignals(gd),
+    partnerDivergence: computePartnerDivergence(gd),
     bridgeSentence: generateBridgeSentence(gd),
     computedAt: new Date().toISOString(),
   }

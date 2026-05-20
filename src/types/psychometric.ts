@@ -162,9 +162,20 @@ export interface SignalHit {
 
 export type SignalMap = Record<SignalId, SignalHit>
 
+// Block-5 captures both the user's drop-goal pick and what they think
+// their partner would drop. v10 calls divergence here "the most diagnostic
+// signal in the whole flow" — alignment vs misalignment is itself a
+// finding worth surfacing in the dashboard / AI / exports.
+export interface PartnerDivergence {
+  userPick: string         // the goal label the user would drop
+  partnerPick: string      // the goal label the user thinks their partner would drop
+  diverged: boolean        // true if userPick !== partnerPick
+}
+
 export interface InferenceResult {
   persona: PersonaInference
   signals: SignalMap
+  partnerDivergence: PartnerDivergence | null
   bridgeSentence: string   // generated intro to bridge GD → quiz
   computedAt: string       // ISO
 }
