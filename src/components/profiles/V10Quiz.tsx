@@ -336,18 +336,21 @@ function OptionList({
   }
 
   // Single-select scales (5-Likert, 7-Likert, knowledge-MCQ)
-  const chosen = typeof answer?.value === 'number' && !answer.skipped ? answer.value : null
+  const isAnswered = answer != null && !answer.skipped && typeof answer.value === 'number'
   return (
     <div className="space-y-2">
       {question.options.map((opt, i) => {
-        // For single-select we identify the chosen option by index, not score, to
-        // handle ties (e.g. C12-Q2 has two options with score 3).
-        const isChosen = chosen != null && state_chosenIndex(answer, question) === i
+        // Prefer the persisted selectedIndex (set on click). Fall back to
+        // first index whose score matches stored value — handles answers
+        // stored before selectedIndex was added.
+        const fallbackIdx = isAnswered ? question.options.findIndex((o) => o.score === answer!.value) : -1
+        const idx = answer?.selectedIndex ?? fallbackIdx
+        const isChosen = isAnswered && idx === i
         return (
           <button
             key={`${opt.label}-${i}`}
             type="button"
-            onClick={() => onPick({ value: opt.score, skipped: false })}
+            onClick={() => onPick({ value: opt.score, skipped: false, selectedIndex: i })}
             className={`w-full text-left px-4 py-3 rounded-lg border-2 transition-colors text-sm ${
               isChosen
                 ? 'bg-blue-50 border-blue-400 text-blue-900'
@@ -360,13 +363,5 @@ function OptionList({
       })}
     </div>
   )
-}
-
-// Recover the chosen index from a stored answer. When two options share a score
-// we cannot distinguish them on replay; the first match wins, which is fine for
-// the highlight (the underlying score is what matters for scoring).
-function state_chosenIndex(answer: PsychAnswer | undefined, question: PsychQuestion): number | null {
-  if (!answer || answer.skipped || typeof answer.value !== 'number') return null
-  return question.options.findIndex((o) => o.score === answer.value)
 }
 

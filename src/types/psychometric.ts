@@ -34,8 +34,9 @@ export interface PsychQuestion {
 export interface PsychAnswer {
   value: number | number[]
   skipped: boolean
-  prefilled?: boolean       // true if seeded from Goal Discovery signal inference
-  prefillEvidence?: string  // evidence quote from the signal that drove the prefill
+  selectedIndex?: number     // single-select only — disambiguates options sharing the same score
+  prefilled?: boolean        // true if seeded from Goal Discovery signal inference
+  prefillEvidence?: string   // evidence quote from the signal that drove the prefill
 }
 
 export type PsychAnswers = Record<string, PsychAnswer>
