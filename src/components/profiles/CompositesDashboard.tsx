@@ -7,6 +7,8 @@
 
 import type { CompositesResult, ConstructId, MoneyScriptId } from '../../types/psychometric'
 import { profileById } from '../../lib/data/riskProfiles'
+import { storage } from '../../lib/storage'
+import { downloadV10Json } from '../../lib/exporters/v10Json'
 import { Button } from '../ui/Button'
 
 interface Props {
@@ -145,6 +147,14 @@ export function CompositesDashboard({ composites, onAccept, onRetake, onExit }: 
       {/* ─── Controls ─────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-2 flex-wrap pt-1">
         <Button variant="ghost" size="sm" onClick={onRetake}>Retake</Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => downloadV10Json(storage.getGoalDiscovery(), storage.getV10QuizState())}
+          title="Download a structured JSON for advisor handoff"
+        >
+          ⬇ Export JSON
+        </Button>
         <Button variant="ghost" size="sm" onClick={onExit}>Close</Button>
         <Button onClick={onAccept}>Use this profile →</Button>
       </div>

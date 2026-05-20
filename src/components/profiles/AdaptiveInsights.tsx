@@ -5,6 +5,7 @@
 // CompositesResult.
 
 import type { GoalDiscoveryState, V10QuizState, SignalId } from '../../types/psychometric'
+import { downloadV10Json } from '../../lib/exporters/v10Json'
 
 interface Props {
   gdState: GoalDiscoveryState | null
@@ -66,6 +67,14 @@ export function AdaptiveInsights({ gdState, v10State }: Props) {
             updated {new Date(inference.computedAt).toLocaleDateString()}
           </span>
         )}
+        <button
+          type="button"
+          onClick={() => downloadV10Json(gdState, v10State)}
+          className="text-[10px] font-bold tracking-wider uppercase text-indigo-700 hover:text-indigo-900 px-1.5 py-0.5 rounded hover:bg-indigo-100/60 transition-colors"
+          title="Download a structured JSON for advisor handoff"
+        >
+          ⬇ JSON
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
