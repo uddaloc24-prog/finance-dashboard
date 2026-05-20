@@ -70,6 +70,8 @@ export interface LifeStageInput {
   retirementAge: number
 }
 
+export type LengthMode = 'short' | 'standard' | 'exhaustive'
+
 // Top-level state held during a v10 quiz session and persisted to localStorage.
 export interface V10QuizState {
   schemaVersion?: number   // 1 since phase 7; older states default to 0 + migrate
@@ -77,7 +79,8 @@ export interface V10QuizState {
   startedAt: string        // ISO
   updatedAt: string        // ISO
   currentIndex: number     // pointer into the active question sequence
-  questionSeq: string[]    // codes in adaptive order; static for phase 1
+  questionSeq: string[]    // codes in adaptive order
+  lengthMode?: LengthMode  // user-picked battery length; defaults to 'standard'
   answers: PsychAnswers
   completed: boolean
   composites: CompositesResult | null

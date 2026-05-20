@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import type {
   CompositesResult,
   InferenceResult,
+  LengthMode,
   PersonaId,
   PsychAnswer,
   PsychQuestion,
@@ -22,6 +23,7 @@ import {
   buildAdaptivePrefills,
   buildAdaptiveSequence,
   getQuestionText,
+  LENGTH_PRESETS,
 } from '../../lib/psychometric/adaptive'
 import { storage } from '../../lib/storage'
 import { Button } from '../ui/Button'
@@ -45,15 +47,20 @@ function makeSessionId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 }
 
-function freshState(inference: InferenceResult | null): V10QuizState {
+function freshState(inference: InferenceResult | null, lengthMode: LengthMode = 'standard'): V10QuizState {
   const now = new Date().toISOString()
   const personaId = inference?.persona.primary?.id ?? null
+  const sessionId = makeSessionId()
   return {
-    sessionId: makeSessionId(),
+    sessionId,
     startedAt: now,
     updatedAt: now,
     currentIndex: 0,
-    questionSeq: buildAdaptiveSequence(personaId as PersonaId | null, PSYCH_QUESTIONS),
+    questionSeq: buildAdaptiveSequence(personaId as PersonaId | null, PSYCH_QUESTIONS, {
+      lengthMode,
+      sessionSeed: sessionId,
+    }),
+    lengthMode,
     answers: buildAdaptivePrefills(inference),
     completed: false,
     composites: null,
@@ -110,12 +117,18 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
     setShowReview(true)
   }
 
-  function restart() {
-    const fresh = freshState(inference)
+  function restart(lengthMode: LengthMode = state.lengthMode ?? 'standard') {
+    const fresh = freshState(inference, lengthMode)
     persist(fresh)
     setShowReview(false)
     setBridgeDismissed(false)
   }
+
+  // No-progress-yet check — used to gate the length picker. Picks aren't
+  // counted; only real (non-prefilled) answers are.
+  const hasProgress = Object.values(state.answers).some(
+    (a) => !a.prefilled && !a.skipped && (Array.isArray(a.value) ? a.value.length > 0 : typeof a.value === 'number'),
+  ) || state.currentIndex > 0
 
   // ── Review screen ──────────────────────────────────────────────
   if (showReview && state.composites) {
@@ -162,6 +175,41 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
 
   return (
     <div className="bg-white rounded-2xl border-2 border-blue-200 p-5 space-y-4">
+      {/* ── Length picker — visible on fresh start ─────────────── */}
+      {!hasProgress && (
+        <div className="rounded-md border-2 border-slate-200 bg-slate-50/60 p-3 space-y-2">
+          <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600">
+            Battery length
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {(Object.values(LENGTH_PRESETS)).map((preset) => {
+              const active = (state.lengthMode ?? 'standard') === preset.id
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  onClick={() => restart(preset.id)}
+                  className={`text-left px-3 py-2 rounded-md border-2 transition-colors ${
+                    active
+                      ? 'border-blue-400 bg-blue-50 text-blue-900'
+                      : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
+                  }`}
+                >
+                  <div className="text-xs font-bold flex items-center gap-1.5">
+                    {active && <span aria-hidden="true">●</span>}
+                    {preset.label}
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">{preset.description}</div>
+                </button>
+              )
+            })}
+          </div>
+          <p className="text-[10px] text-slate-500 italic">
+            Switching length re-shuffles the items. Items are also re-sampled on each new session, so a retake won't be identical.
+          </p>
+        </div>
+      )}
+
       {/* ── Personalisation banner ─────────────────────────────── */}
       {persona && (
         <div className="rounded-md border border-indigo-200 bg-indigo-50 px-3 py-2 flex items-baseline gap-2 flex-wrap">
