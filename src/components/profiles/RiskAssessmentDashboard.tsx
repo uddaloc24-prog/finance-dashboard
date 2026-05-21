@@ -280,35 +280,6 @@ function clamp(v: number, lo = 0, hi = 100): number {
   return Math.max(lo, Math.min(hi, v))
 }
 
-function MetricRadio({
-  metric, active, label, onClick,
-}: { metric: MetricKey; active: boolean; label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-2 rounded-md border-2 transition-colors text-left ${
-        active
-          ? 'border-blue-400 bg-blue-50 text-blue-900'
-          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-      }`}
-      role="radio"
-      aria-checked={active}
-    >
-      <span
-        aria-hidden="true"
-        className={`shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
-          active ? 'border-blue-600' : 'border-slate-300'
-        }`}
-      >
-        {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
-      </span>
-      <span className="text-xs font-bold tracking-tight">{label}</span>
-      <span className="text-[10px] text-slate-500 hidden sm:inline ml-auto">{METRIC_META[metric].subtitle.split(' ').slice(0, 3).join(' ')}…</span>
-    </button>
-  )
-}
-
 function StressRow({
   before, after, label,
 }: { before: number; after: number; label: 'Profile' | 'Appetite' | 'Capacity' }) {
@@ -360,10 +331,9 @@ export function RiskAssessmentDashboard({
   const hasAnything = quickScore != null || deepRiskPercent != null || v10Score != null || matched != null
   if (!hasAnything) return null
 
-  // Composite values for the radio-driven view + stress test (all 0–100)
+  // Composite values for the stress test (all 0–100)
   const appetitePct = ((userProfile.riskAppetite - 1) / 4) * 100  // slider 1–5 → 0–100
   const profilePct = v10State?.composites?.riskProfile ?? (0.5 * appetitePct + 0.5 * capacityScore)
-  const [activeMetric, setActiveMetric] = useState<MetricKey>('profile')
 
   async function handleExport(fmt: ExportFormat) {
     setBusy(fmt)
@@ -396,16 +366,9 @@ export function RiskAssessmentDashboard({
         </div>
       </div>
 
-      {/* ── Radio tabs ───────────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Pick a metric to focus">
-        <MetricRadio metric="profile"  label="Risk Profile"  active={activeMetric === 'profile'}  onClick={() => setActiveMetric('profile')} />
-        <MetricRadio metric="appetite" label="Risk Appetite" active={activeMetric === 'appetite'} onClick={() => setActiveMetric('appetite')} />
-        <MetricRadio metric="capacity" label="Risk Capacity" active={activeMetric === 'capacity'} onClick={() => setActiveMetric('capacity')} />
-      </div>
-
-      {/* ── Active metric gauge ──────────────────────────────── */}
-      <div className="rounded-md border-2 border-blue-200 bg-blue-50/40 p-4">
-        {activeMetric === 'profile' && (
+      {/* ── All three gauges side-by-side ────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="rounded-md border-2 border-blue-200 bg-blue-50/40 p-3">
           <Gauge
             value={profilePct}
             max={100}
@@ -419,8 +382,8 @@ export function RiskAssessmentDashboard({
               profilePct < 80 ? 'Growth-Oriented' : 'Aggressive'
             }
           />
-        )}
-        {activeMetric === 'appetite' && (
+        </div>
+        <div className="rounded-md border-2 border-amber-200 bg-amber-50/40 p-3">
           <Gauge
             value={userProfile.riskAppetite}
             max={5}
@@ -429,8 +392,8 @@ export function RiskAssessmentDashboard({
             unit="/5"
             caption={userProfile.riskAppetite <= 2 ? 'Conservative' : userProfile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'}
           />
-        )}
-        {activeMetric === 'capacity' && (
+        </div>
+        <div className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
           <Gauge
             value={capacityScore}
             max={100}
@@ -439,24 +402,18 @@ export function RiskAssessmentDashboard({
             unit="/100"
             caption={capacityScore < 30 ? 'Stretched' : capacityScore < 55 ? 'Constrained' : capacityScore < 75 ? 'Adequate' : 'Strong'}
           />
-        )}
+        </div>
       </div>
 
       {/* ── Explanations of all three ────────────────────────── */}
-      <section className="rounded-md border-2 border-slate-200 p-3 space-y-3">
+      <section className="rounded-md border-2 border-slate-200 p-3 space-y-2.5">
         <h4 className="text-xs font-bold tracking-[2px] uppercase text-slate-700">How to read these three scores</h4>
         {(['profile', 'appetite', 'capacity'] as MetricKey[]).map((m) => {
           const meta = METRIC_META[m]
-          const isActive = activeMetric === m
           return (
-            <div
-              key={m}
-              className={`rounded p-2.5 border-2 transition-colors ${
-                isActive ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
-              }`}
-            >
-              <div className={`text-[11px] font-bold tracking-wide ${isActive ? 'text-blue-800' : 'text-slate-800'}`}>
-                {isActive && '● '}{meta.label} <span className="font-normal text-slate-500 italic">— {meta.oneLiner}</span>
+            <div key={m} className="rounded p-2.5 border-2 border-slate-100 bg-white">
+              <div className="text-[11px] font-bold tracking-wide text-slate-800">
+                {meta.label} <span className="font-normal text-slate-500 italic">— {meta.oneLiner}</span>
               </div>
               <p className="text-[11px] text-slate-700 mt-1 leading-relaxed">{meta.detail}</p>
               <div className="text-[10px] text-slate-500 mt-1 font-mono leading-snug bg-slate-50 border border-slate-100 rounded px-2 py-1">
