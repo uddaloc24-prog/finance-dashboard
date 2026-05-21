@@ -1,11 +1,9 @@
-// Executive Dashboard — the user's "financial cockpit".
-// One-screen overview that summarises every other dashboard:
-//   - KPI tiles (Net Worth · Liabilities · Runway · Ready-at · Risk Profile · Goal Clarity)
-//   - Overall Health composite with band indicator
-//   - 10-item score breakdown bars
-//   - Goal cards (P1, P2, …) with horizon / target / SIP / tilt
-//   - Top action items
-//   - Download row (same exporters as the other dashboards)
+// Executive Dashboard — "Financial Cockpit".
+// Visual language borrowed from aviation glass cockpits: dark instrument
+// panel, radial dials with needles, LED status indicators, attitude-style
+// central health gauge, waypoint-list navigation, master-caution alerts.
+//
+// All metrics computed live from the user's Plan / GD / v10 data.
 
 import { useState } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions, AssetEntry, LoanEntry } from '../../types'
@@ -15,7 +13,6 @@ import { storage } from '../../lib/storage'
 import { downloadV10Json } from '../../lib/exporters/v10Json'
 import { exportReport, FORMATS, type ExportFormat } from '../../lib/exporters'
 import { deriveRiskCapacity } from '../../lib/psychometric/capacityInputs'
-import { GD_GOAL_TYPES } from '../../lib/data/goalDiscovery'
 
 interface Props {
   userProfile: UserProfile
@@ -27,18 +24,16 @@ interface Props {
   deepRiskPercent: number | null
 }
 
-// ─── Money formatters ──────────────────────────────────────────────────
+// ─── formatters & math ─────────────────────────────────────────────────
 
 function fmtINR(n: number): string {
   const abs = Math.abs(n)
   const sign = n < 0 ? '-' : ''
-  if (abs >= 1e7) return `${sign}₹${(abs / 1e7).toFixed(1)} Cr`
-  if (abs >= 1e5) return `${sign}₹${(abs / 1e5).toFixed(1)} L`
+  if (abs >= 1e7) return `${sign}₹${(abs / 1e7).toFixed(1)}Cr`
+  if (abs >= 1e5) return `${sign}₹${(abs / 1e5).toFixed(1)}L`
   if (abs >= 1e3) return `${sign}₹${(abs / 1e3).toFixed(0)}k`
   return `${sign}₹${Math.round(abs)}`
 }
-
-// ─── Calculation primitives ────────────────────────────────────────────
 
 function sumAssets(p: UserProfile, predicate?: (a: AssetEntry) => boolean): number {
   if (!p.assetInventory) return 0
@@ -54,89 +49,261 @@ function sumLoanOutstanding(p: UserProfile): number {
   return entries.filter((l) => l && l.active).reduce((s, l) => s + (l.outstanding || 0), 0)
 }
 
-// Map GD goal-amount string to a midpoint rupee value
 const AMOUNT_MIDPOINT: Record<string, number> = {
-  lt10L:    5_00_000,
-  '10L_25L':  17_50_000,
-  '25L_50L':  37_50_000,
-  '50L_1Cr':  75_00_000,
-  '1Cr_2Cr':  1_50_00_000,
-  '2Cr_5Cr':  3_50_00_000,
-  '5Cr_plus': 6_00_00_000,
-  dontknow:   0,
+  lt10L: 5_00_000, '10L_25L': 17_50_000, '25L_50L': 37_50_000, '50L_1Cr': 75_00_000,
+  '1Cr_2Cr': 1_50_00_000, '2Cr_5Cr': 3_50_00_000, '5Cr_plus': 6_00_00_000, dontknow: 0,
 }
-
 const HORIZON_YEARS: Record<string, number> = {
-  lt5:      3,
-  '5_10':   7,
-  '10_15': 12,
-  '15_20': 17,
-  '20_25': 22,
-  '25_plus': 27,
-  unsure:    0,
+  lt5: 3, '5_10': 7, '10_15': 12, '15_20': 17, '20_25': 22, '25_plus': 27, unsure: 0,
 }
 
-// SIP needed (simplified future-value) — solve for monthly amount that reaches target over years
 function requiredSip(targetINR: number, years: number, annualReturnPct = 10): number {
   if (years <= 0 || targetINR <= 0) return 0
-  const r = annualReturnPct / 100 / 12
-  const n = years * 12
-  // FV of monthly SIP = sip × ((1+r)^n − 1) / r × (1+r)
+  const r = annualReturnPct / 100 / 12, n = years * 12
   const factor = ((Math.pow(1 + r, n) - 1) / r) * (1 + r)
   return Math.round(targetINR / factor)
 }
 
 function horizonTilt(years: number): { label: string; color: string } {
-  if (years <= 0)       return { label: 'Liquid',       color: '#3b82f6' }
-  if (years < 3)        return { label: 'Conservative', color: '#0ea5e9' }
-  if (years < 8)        return { label: 'Moderate',     color: '#10b981' }
-  if (years < 15)       return { label: 'Growth',       color: '#84cc16' }
-  return                       { label: 'Equity',       color: '#8b5cf6' }
+  if (years <= 0) return { label: 'LIQUID',       color: '#22d3ee' }
+  if (years < 3)  return { label: 'CONSERVATIVE', color: '#38bdf8' }
+  if (years < 8)  return { label: 'MODERATE',     color: '#34d399' }
+  if (years < 15) return { label: 'GROWTH',       color: '#bef264' }
+  return            { label: 'EQUITY',          color: '#c084fc' }
 }
 
-// ─── Health bands ──────────────────────────────────────────────────────
+// ─── cockpit palette ───────────────────────────────────────────────────
 
-interface BandInfo { label: string; color: string }
-function bandFor(score: number): BandInfo {
-  if (score < 20)  return { label: 'AT RISK',     color: '#dc2626' }
-  if (score < 60)  return { label: 'DEVELOPING',  color: '#f59e0b' }
-  if (score < 80)  return { label: 'STRONG',      color: '#65a30d' }
-  return                  { label: 'OPTIMAL',     color: '#16a34a' }
+const COCKPIT = {
+  bg:        '#0f172a',       // slate-900
+  panel:     '#1e293b',       // slate-800
+  trim:      '#334155',       // slate-700
+  textHi:    '#e2e8f0',       // slate-200
+  textLo:    '#94a3b8',       // slate-400
+  accent:    '#22d3ee',       // cyan-400
+  ok:        '#34d399',       // emerald-400
+  warn:      '#fbbf24',       // amber-400
+  alert:     '#f87171',       // red-400
+  inactive:  '#475569',       // slate-600
 }
 
-// ─── KPI tile ──────────────────────────────────────────────────────────
+function statusColor(score: number | null): string {
+  if (score == null) return COCKPIT.inactive
+  if (score < 20) return COCKPIT.alert
+  if (score < 60) return COCKPIT.warn
+  if (score < 80) return '#a3e635'      // lime-400
+  return COCKPIT.ok
+}
 
-function Kpi({
-  icon, label, value, sub,
-}: { icon: string; label: string; value: string; sub?: string }) {
+// ─── Circular instrument dial ──────────────────────────────────────────
+
+interface DialProps {
+  value: number | null
+  max: number
+  label: string
+  primary?: string
+  caption?: string
+  size?: number
+}
+
+function Dial({ value, max, label, primary, caption, size = 96 }: DialProps) {
+  const cx = size / 2, cy = size / 2
+  const r = size * 0.38
+  const stroke = 4
+
+  // 270° arc from 135° to 405°, clockwise (visible angle range)
+  const START = 135
+  const SWEEP = 270
+  const pct = value == null ? 0 : Math.max(0, Math.min(max, value)) / max
+  const needleAngle = START + pct * SWEEP
+
+  function polar(deg: number, radius: number) {
+    const rad = (deg * Math.PI) / 180
+    return { x: cx + radius * Math.cos(rad), y: cy + radius * Math.sin(rad) }
+  }
+
+  // Background arc
+  const startPt = polar(START, r)
+  const endPt = polar(START + SWEEP, r)
+  const bgPath = `M ${startPt.x} ${startPt.y} A ${r} ${r} 0 1 1 ${endPt.x} ${endPt.y}`
+
+  // Filled arc (value)
+  const valEnd = polar(needleAngle, r)
+  const largeArc = pct > 0.5 ? 1 : 0
+  const valPath = value != null && value > 0
+    ? `M ${startPt.x} ${startPt.y} A ${r} ${r} 0 ${largeArc} 1 ${valEnd.x} ${valEnd.y}`
+    : ''
+
+  // Tick marks
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+    const a = START + t * SWEEP
+    const inner = polar(a, r - 5)
+    const outer = polar(a, r - 1)
+    return `M ${inner.x} ${inner.y} L ${outer.x} ${outer.y}`
+  }).join(' ')
+
+  // Needle
+  const needle = polar(needleAngle, r - 8)
+  const fill = primary ?? statusColor(value)
+
   return (
-    <div className="rounded-md border-2 border-slate-200 bg-white px-2.5 py-2 text-center">
-      <div className="text-xl leading-none mb-0.5" aria-hidden="true">{icon}</div>
-      <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-slate-500">{label}</div>
-      <div className="text-base font-extrabold text-slate-900 tabular-nums mt-0.5 leading-tight">{value}</div>
-      {sub && <div className="text-[9px] text-slate-500 mt-0.5 leading-tight">{sub}</div>}
+    <div className="flex flex-col items-center">
+      <svg viewBox={`0 0 ${size} ${size}`} className="block" style={{ width: size, height: size }}>
+        {/* Outer bezel */}
+        <circle cx={cx} cy={cy} r={r + 6} fill={COCKPIT.panel} stroke={COCKPIT.trim} strokeWidth={1.5} />
+        {/* Background track */}
+        <path d={bgPath} stroke={COCKPIT.trim} strokeWidth={stroke} fill="none" strokeLinecap="round" />
+        {/* Filled value arc */}
+        {valPath && (
+          <path d={valPath} stroke={fill} strokeWidth={stroke} fill="none" strokeLinecap="round"
+                style={{ filter: `drop-shadow(0 0 2px ${fill})` }} />
+        )}
+        {/* Ticks */}
+        <path d={ticks} stroke={COCKPIT.textLo} strokeWidth={1} opacity={0.6} />
+        {/* Needle */}
+        {value != null && (
+          <line x1={cx} y1={cy} x2={needle.x} y2={needle.y}
+                stroke={COCKPIT.textHi} strokeWidth={2} strokeLinecap="round" />
+        )}
+        <circle cx={cx} cy={cy} r={3} fill={COCKPIT.textHi} />
+      </svg>
+      <div className="text-[8px] font-bold tracking-[1.5px] uppercase text-center mt-0.5" style={{ color: COCKPIT.textLo, letterSpacing: '0.1em' }}>
+        {label}
+      </div>
+      {caption && (
+        <div className="text-[10px] font-bold tabular-nums mt-0.5" style={{ color: fill }}>
+          {caption}
+        </div>
+      )}
     </div>
   )
 }
 
-// ─── Score breakdown bar ───────────────────────────────────────────────
+// ─── Attitude indicator — big health gauge ─────────────────────────────
 
-function ScoreBar({ label, value }: { label: string; value: number | null }) {
-  const isNull = value == null
-  const pct = isNull ? 0 : Math.max(0, Math.min(100, value))
-  const fill = isNull ? '#cbd5e1' : pct < 20 ? '#dc2626' : pct < 60 ? '#f59e0b' : pct < 80 ? '#65a30d' : '#16a34a'
+function AttitudeIndicator({ score, band, sub }: { score: number; band: string; sub: string }) {
+  const size = 220
+  const cx = size / 2, cy = size / 2 + 10
+  const r = size * 0.4
+  const accent = statusColor(score)
+
+  // Horizon-line attitude: pitch tied to score (0 = nose down, 100 = nose up)
+  const tilt = (score - 50) * 0.5   // -25° to +25°
+
   return (
-    <div className="grid grid-cols-[1fr_28px] gap-2 items-center">
+    <div className="relative inline-block">
+      <svg viewBox={`0 0 ${size} ${size + 10}`} style={{ width: size, height: size + 10 }}>
+        {/* Outer ring */}
+        <circle cx={cx} cy={cy} r={r + 10} fill={COCKPIT.panel} stroke={COCKPIT.trim} strokeWidth={2} />
+        {/* Clipped sphere — sky + ground */}
+        <defs>
+          <clipPath id="att-sphere">
+            <circle cx={cx} cy={cy} r={r} />
+          </clipPath>
+        </defs>
+        <g clipPath="url(#att-sphere)">
+          <g transform={`rotate(${tilt} ${cx} ${cy})`}>
+            <rect x={cx - r * 2} y={cy - r * 2} width={r * 4} height={r * 2} fill="#0c4a6e" />
+            <rect x={cx - r * 2} y={cy}        width={r * 4} height={r * 2} fill="#7c2d12" />
+            {/* Pitch ladder lines */}
+            {[-30, -20, -10, 0, 10, 20, 30].map((p) => {
+              const y = cy - (p * r * 0.06)
+              const w = p === 0 ? r * 1.4 : r * 0.5
+              return (
+                <line key={p} x1={cx - w / 2} y1={y} x2={cx + w / 2} y2={y}
+                      stroke={p === 0 ? COCKPIT.textHi : COCKPIT.textLo}
+                      strokeWidth={p === 0 ? 1.5 : 0.5} />
+              )
+            })}
+          </g>
+        </g>
+        {/* Aircraft symbol */}
+        <line x1={cx - 20} y1={cy} x2={cx - 6} y2={cy} stroke="#fbbf24" strokeWidth={2} />
+        <line x1={cx + 6}  y1={cy} x2={cx + 20} y2={cy} stroke="#fbbf24" strokeWidth={2} />
+        <circle cx={cx} cy={cy} r={2.5} fill="#fbbf24" />
+        {/* Bezel ticks */}
+        {[0, 45, 90, 135, 180, 225, 270, 315].map((a) => {
+          const rad = (a - 90) * Math.PI / 180
+          const x1 = cx + (r + 6) * Math.cos(rad)
+          const y1 = cy + (r + 6) * Math.sin(rad)
+          const x2 = cx + (r + 11) * Math.cos(rad)
+          const y2 = cy + (r + 11) * Math.sin(rad)
+          return <line key={a} x1={x1} y1={y1} x2={x2} y2={y2} stroke={COCKPIT.textLo} strokeWidth={1} />
+        })}
+        {/* Center health readout */}
+        <text x={cx} y={size - 2} textAnchor="middle" style={{ fontSize: 26, fontWeight: 800, fill: accent, fontFamily: 'monospace' }}>
+          {Math.round(score)}
+        </text>
+      </svg>
+      <div className="text-center mt-1">
+        <div className="text-[10px] font-bold tracking-[2px]" style={{ color: accent }}>{band}</div>
+        <div className="text-[9px]" style={{ color: COCKPIT.textLo }}>{sub}</div>
+      </div>
+    </div>
+  )
+}
+
+// ─── LED indicator (systems panel row) ─────────────────────────────────
+
+function LedRow({ label, value, max = 100 }: { label: string; value: number | null; max?: number }) {
+  const isNull = value == null
+  const pct = isNull ? 0 : Math.max(0, Math.min(max, value)) / max * 100
+  const color = statusColor(value)
+  return (
+    <div className="grid grid-cols-[10px_1fr_28px] items-center gap-2">
+      <span
+        className="inline-block w-2.5 h-2.5 rounded-full"
+        style={{
+          background: color,
+          boxShadow: isNull ? 'none' : `0 0 6px ${color}`,
+        }}
+        aria-hidden="true"
+      />
       <div>
-        <div className="flex items-baseline justify-between text-[10px] mb-0.5">
-          <span className={isNull ? 'text-slate-400' : 'text-slate-700'}>{label}</span>
+        <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: isNull ? COCKPIT.inactive : COCKPIT.textHi }}>
+          {label}
         </div>
-        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-          <div className="h-full" style={{ width: `${pct}%`, background: fill }} />
+        <div className="h-1 rounded-full bg-slate-700 mt-0.5 overflow-hidden">
+          <div className="h-full transition-all" style={{ width: `${pct}%`, background: color }} />
         </div>
       </div>
-      <div className="text-[11px] tabular-nums font-semibold text-right" style={{ color: isNull ? '#94a3b8' : '#0f172a' }}>
-        {isNull ? '—' : Math.round(pct)}
+      <div className="text-right text-[11px] font-mono tabular-nums" style={{ color: isNull ? COCKPIT.inactive : COCKPIT.textHi }}>
+        {isNull ? '---' : Math.round(value!)}
+      </div>
+    </div>
+  )
+}
+
+// ─── Waypoint (goal as a navigation row) ───────────────────────────────
+
+function Waypoint({ tag, name, years, target, sip, tilt }: {
+  tag: string; name: string; years: number; target: number; sip: number; tilt: { label: string; color: string }
+}) {
+  const distancePct = Math.min(100, (years / 30) * 100)
+  return (
+    <div className="rounded border border-slate-700 bg-slate-800/60 p-2">
+      <div className="flex items-baseline gap-2">
+        <span className="font-mono text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: tilt.color, color: '#0f172a' }}>{tag}</span>
+        <span className="text-[11.5px] font-bold text-slate-100 truncate flex-1">{name}</span>
+        <span className="font-mono text-[10px] tracking-wider" style={{ color: tilt.color }}>{tilt.label}</span>
+      </div>
+      {/* Range-to-waypoint runway */}
+      <div className="mt-1.5 relative h-3 bg-slate-900 rounded overflow-hidden border border-slate-700">
+        <div className="absolute inset-y-0 left-0" style={{ width: '100%' }}>
+          {/* Tick marks every 5 yrs */}
+          {[5, 10, 15, 20, 25, 30].map((y) => (
+            <span key={y} className="absolute top-0 bottom-0 w-px" style={{ left: `${(y / 30) * 100}%`, background: COCKPIT.trim }} />
+          ))}
+          {/* Aircraft position (now = 0) */}
+          <span className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-[10px] leading-none" style={{ left: '0%', color: COCKPIT.accent }} aria-hidden="true">▶</span>
+          {/* Waypoint marker */}
+          <span className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 text-[10px] leading-none" style={{ left: `${distancePct}%`, color: tilt.color }} aria-hidden="true">◆</span>
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-2 mt-1.5 text-[10px] font-mono">
+        <span style={{ color: COCKPIT.textLo }}>RNG <span style={{ color: COCKPIT.textHi }}>{years}y</span></span>
+        <span style={{ color: COCKPIT.textLo }}>TGT <span style={{ color: COCKPIT.textHi }}>{target > 0 ? fmtINR(target) : '—'}</span></span>
+        <span style={{ color: COCKPIT.textLo }}>SIP <span style={{ color: COCKPIT.textHi }}>{sip > 0 ? fmtINR(sip) : '—'}</span></span>
       </div>
     </div>
   )
@@ -152,11 +319,11 @@ export function ExecutiveDashboard({
 
   // ── Identity + horizon ─────────────────────────────────────────────
   const identity = storage.getIdentity()
-  const userName = identity?.fullName?.trim() || 'You'
+  const userName = identity?.fullName?.trim() || 'PILOT'
   const currentAge = userProfile.demographics?.currentAge ?? 60
   const retirementAge = userProfile.demographics?.retirementAge ?? 60
   const horizon = Math.max(0, retirementAge - currentAge)
-  const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase()
 
   // ── Money KPIs ─────────────────────────────────────────────────────
   const grossAssets = sumAssets(userProfile)
@@ -179,15 +346,11 @@ export function ExecutiveDashboard({
     ?? (quizState?.completed ? ((quizState.totalScore - 10) / 40) * 100 : 0.5 * appetiteScore + 0.5 * capacityScore)
   const cognitiveBias = v10State?.composites ? Math.max(0, 100 - v10State.composites.biasIndex) : null
   const scamResilience = v10State?.composites ? Math.max(0, 100 - v10State.composites.scamVulnerability) : null
-
-  // Net worth score: positive net worth → scaled to 1 Cr = 100; negative → 0
   const netWorthScore = netWorth <= 0 ? 0 : Math.min(100, (netWorth / 1_00_00_000) * 100)
-  // Debt freedom: low DTI = high score
   const debtFreedomScore = Math.max(0, Math.min(100, 100 - capacityInputs.debtToIncome * 100 * 1.8))
-  // Money Health: savings rate × scale
   const moneyHealthScore = Math.min(100, capacityInputs.savingsRate * 100 * 2.5)
 
-  // ── Goal Clarity (from GD) ─────────────────────────────────────────
+  // ── Goal clarity ───────────────────────────────────────────────────
   const goals: Array<{ name: string; type: string; amount: string; horizon: string; priority: string }> = (() => {
     const raw = gdState?.answers['block-1']?.['goals']
     return Array.isArray(raw) && typeof raw[0] === 'object' ? (raw as unknown as typeof goals) : []
@@ -199,22 +362,17 @@ export function ExecutiveDashboard({
   }
   const goalClarityScore = namedGoals.length === 0 ? 0
     : namedGoals.reduce((s, g) => s + goalClarityFor(g), 0) / namedGoals.length
-  const goalClarityBand = goalClarityScore < 25 ? 'Broad' : goalClarityScore < 60 ? 'Forming' : goalClarityScore < 85 ? 'Defined' : 'Sharp'
 
-  // ── Spousal Alignment ──────────────────────────────────────────────
+  // ── Spousal alignment ──────────────────────────────────────────────
   let spousalScore: number | null = null
   const partner = gdState?.answers['block-5']?.['applicable'] as string | undefined
   if (partner === 'yes' || partner === 'partial') {
-    if (gdState?.inference?.partnerDivergence) {
-      spousalScore = gdState.inference.partnerDivergence.diverged ? 40 : 90
-    } else {
-      spousalScore = 60   // applicable but no divergence data
-    }
-  } else if (partner === 'no') {
-    spousalScore = null   // not applicable
+    spousalScore = gdState?.inference?.partnerDivergence
+      ? (gdState.inference.partnerDivergence.diverged ? 40 : 90)
+      : 60
   }
 
-  // ── Overall Health composite ───────────────────────────────────────
+  // ── Health composite ───────────────────────────────────────────────
   const subScores: Array<{ key: string; label: string; value: number | null }> = [
     { key: 'netWorth',       label: 'Net Worth',         value: netWorthScore },
     { key: 'debtFreedom',    label: 'Debt Freedom',      value: debtFreedomScore },
@@ -229,212 +387,191 @@ export function ExecutiveDashboard({
   ]
   const known = subScores.filter((s) => s.value != null) as Array<{ key: string; label: string; value: number }>
   const healthScore = known.length === 0 ? 0 : Math.round(known.reduce((s, x) => s + x.value, 0) / known.length)
-  const healthBand = bandFor(healthScore)
+  const healthBand =
+    healthScore < 20 ? 'CRITICAL' :
+    healthScore < 60 ? 'DEVELOPING' :
+    healthScore < 80 ? 'NOMINAL' : 'OPTIMAL'
 
-  // ── Readiness ──────────────────────────────────────────────────────
-  const readyAt = !v10State?.completed ? '—' : (
-    profileScore >= 60 ? `${retirementAge}` : `${retirementAge + 3}+`
-  )
-  const readinessSub = !v10State?.completed ? 'finish questionnaire' : profileScore >= 60 ? 'at target age' : 'small delay likely'
-
-  // ── Profile label ──────────────────────────────────────────────────
   const profileLabel =
-    profileScore < 20 ? 'Ultra-Conservative' :
-    profileScore < 40 ? 'Conservative' :
-    profileScore < 60 ? 'Moderate' :
-    profileScore < 80 ? 'Growth-Oriented' : 'Aggressive'
+    profileScore < 20 ? 'ULTRA-CONS' :
+    profileScore < 40 ? 'CONSERVATIVE' :
+    profileScore < 60 ? 'MODERATE' :
+    profileScore < 80 ? 'GROWTH' : 'AGGRESSIVE'
 
-  // ── Top action items (rule-driven, short list) ─────────────────────
-  interface Action { icon: string; tag: string; text: string }
+  // ── Action items ───────────────────────────────────────────────────
+  interface Action { sev: 'caution' | 'advisory'; tag: string; text: string }
   const actions: Action[] = []
-  // P1 / P2 / … from goals
   namedGoals.slice(0, 3).forEach((g, i) => {
     const targetINR = AMOUNT_MIDPOINT[g.amount] ?? 0
     const years = HORIZON_YEARS[g.horizon] ?? 0
     const sip = requiredSip(targetINR, years)
     const tilt = horizonTilt(years)
     actions.push({
-      icon: '📈',
-      tag: `P${i + 1}`,
-      text: `${g.name} — ${fmtINR(sip)}/mo for ${years || 0} years targets ${fmtINR(targetINR)}. Anchor band: ${tilt.label}.`,
+      sev: 'advisory', tag: `P${i + 1}`,
+      text: `${g.name} — ${fmtINR(sip)}/mo for ${years || 0} yrs → ${fmtINR(targetINR)}. Band: ${tilt.label}.`,
     })
   })
-  if (goalClarityScore < 60) {
-    actions.push({
-      icon: '💡', tag: 'T',
-      text: 'Sharpen goals — set a specific corpus target and date for your top goal before next quarter.',
-    })
-  }
-  if (cognitiveBias != null && cognitiveBias < 50) {
-    actions.push({
-      icon: '🛡️', tag: 'B',
-      text: 'High cognitive-bias index — slow down major decisions, document the rationale, sleep on it 48 h.',
-    })
-  }
-  if (scamResilience != null && scamResilience < 50) {
-    actions.push({
-      icon: '🚨', tag: 'S',
-      text: 'Scam-vulnerability flag — verify every new scheme on sebi.gov.in/Intermediaries before any money moves.',
-    })
-  }
-  if (!v10State?.completed) {
-    actions.push({ icon: '📝', tag: 'A', text: 'Finish the v10 psychometric assessment to unlock the full readiness verdict.' })
-  }
+  if (goalClarityScore < 60) actions.push({ sev: 'caution', tag: 'GC', text: 'Sharpen goals — set explicit target + date for your top goal this quarter.' })
+  if (cognitiveBias != null && cognitiveBias < 50) actions.push({ sev: 'caution', tag: 'CB', text: 'Elevated cognitive bias — slow major decisions, document rationale, sleep 48 h.' })
+  if (scamResilience != null && scamResilience < 50) actions.push({ sev: 'caution', tag: 'SR', text: 'Scam-resilience low — verify every new scheme on sebi.gov.in before funds move.' })
+  if (!v10State?.completed) actions.push({ sev: 'advisory', tag: 'AS', text: 'Finish v10 psychometric assessment to enable full readiness verdict.' })
 
-  // ── Goal "P1 / P2" card data ───────────────────────────────────────
+  // ── Goal cards ─────────────────────────────────────────────────────
   const goalCards = namedGoals.slice(0, 4).map((g, i) => {
     const targetINR = AMOUNT_MIDPOINT[g.amount] ?? 0
     const years = HORIZON_YEARS[g.horizon] ?? 0
     return {
-      tag: `P${i + 1}`,
-      name: g.name,
-      typeLabel: GD_GOAL_TYPES.find((t) => t.value === g.type)?.label ?? g.type,
-      years,
-      target: targetINR,
-      sip: requiredSip(targetINR, years),
-      tilt: horizonTilt(years),
-      priority: g.priority,
+      tag: `P${i + 1}`, name: g.name, years,
+      target: targetINR, sip: requiredSip(targetINR, years), tilt: horizonTilt(years),
     }
   })
 
   async function handleExport(fmt: ExportFormat) {
-    setBusy(fmt)
-    setExportErr(null)
+    setBusy(fmt); setExportErr(null)
     try {
-      await exportReport(fmt, {
-        identity, profile: userProfile, buckets, returnAssumptions,
-      })
+      await exportReport(fmt, { identity, profile: userProfile, buckets, returnAssumptions })
     } catch (e) {
       setExportErr(e instanceof Error ? e.message : `Could not generate ${fmt.toUpperCase()}`)
-    } finally {
-      setBusy(null)
-    }
+    } finally { setBusy(null) }
   }
 
   return (
-    <section className="rounded-lg border-2 border-slate-300 bg-gradient-to-br from-white via-white to-slate-50/40 p-3 sm:p-4 space-y-3.5 ring-1 ring-slate-100 shadow-sm">
-      {/* ── Header ────────────────────────────────────────────── */}
-      <header className="flex items-baseline justify-between gap-3 flex-wrap">
+    <section
+      className="rounded-lg border-2 border-slate-700 p-3 sm:p-4 space-y-3 font-mono"
+      style={{
+        background: `radial-gradient(circle at 20% 0%, #1e293b 0%, ${COCKPIT.bg} 60%)`,
+        boxShadow: 'inset 0 0 30px rgba(34, 211, 238, 0.05)',
+      }}
+    >
+      {/* ── Header: callsign strip ────────────────────────────── */}
+      <header className="flex items-baseline justify-between gap-3 flex-wrap pb-2 border-b border-slate-700">
         <div className="min-w-0">
-          <div className="flex items-baseline gap-2 flex-wrap">
-            <span className="inline-block bg-slate-900 text-white text-[10px] font-bold tracking-[2px] uppercase px-2.5 py-0.5 rounded-full">
-              📊 Executive Dashboard
-            </span>
+          <div className="text-[9px] font-bold tracking-[3px]" style={{ color: COCKPIT.accent }}>
+            ▲ FINANCIAL COCKPIT · CAPTAIN
           </div>
-          <h2 className="font-serif text-lg sm:text-xl font-extralight tracking-tight text-slate-900 mt-1">
-            {userName}'s <em className="not-italic font-extrabold">financial cockpit</em>
+          <h2 className="font-mono text-xl font-bold tracking-tight uppercase" style={{ color: COCKPIT.textHi }}>
+            {userName}
           </h2>
-          <p className="text-[11px] text-slate-600 italic mt-0.5 leading-snug">
-            One-screen overview of where you stand · the rest of the report goes deeper, section by section.
-          </p>
         </div>
-        <div className="text-right text-[10px] text-slate-500 tabular-nums leading-tight">
-          <div className="font-semibold text-slate-700">{today}</div>
-          <div>Age {currentAge} · Retire @ {retirementAge}</div>
-          <div className="italic">Horizon {horizon} yrs</div>
+        <div className="text-right text-[10px] tabular-nums leading-tight" style={{ color: COCKPIT.textLo }}>
+          <div style={{ color: COCKPIT.accent }}>{today}</div>
+          <div>AGE <span style={{ color: COCKPIT.textHi }}>{currentAge}</span> · TGT <span style={{ color: COCKPIT.textHi }}>{retirementAge}</span></div>
+          <div>HORIZON <span style={{ color: COCKPIT.textHi }}>{horizon}y</span></div>
         </div>
       </header>
 
-      {/* ── KPI tiles ─────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-        <Kpi icon="💼" label="Net Worth"    value={fmtINR(netWorth)}     sub={`Gross ${fmtINR(grossAssets)}`} />
-        <Kpi icon="💳" label="Liabilities"  value={fmtINR(liabilities)}  sub={liabilityPctOfAssets === Infinity ? '∞% of assets' : `${Math.round(liabilityPctOfAssets)}% of assets`} />
-        <Kpi icon="⏳" label="Runway"       value={runwayYrs === Infinity ? '∞ yrs' : `${runwayYrs.toFixed(1)} yrs`} sub="at current burn" />
-        <Kpi icon="🎯" label="Ready at"     value={readyAt} sub={readinessSub} />
-        <Kpi icon="⚖️" label="Risk Profile" value={profileLabel} sub={`${Math.round(profileScore)}/100`} />
-        <Kpi icon="🌟" label="Goal Clarity" value={`${Math.round(goalClarityScore)}/100`} sub={goalClarityBand} />
+      {/* ── Top row: 6 instrument dials ──────────────────────── */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+        <Dial value={netWorthScore} max={100} label="NET WORTH" caption={fmtINR(netWorth)} primary={statusColor(netWorthScore)} />
+        <Dial value={Math.min(100, liabilityPctOfAssets === Infinity ? 100 : liabilityPctOfAssets)} max={100} label="LIABILITIES" caption={fmtINR(liabilities)} primary={liabilities > grossAssets ? COCKPIT.alert : COCKPIT.warn} />
+        <Dial value={runwayYrs === Infinity ? 100 : Math.min(100, runwayYrs * 5)} max={100} label="RUNWAY" caption={runwayYrs === Infinity ? '∞ yrs' : `${runwayYrs.toFixed(1)}y`} primary={COCKPIT.accent} />
+        <Dial value={v10State?.completed ? profileScore : null} max={100} label="READINESS" caption={v10State?.completed ? `Age ${retirementAge}` : 'PENDING'} primary={v10State?.completed ? statusColor(profileScore) : COCKPIT.inactive} />
+        <Dial value={profileScore} max={100} label="RISK PROF" caption={profileLabel} primary={statusColor(profileScore)} />
+        <Dial value={goalClarityScore} max={100} label="GOAL CLAR" caption={`${Math.round(goalClarityScore)}/100`} primary={statusColor(goalClarityScore)} />
       </div>
 
-      {/* ── Health composite bar ──────────────────────────────── */}
-      <section className="rounded-md border-2 p-3 bg-white" style={{ borderColor: healthBand.color + '40' }}>
-        <div className="flex items-baseline justify-between gap-2 mb-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700">Health</span>
-            <span className="text-2xl font-extrabold tabular-nums" style={{ color: healthBand.color }}>{healthScore}</span>
-            <span className="text-[10px] font-bold tracking-[2px] uppercase" style={{ color: healthBand.color }}>{healthBand.label}</span>
+      {/* ── Center: Attitude indicator + Systems panel ───────── */}
+      <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-3 items-start">
+        {/* Attitude / Health */}
+        <div className="rounded-md border border-slate-700 p-3 flex flex-col items-center" style={{ background: COCKPIT.panel }}>
+          <div className="text-[9px] font-bold tracking-[3px] mb-1" style={{ color: COCKPIT.accent }}>
+            ◉ HEALTH · ATTITUDE
           </div>
-          <span className="text-[10px] text-slate-500 italic">{known.length}/{subScores.length} sub-scores known</span>
-        </div>
-        <div className="relative h-3 rounded-full bg-slate-100 overflow-hidden">
-          {/* zone backgrounds */}
-          <div className="absolute inset-y-0 left-0 bg-rose-100"     style={{ width: '20%' }} />
-          <div className="absolute inset-y-0 left-[20%] bg-amber-100" style={{ width: '40%' }} />
-          <div className="absolute inset-y-0 left-[60%] bg-lime-100"  style={{ width: '20%' }} />
-          <div className="absolute inset-y-0 left-[80%] bg-emerald-100" style={{ width: '20%' }} />
-          {/* needle */}
-          <div className="absolute inset-y-0" style={{ left: `${healthScore}%` }}>
-            <div className="w-0.5 h-full" style={{ background: healthBand.color }} />
+          <AttitudeIndicator score={healthScore} band={healthBand} sub={`${known.length}/${subScores.length} sub-scores`} />
+          {/* Band scale */}
+          <div className="flex items-center gap-1 mt-2 text-[8px]" style={{ color: COCKPIT.textLo }}>
+            <span style={{ color: COCKPIT.alert }}>CRIT</span>
+            <span>·</span>
+            <span style={{ color: COCKPIT.warn }}>DEV</span>
+            <span>·</span>
+            <span style={{ color: '#a3e635' }}>NOM</span>
+            <span>·</span>
+            <span style={{ color: COCKPIT.ok }}>OPT</span>
           </div>
         </div>
-        <div className="flex justify-between text-[9px] text-slate-500 tabular-nums mt-1">
-          <span>0</span><span>20</span><span>60</span><span>80</span><span>100</span>
-        </div>
-      </section>
 
-      {/* ── Sub-score breakdown ───────────────────────────────── */}
-      <section className="rounded-md border border-slate-200 p-2.5 bg-white">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-2">Score breakdown</h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-          {subScores.map((s) => (
-            <ScoreBar key={s.key} label={s.label} value={s.value} />
-          ))}
-        </div>
-      </section>
-
-      {/* ── Goals (P1 / P2 cards) ─────────────────────────────── */}
-      {goalCards.length > 0 && (
-        <section className="rounded-md border border-slate-200 p-2.5 bg-white">
-          <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-2">Priority goals</h4>
-          <div className="space-y-2">
-            {goalCards.map((g) => (
-              <article key={g.tag} className="rounded-md border border-slate-200 bg-slate-50/40 p-2.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[10px] font-extrabold tabular-nums bg-slate-900 text-white px-1.5 py-0.5 rounded shrink-0">{g.tag}</span>
-                  <span className="text-[12px] font-bold text-slate-900 truncate">{g.name}</span>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-wider ml-auto shrink-0">{g.typeLabel}</span>
-                </div>
-                <div className="grid grid-cols-4 gap-2 mt-1.5 text-[10px]">
-                  <Mini label="Horizon" value={g.years > 0 ? `${g.years}y` : '—'} />
-                  <Mini label="Target"  value={g.target > 0 ? fmtINR(g.target) : '—'} />
-                  <Mini label="SIP/mo"  value={g.sip > 0 ? fmtINR(g.sip) : '—'} />
-                  <Mini label="Tilt"    value={g.tilt.label} color={g.tilt.color} />
-                </div>
-              </article>
+        {/* Systems panel */}
+        <div className="rounded-md border border-slate-700 p-3" style={{ background: COCKPIT.panel }}>
+          <div className="flex items-baseline justify-between mb-2">
+            <span className="text-[9px] font-bold tracking-[3px]" style={{ color: COCKPIT.accent }}>◉ SYSTEMS · 10 INDICATORS</span>
+            <span className="text-[8px]" style={{ color: COCKPIT.textLo }}>● GRN OK · ● AMB caution · ● RED critical · ● --- unknown</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+            {subScores.map((s) => (
+              <LedRow key={s.key} label={s.label} value={s.value} />
             ))}
           </div>
-        </section>
-      )}
+        </div>
+      </div>
 
-      {/* ── Top action items ──────────────────────────────────── */}
-      {actions.length > 0 && (
-        <section className="rounded-md border-2 border-amber-200 bg-amber-50/40 p-2.5">
-          <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-amber-800 mb-2">⚡ Top action items</h4>
-          <ul className="space-y-1.5">
-            {actions.slice(0, 5).map((a, i) => (
-              <li key={i} className="flex items-start gap-2 text-[11.5px] text-slate-800 leading-snug">
-                <span aria-hidden="true" className="text-base leading-none shrink-0">{a.icon}</span>
-                <span className="flex-1">{a.text}</span>
-                <span className="text-[9px] font-extrabold tabular-nums bg-slate-900 text-white px-1.5 py-0.5 rounded shrink-0">{a.tag}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      {/* ── Navigation: waypoints + master caution ───────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Waypoints */}
+        <div className="rounded-md border border-slate-700 p-3" style={{ background: COCKPIT.panel }}>
+          <div className="text-[9px] font-bold tracking-[3px] mb-2" style={{ color: COCKPIT.accent }}>
+            ◉ NAVIGATION · WAYPOINTS
+          </div>
+          {goalCards.length > 0 ? (
+            <div className="space-y-2">
+              {goalCards.map((g) => (
+                <Waypoint key={g.tag} {...g} />
+              ))}
+            </div>
+          ) : (
+            <div className="text-[10px] italic text-center py-6" style={{ color: COCKPIT.textLo }}>
+              NO WAYPOINTS · Add goals in Goal Discovery to chart your course.
+            </div>
+          )}
+        </div>
 
-      {/* ── Download row ─────────────────────────────────────── */}
-      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-2.5">
+        {/* Master caution */}
+        <div className="rounded-md border border-amber-700/60 p-3" style={{ background: 'rgba(120, 53, 15, 0.20)' }}>
+          <div className="text-[9px] font-bold tracking-[3px] mb-2" style={{ color: COCKPIT.warn }}>
+            ⚠ MASTER CAUTION · ACTION ITEMS
+          </div>
+          {actions.length > 0 ? (
+            <ul className="space-y-1.5">
+              {actions.slice(0, 6).map((a, i) => {
+                const sevColor = a.sev === 'caution' ? COCKPIT.warn : COCKPIT.accent
+                return (
+                  <li key={i} className="grid grid-cols-[14px_1fr_auto] items-start gap-2">
+                    <span
+                      className="inline-block w-2 h-2 rounded-full mt-1"
+                      style={{
+                        background: sevColor,
+                        boxShadow: a.sev === 'caution' ? `0 0 6px ${sevColor}` : 'none',
+                      }}
+                      aria-hidden="true"
+                    />
+                    <span className="text-[10.5px] leading-snug" style={{ color: COCKPIT.textHi }}>
+                      {a.text}
+                    </span>
+                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.5 rounded" style={{ background: sevColor, color: '#0f172a' }}>{a.tag}</span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <div className="text-[10px] italic text-center py-3" style={{ color: COCKPIT.textLo }}>
+              ALL CLEAR · No active cautions.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Download / Telemetry export ───────────────────────── */}
+      <section className="rounded-md border border-slate-700 p-2.5" style={{ background: COCKPIT.panel }}>
         <div className="flex items-baseline justify-between gap-2 flex-wrap mb-1.5">
-          <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700">Download report</h4>
-          <span className="text-[10px] text-slate-500 italic">
-            Same envelope as the Risk and Goal Discovery dashboards.
-          </span>
+          <span className="text-[9px] font-bold tracking-[3px]" style={{ color: COCKPIT.accent }}>◉ TELEMETRY · EXPORT</span>
+          <span className="text-[9px]" style={{ color: COCKPIT.textLo }}>JSON envelope + PDF/DOCX/PPTX/MD/CSV</span>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
             onClick={() => downloadV10Json(gdState, v10State)}
-            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold text-slate-800 bg-white border border-slate-300 hover:bg-slate-100 transition-colors"
-            title="Bundles GD + v10 + inference into a single JSON envelope"
+            className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider border border-cyan-700/50 hover:border-cyan-400 transition-colors"
+            style={{ background: 'rgba(8, 51, 68, 0.4)', color: COCKPIT.accent }}
+            title="JSON envelope: GD + v10 + inference"
           >
             <span aria-hidden="true">⬇</span> JSON
           </button>
@@ -444,26 +581,16 @@ export function ExecutiveDashboard({
               type="button"
               onClick={() => handleExport(f.id)}
               disabled={busy != null}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-semibold text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-[11px] font-bold uppercase tracking-wider border border-slate-600 hover:border-slate-400 transition-colors disabled:opacity-50"
+              style={{ background: 'rgba(15, 23, 42, 0.6)', color: COCKPIT.textHi }}
               title={f.hint}
             >
               <span aria-hidden="true">⬇</span> {busy === f.id ? `${f.label}…` : f.label}
             </button>
           ))}
         </div>
-        {exportErr && <div className="mt-2 text-[11px] text-rose-700">{exportErr}</div>}
+        {exportErr && <div className="mt-1.5 text-[10px]" style={{ color: COCKPIT.alert }}>{exportErr}</div>}
       </section>
     </section>
-  )
-}
-
-// ─── Mini stat row ─────────────────────────────────────────────────────
-
-function Mini({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div className="text-center">
-      <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-slate-500">{label}</div>
-      <div className="text-[12px] font-bold tabular-nums mt-0.5" style={{ color: color ?? '#0f172a' }}>{value}</div>
-    </div>
   )
 }
