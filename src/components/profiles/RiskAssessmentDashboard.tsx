@@ -175,6 +175,157 @@ const CAPACITY_ZONES = [
   { start: 75, end: 100, color: '#16a34a' },
 ]
 
+const PROFILE_ZONES = [
+  { start: 0,  end: 20,  color: '#dc2626' },
+  { start: 20, end: 40,  color: '#f59e0b' },
+  { start: 40, end: 60,  color: '#eab308' },
+  { start: 60, end: 80,  color: '#84cc16' },
+  { start: 80, end: 100, color: '#16a34a' },
+]
+
+type MetricKey = 'profile' | 'appetite' | 'capacity'
+
+const METRIC_META: Record<MetricKey, {
+  label: string
+  subtitle: string
+  oneLiner: string
+  detail: string
+  formula: string
+  source: string
+}> = {
+  profile: {
+    label: 'Risk Profile',
+    subtitle: 'The blended composite that drives bucket allocation',
+    oneLiner: 'Your overall risk position — the weighted blend of appetite and capacity.',
+    detail:
+      'Risk Profile is the single 0–100 number the engine uses to pick your bucket allocation. It blends your subjective willingness (Appetite) with your financial ability (Capacity), weighted by life-stage. Closer to retirement weights Capacity more; longer horizons let Appetite carry more weight.',
+    formula: 'Profile = wRA · Appetite + wRC · Capacity   (wRA = 0.4 if <5 yrs to retirement, else 0.5)',
+    source: 'Composite from v10 psychometric assessment + computed Risk Capacity.',
+  },
+  appetite: {
+    label: 'Risk Appetite',
+    subtitle: 'How much volatility you are psychologically willing to accept',
+    oneLiner: 'A personality trait — how much you can stomach, not how much you can afford.',
+    detail:
+      'Risk Appetite is purely subjective: how comfortable you are watching your portfolio swing, how you react to losses, and what return / volatility trade-offs you prefer. It is largely stable across time and does not change in a market crash — only in life-stage transitions.',
+    formula: 'Slider 1–5  OR  C-1 (Risk Tolerance) construct from the v10 psychometric quiz, normalised to 0–100.',
+    source: 'Slider value (Profile tab) and v10 quiz items C1-Q1 to C1-Q5.',
+  },
+  capacity: {
+    label: 'Risk Capacity',
+    subtitle: 'How much risk your financial situation can absorb',
+    oneLiner: 'An objective measure — derived from your Plan data, not your feelings.',
+    detail:
+      'Risk Capacity is computed live from your Wealth Snapshot, Loans & Liabilities, and Monthly Budget. It rises when your savings rate is high, your debt-to-income is low, and your emergency-fund cover is deep. It shifts when life events change those inputs.',
+    formula: 'Capacity = mean(savingsRate · 2.5 · 100,  100 − DTI · 1.8 · 100,  emergencyMonths · 15)   (all clamped 0–100)',
+    source: 'deriveRiskCapacity() on your Plan-tab inputs.',
+  },
+}
+
+// ─── Stress-test scenarios ─────────────────────────────────────────────
+// Conservative directional deltas. Appetite is a personality trait and is
+// largely shock-invariant; Capacity moves with cash buffers and income;
+// Profile is a weighted blend so its delta is dampened.
+interface StressScenario {
+  id: string
+  icon: string
+  label: string
+  description: string
+  /** Δ percentage-points on each composite (0–100 scale) */
+  deltaProfile: number
+  deltaAppetite: number
+  deltaCapacity: number
+}
+
+const STRESS_SCENARIOS: StressScenario[] = [
+  {
+    id: 'crash',
+    icon: '📉',
+    label: '30% equity crash',
+    description: 'B3 + B4 lose 30% overnight; emergency cash unchanged but psychological pressure spikes.',
+    deltaProfile:  -8,
+    deltaAppetite:  0,
+    deltaCapacity: -10,
+  },
+  {
+    id: 'jobloss',
+    icon: '💼',
+    label: '6-month job loss',
+    description: 'Monthly income drops to ₹0 for 6 months. Liquid cash bleeds; savings rate collapses; DTI ratio spikes.',
+    deltaProfile: -15,
+    deltaAppetite:  0,
+    deltaCapacity: -30,
+  },
+  {
+    id: 'illness',
+    icon: '🏥',
+    label: 'Major illness (₹15 L surprise)',
+    description: 'Large unplanned medical expense draws down liquid emergency reserves; ongoing care erodes monthly buffer.',
+    deltaProfile: -10,
+    deltaAppetite:  0,
+    deltaCapacity: -20,
+  },
+  {
+    id: 'inflation',
+    icon: '📈',
+    label: 'Inflation spike (10y at 9%)',
+    description: 'Real returns compress; expenses balloon; corpus longevity shrinks. Capacity erodes slowly but persistently.',
+    deltaProfile:  -6,
+    deltaAppetite:  0,
+    deltaCapacity:  -8,
+  },
+]
+
+function clamp(v: number, lo = 0, hi = 100): number {
+  return Math.max(lo, Math.min(hi, v))
+}
+
+function MetricRadio({
+  metric, active, label, onClick,
+}: { metric: MetricKey; active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-2 px-3 py-2 rounded-md border-2 transition-colors text-left ${
+        active
+          ? 'border-blue-400 bg-blue-50 text-blue-900'
+          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+      }`}
+      role="radio"
+      aria-checked={active}
+    >
+      <span
+        aria-hidden="true"
+        className={`shrink-0 w-3.5 h-3.5 rounded-full border-2 flex items-center justify-center ${
+          active ? 'border-blue-600' : 'border-slate-300'
+        }`}
+      >
+        {active && <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />}
+      </span>
+      <span className="text-xs font-bold tracking-tight">{label}</span>
+      <span className="text-[10px] text-slate-500 hidden sm:inline ml-auto">{METRIC_META[metric].subtitle.split(' ').slice(0, 3).join(' ')}…</span>
+    </button>
+  )
+}
+
+function StressRow({
+  before, after, label,
+}: { before: number; after: number; label: 'Profile' | 'Appetite' | 'Capacity' }) {
+  const delta = after - before
+  const color = delta < -10 ? '#9f1239' : delta < 0 ? '#b45309' : '#475569'
+  return (
+    <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 text-[11px]">
+      <span className="text-slate-700">{label}</span>
+      <span className="tabular-nums text-slate-500 w-10 text-right">{Math.round(before)}</span>
+      <span aria-hidden="true" className="text-slate-300">→</span>
+      <span className="tabular-nums font-semibold w-12 text-right" style={{ color }}>
+        {Math.round(after)} <span className="text-[9px] font-normal">({delta > 0 ? '+' : ''}{Math.round(delta)})</span>
+      </span>
+    </div>
+  )
+}
+
 export function RiskAssessmentDashboard({
   userProfile, buckets, returnAssumptions,
   quizState, v10State, gdState, deepRiskPercent,
@@ -209,6 +360,11 @@ export function RiskAssessmentDashboard({
   const hasAnything = quickScore != null || deepRiskPercent != null || v10Score != null || matched != null
   if (!hasAnything) return null
 
+  // Composite values for the radio-driven view + stress test (all 0–100)
+  const appetitePct = ((userProfile.riskAppetite - 1) / 4) * 100  // slider 1–5 → 0–100
+  const profilePct = v10State?.composites?.riskProfile ?? (0.5 * appetitePct + 0.5 * capacityScore)
+  const [activeMetric, setActiveMetric] = useState<MetricKey>('profile')
+
   async function handleExport(fmt: ExportFormat) {
     setBusy(fmt)
     setExportErr(null)
@@ -240,9 +396,31 @@ export function RiskAssessmentDashboard({
         </div>
       </div>
 
-      {/* ── Gauges row: Appetite + Capacity ──────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="rounded-md border-2 border-blue-200 bg-blue-50/40 p-3">
+      {/* ── Radio tabs ───────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2" role="radiogroup" aria-label="Pick a metric to focus">
+        <MetricRadio metric="profile"  label="Risk Profile"  active={activeMetric === 'profile'}  onClick={() => setActiveMetric('profile')} />
+        <MetricRadio metric="appetite" label="Risk Appetite" active={activeMetric === 'appetite'} onClick={() => setActiveMetric('appetite')} />
+        <MetricRadio metric="capacity" label="Risk Capacity" active={activeMetric === 'capacity'} onClick={() => setActiveMetric('capacity')} />
+      </div>
+
+      {/* ── Active metric gauge ──────────────────────────────── */}
+      <div className="rounded-md border-2 border-blue-200 bg-blue-50/40 p-4">
+        {activeMetric === 'profile' && (
+          <Gauge
+            value={profilePct}
+            max={100}
+            zones={PROFILE_ZONES}
+            label="Risk Profile"
+            unit="/100"
+            caption={
+              profilePct < 20 ? 'Ultra-Conservative' :
+              profilePct < 40 ? 'Conservative' :
+              profilePct < 60 ? 'Moderate' :
+              profilePct < 80 ? 'Growth-Oriented' : 'Aggressive'
+            }
+          />
+        )}
+        {activeMetric === 'appetite' && (
           <Gauge
             value={userProfile.riskAppetite}
             max={5}
@@ -251,8 +429,8 @@ export function RiskAssessmentDashboard({
             unit="/5"
             caption={userProfile.riskAppetite <= 2 ? 'Conservative' : userProfile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'}
           />
-        </div>
-        <div className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
+        )}
+        {activeMetric === 'capacity' && (
           <Gauge
             value={capacityScore}
             max={100}
@@ -261,8 +439,71 @@ export function RiskAssessmentDashboard({
             unit="/100"
             caption={capacityScore < 30 ? 'Stretched' : capacityScore < 55 ? 'Constrained' : capacityScore < 75 ? 'Adequate' : 'Strong'}
           />
-        </div>
+        )}
       </div>
+
+      {/* ── Explanations of all three ────────────────────────── */}
+      <section className="rounded-md border-2 border-slate-200 p-3 space-y-3">
+        <h4 className="text-xs font-bold tracking-[2px] uppercase text-slate-700">How to read these three scores</h4>
+        {(['profile', 'appetite', 'capacity'] as MetricKey[]).map((m) => {
+          const meta = METRIC_META[m]
+          const isActive = activeMetric === m
+          return (
+            <div
+              key={m}
+              className={`rounded p-2.5 border-2 transition-colors ${
+                isActive ? 'border-blue-200 bg-blue-50/40' : 'border-slate-100 bg-white'
+              }`}
+            >
+              <div className={`text-[11px] font-bold tracking-wide ${isActive ? 'text-blue-800' : 'text-slate-800'}`}>
+                {isActive && '● '}{meta.label} <span className="font-normal text-slate-500 italic">— {meta.oneLiner}</span>
+              </div>
+              <p className="text-[11px] text-slate-700 mt-1 leading-relaxed">{meta.detail}</p>
+              <div className="text-[10px] text-slate-500 mt-1 font-mono leading-snug bg-slate-50 border border-slate-100 rounded px-2 py-1">
+                {meta.formula}
+              </div>
+              <div className="text-[10px] text-slate-500 italic mt-1">Source: {meta.source}</div>
+            </div>
+          )
+        })}
+      </section>
+
+      {/* ── Stress test ──────────────────────────────────────── */}
+      <section className="rounded-md border-2 border-amber-200 bg-amber-50/40 p-3">
+        <div className="flex items-baseline justify-between gap-2 mb-2 flex-wrap">
+          <h4 className="text-xs font-bold tracking-[2px] uppercase text-amber-800">Stress test — how would these scores shift?</h4>
+          <span className="text-[10px] text-slate-500 italic">
+            Directional only. Appetite is a personality trait so it barely moves; Capacity moves with cash and income.
+          </span>
+        </div>
+        <div className="space-y-2">
+          {STRESS_SCENARIOS.map((s) => {
+            const newProfile  = clamp(profilePct  + s.deltaProfile)
+            const newAppetite = clamp(appetitePct + s.deltaAppetite)
+            const newCapacity = clamp(capacityScore + s.deltaCapacity)
+            return (
+              <div key={s.id} className="rounded-md border border-amber-200 bg-white p-2.5">
+                <div className="flex items-baseline justify-between gap-2 mb-1">
+                  <span className="text-[12px] font-bold text-slate-900">
+                    <span className="mr-1" aria-hidden="true">{s.icon}</span>
+                    {s.label}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 italic leading-snug mb-2">{s.description}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-4 gap-y-1">
+                  <StressRow label="Profile"  before={profilePct}    after={newProfile} />
+                  <StressRow label="Appetite" before={appetitePct}   after={newAppetite} />
+                  <StressRow label="Capacity" before={capacityScore} after={newCapacity} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+        <p className="text-[10px] text-slate-500 italic mt-2 leading-snug">
+          A robust profile is one where the worst-case scenario above still leaves you above 40 on the Capacity score.
+          Below 40 indicates you should build the floor (emergency fund + insurance) before tilting further to equity.
+        </p>
+      </section>
 
       {/* ── Capacity breakdown bars ──────────────────────────── */}
       <section className="rounded-md border-2 border-slate-200 p-3">
