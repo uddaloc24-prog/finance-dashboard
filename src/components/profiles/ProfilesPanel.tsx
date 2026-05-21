@@ -13,6 +13,7 @@ import { ProfileGrid } from './ProfileGrid'
 import { RiskProfiler, type RiskResult } from '../RiskProfiler'
 import { GoalDiscoveryDashboard } from './GoalDiscoveryDashboard'
 import { RiskAssessmentDashboard } from './RiskAssessmentDashboard'
+import { ExecutiveDashboard } from './ExecutiveDashboard'
 import { Modal } from '../ui/Modal'
 
 interface Props {
@@ -32,7 +33,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   )
   // Single-open assessment / dashboard row. Quiz modals AND dashboard
   // popups all share this state so only one floats at a time.
-  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10' | 'gd-dash' | 'risk-dash'
+  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10' | 'gd-dash' | 'risk-dash' | 'exec-dash'
   const [openAssessment, setOpenAssessment] = useState<AssessmentKind | null>(null)
   const showQuiz = openAssessment === 'quiz'
   const showProfiler = openAssessment === 'profiler'
@@ -40,6 +41,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   const showV10 = openAssessment === 'v10'
   const showGdDash = openAssessment === 'gd-dash'
   const showRiskDash = openAssessment === 'risk-dash'
+  const showExecDash = openAssessment === 'exec-dash'
   function toggleOpen(kind: AssessmentKind) {
     setOpenAssessment((cur) => (cur === kind ? null : kind))
   }
@@ -124,6 +126,19 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
 
   return (
     <div className="space-y-4">
+      {/* ── Executive Dashboard launcher ─────────────────── */}
+      <div className="flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => toggleOpen('exec-dash')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
+        >
+          <span aria-hidden="true">📊</span>
+          Open Executive Dashboard
+          <span aria-hidden="true">↗</span>
+        </button>
+      </div>
+
       {/* ── Hero strip ────────────────────────────────────── */}
       <ProfileHero />
 
@@ -392,6 +407,25 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
           quizState={quizState}
           v10State={v10State}
           gdState={gdState}
+          deepRiskPercent={profilerResult ? profilerResult.riskScore : null}
+        />
+      </Modal>
+
+      <Modal
+        open={showExecDash}
+        title="Executive Dashboard"
+        subtitle="Your financial cockpit — net worth, runway, risk, goals, action items"
+        accent="slate"
+        size="3xl"
+        onClose={closeAll}
+      >
+        <ExecutiveDashboard
+          userProfile={userProfile}
+          buckets={buckets}
+          returnAssumptions={returnAssumptions}
+          gdState={gdState}
+          v10State={v10State}
+          quizState={quizState}
           deepRiskPercent={profilerResult ? profilerResult.riskScore : null}
         />
       </Modal>
