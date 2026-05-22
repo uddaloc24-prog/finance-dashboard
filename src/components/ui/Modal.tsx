@@ -14,7 +14,7 @@ interface Props {
   /** Tailwind max-width class for the panel. Default: `max-w-3xl`. */
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
   /** Tone-keyed accent stripe across the top. Defaults to slate. */
-  accent?: 'navy' | 'amber' | 'indigo' | 'emerald' | 'slate'
+  accent?: 'navy' | 'amber' | 'indigo' | 'emerald' | 'rose' | 'slate'
 }
 
 const SIZE_CLASS: Record<NonNullable<Props['size']>, string> = {
@@ -33,6 +33,7 @@ const ACCENT_CLASS: Record<NonNullable<Props['accent']>, string> = {
   amber:   'bg-amber-600',
   indigo:  'bg-indigo-700',
   emerald: 'bg-emerald-600',
+  rose:    'bg-rose-600',
   slate:   'bg-slate-700',
 }
 
