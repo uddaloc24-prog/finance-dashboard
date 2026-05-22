@@ -186,9 +186,9 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
     { label: gdState && v10State?.composites ? 'Full read available' : 'Partial read', tone: gdState && v10State?.composites ? 'good' : 'muted' },
   ]
 
-  function LaunchersRail({ orientation = 'col' }: { orientation?: 'col' | 'row' }) {
+  function LaunchersRail() {
     return (
-      <aside className={orientation === 'col' ? 'flex flex-col gap-2 shrink-0 w-full md:w-[170px]' : 'flex flex-row gap-2'}>
+      <div className="flex flex-col gap-2.5 h-full">
         <LauncherBtn
           icon="🎯"
           label="Goal Discovery"
@@ -217,7 +217,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
           status={execStatus}
           onClick={() => toggleOpen('exec-dash')}
         />
-      </aside>
+      </div>
     )
   }
 
@@ -227,12 +227,15 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
       <ProfileHero />
 
       {/* ── Launchers + Section 01 + Section 02 in a 3-column layout */}
-      <div className="grid grid-cols-1 md:grid-cols-[170px_1fr_1fr] gap-3 items-start">
-        <LaunchersRail />
+      <div className="grid grid-cols-1 md:grid-cols-[minmax(200px,1fr)_1.4fr_1.4fr] gap-3 items-stretch">
+        {/* 00 — Launchers (slate) */}
+        <ToneCard num="00" tone="slate" title="Dashboards" subtitle="Cockpit · summary · advisor handoff">
+          <LaunchersRail />
+        </ToneCard>
 
       {/* ── 01 — Goal Discovery & Psychometric Assessment (indigo) */}
       <ToneCard num="01" tone="indigo" title="Goal Discovery & Psychometric Assessment" subtitle="Adaptive intelligence · the deeper tools that personalise your plan">
-        <div className="grid grid-cols-1 gap-3">
+        <div className="grid grid-cols-1 gap-3 h-full">
           {/* Goal Discovery */}
           <AssessmentCard
             tone="indigo"
@@ -277,7 +280,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
       <ToneCard num="02" tone="navy" title="Risk Profile & Risk Assessment" subtitle="Your current setting and quick / detailed calibration">
-        <div className="space-y-4">
+        <div className="space-y-4 h-full">
           {/* ── Subheader: Risk Profile ─── */}
           <section>
             <SubHeader tone="navy" eyebrow="Risk Profile" subtitle="Current match · slider · score history" />
@@ -557,7 +560,7 @@ function ProfileHero() {
   )
 }
 
-type Tone = 'navy' | 'amber' | 'green' | 'indigo'
+type Tone = 'navy' | 'amber' | 'green' | 'indigo' | 'slate'
 
 const TONES: Record<Tone, {
   border: string; ring: string; bar: string; text: string; numBg: string; numBorder: string
@@ -566,6 +569,7 @@ const TONES: Record<Tone, {
   amber:  { border: 'border-amber-400',   ring: 'ring-amber-100',   bar: 'bg-amber-600',   text: 'text-amber-700',   numBg: 'bg-amber-50',   numBorder: 'border-amber-300' },
   green:  { border: 'border-emerald-400', ring: 'ring-emerald-100', bar: 'bg-emerald-600', text: 'text-emerald-700', numBg: 'bg-emerald-50', numBorder: 'border-emerald-300' },
   indigo: { border: 'border-indigo-400',  ring: 'ring-indigo-100',  bar: 'bg-indigo-700',  text: 'text-indigo-700',  numBg: 'bg-indigo-50',  numBorder: 'border-indigo-300' },
+  slate:  { border: 'border-slate-500',   ring: 'ring-slate-200',   bar: 'bg-slate-800',   text: 'text-slate-700',   numBg: 'bg-slate-50',   numBorder: 'border-slate-400' },
 }
 
 // ── SubHeader — used to mark subsections inside a ToneCard ─────────────
@@ -670,7 +674,7 @@ const LAUNCHER_TONE: Record<Tone, { bg: string; bgHover: string; ring: string }>
   amber:  { bg: 'bg-amber-600',   bgHover: 'hover:bg-amber-700',   ring: 'focus:ring-amber-300' },
   green:  { bg: 'bg-emerald-600', bgHover: 'hover:bg-emerald-700', ring: 'focus:ring-emerald-300' },
   indigo: { bg: 'bg-indigo-700',  bgHover: 'hover:bg-indigo-800',  ring: 'focus:ring-indigo-300' },
-  // Slate is the executive (neutral) tone for this rail; not in TONES, so handle inline.
+  slate:  { bg: 'bg-slate-900',   bgHover: 'hover:bg-slate-800',   ring: 'focus:ring-slate-400' },
 }
 
 function LauncherBtn({ icon, label, sub, tone, status, onClick, disabled, disabledTitle }: LauncherBtnProps) {
@@ -682,28 +686,31 @@ function LauncherBtn({ icon, label, sub, tone, status, onClick, disabled, disabl
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       title={disabled ? disabledTitle : `Open ${label} dashboard`}
-      className={`w-full text-left rounded-md transition-colors flex flex-col shadow-sm overflow-hidden ${
+      className={`flex-1 min-h-[120px] w-full text-left rounded-lg border-2 transition-all flex flex-col shadow-sm overflow-hidden ${
         disabled
-          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-          : `${t.bg} ${t.bgHover} text-white focus:outline-none focus:ring-2 ${t.ring}`
+          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
+          : `${t.bg} ${t.bgHover} text-white border-transparent hover:shadow-md focus:outline-none focus:ring-2 ${t.ring}`
       }`}
     >
-      {/* Top: icon + open arrow */}
-      <span className="flex items-center justify-between gap-1.5 px-2.5 pt-2 pb-1">
-        <span className="text-lg leading-none" aria-hidden="true">{icon}</span>
-        <span className="text-[10px] leading-none opacity-70" aria-hidden="true">↗</span>
-      </span>
-      {/* Title */}
-      <span className="px-2.5 text-[11px] font-bold leading-tight tracking-tight">{label}</span>
-      <span className="px-2.5 text-[9px] uppercase tracking-wider opacity-80 mb-1">{sub}</span>
+      {/* Header band */}
+      <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
+        <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
+        <span className="text-[10px] leading-none opacity-80" aria-hidden="true">↗</span>
+      </div>
+      <div className="px-3 pt-1.5 pb-2">
+        <div className="text-xs font-bold tracking-tight leading-tight">{label}</div>
+        <div className="text-[9px] uppercase tracking-[2px] opacity-80 mt-0.5">{sub}</div>
+      </div>
       {/* Status bullets */}
-      <div className="bg-black/15 px-2.5 py-1.5 space-y-0.5">
+      <div className={`mt-auto px-3 py-2 space-y-0.5 border-t ${disabled ? 'border-slate-200 bg-slate-50' : 'border-black/20 bg-black/15'}`}>
         {status.map((s, i) => {
-          const dot = s.tone === 'good' ? 'bg-emerald-300' : s.tone === 'warn' ? 'bg-amber-300' : 'bg-white/40'
-          const text = s.tone === 'muted' ? 'opacity-70' : ''
+          const dot = disabled ? 'bg-slate-300' :
+            s.tone === 'good' ? 'bg-emerald-300' :
+            s.tone === 'warn' ? 'bg-amber-300' : 'bg-white/50'
+          const text = s.tone === 'muted' && !disabled ? 'opacity-70' : ''
           return (
-            <div key={i} className={`text-[9.5px] flex items-baseline gap-1 leading-snug ${text}`}>
-              <span className={`inline-block w-1 h-1 rounded-full ${dot} shrink-0 translate-y-[-1px]`} aria-hidden="true" />
+            <div key={i} className={`text-[10px] flex items-baseline gap-1.5 leading-snug ${text}`}>
+              <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} shrink-0 translate-y-[-1px]`} aria-hidden="true" />
               <span className="truncate">{s.label}</span>
             </div>
           )
@@ -715,9 +722,10 @@ function LauncherBtn({ icon, label, sub, tone, status, onClick, disabled, disabl
 
 function ToneCard({ num, title, subtitle, tone, framed = false, children }: ToneCardProps) {
   const t = TONES[tone]
+  const isLauncherCard = num === '00'
   return (
     <section
-      className={`relative bg-white rounded-lg border-[3px] ${t.border} ring-1 ring-inset ${t.ring} overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow`}
+      className={`relative bg-white rounded-lg border-[3px] ${t.border} ring-1 ring-inset ${t.ring} overflow-hidden flex flex-col shadow-sm hover:shadow-md transition-shadow h-full`}
     >
       <div className={`absolute top-0 left-0 right-0 h-1 ${t.bar}`} aria-hidden="true" />
       <header className="px-4 sm:px-5 pt-4 pb-3 border-b-2 border-slate-100">
@@ -730,7 +738,7 @@ function ToneCard({ num, title, subtitle, tone, framed = false, children }: Tone
           </span>
           <div className="min-w-0 flex-1">
             <div className={`text-[10px] font-bold tracking-[2px] uppercase ${t.text} mb-0.5`}>
-              Section {parseInt(num, 10)}
+              {isLauncherCard ? 'Section 00' : `Section ${parseInt(num, 10)}`}
             </div>
             <h3 className="font-serif text-base sm:text-lg font-extralight tracking-tight text-slate-900 leading-tight">
               {title}
