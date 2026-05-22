@@ -211,40 +211,38 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <PlanIntro />
 
-            {/* 01 — Wealth Snapshot — full width */}
-            <PlanSection
-              num="01"
-              tone="navy"
-              title="Wealth Snapshot"
-              subtitle="8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income"
-              status={<AssetInventoryStatus profile={profile} />}
-            >
-              <AssetInventory
-                profile={profile}
-                buckets={buckets}
-                onProfileUpdate={onProfileUpdate}
-                onBucketsUpdate={onBucketsUpdate}
-                chrome="bare"
-              />
-            </PlanSection>
-
-            {/* 02 — Loans & Liabilities — full width */}
-            <PlanSection
-              num="02"
-              tone="rose"
-              title="Loans & Liabilities"
-              subtitle="4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy"
-              status={<LoansStatus profile={profile} />}
-            >
-              <LoansLiabilities
-                profile={profile}
-                onProfileUpdate={onProfileUpdate}
-                chrome="bare"
-              />
-            </PlanSection>
-
-            {/* 03–06 — remaining sections in 2-col grid */}
+            {/* 01–07 — all steps in a single 2-col grid */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
+              <PlanSection
+                num="01"
+                tone="navy"
+                title="Wealth Snapshot"
+                subtitle="8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income"
+                status={<AssetInventoryStatus profile={profile} />}
+              >
+                <AssetInventory
+                  profile={profile}
+                  buckets={buckets}
+                  onProfileUpdate={onProfileUpdate}
+                  onBucketsUpdate={onBucketsUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
+              <PlanSection
+                num="02"
+                tone="rose"
+                title="Loans & Liabilities"
+                subtitle="4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy"
+                status={<LoansStatus profile={profile} />}
+              >
+                <LoansLiabilities
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+
               <PlanSection
                 num="03"
                 tone="green"
@@ -302,24 +300,23 @@ export function Dashboard({
                   chrome="bare"
                 />
               </PlanSection>
+
+              <PlanSection
+                num="07"
+                tone="rose"
+                title="Insurance Cover"
+                subtitle="3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term"
+                status={<InsuranceStatus profile={profile} />}
+              >
+                <InsuranceCover
+                  profile={profile}
+                  onProfileUpdate={onProfileUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
             </div>
 
-            {/* 07 — Insurance Cover — full width */}
-            <PlanSection
-              num="07"
-              tone="rose"
-              title="Insurance Cover"
-              subtitle="3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term"
-              status={<InsuranceStatus profile={profile} />}
-            >
-              <InsuranceCover
-                profile={profile}
-                onProfileUpdate={onProfileUpdate}
-                chrome="bare"
-              />
-            </PlanSection>
-
-            {/* Cashflow summary + surplus deployment plan */}
+            {/* Cashflow summary — single column, full-width footer */}
             <CashflowSummary profile={profile} buckets={buckets} />
           </div>
         )}
