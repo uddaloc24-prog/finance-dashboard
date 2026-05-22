@@ -243,34 +243,119 @@ function AttitudeIndicator({ score, band, sub }: { score: number; band: string; 
   )
 }
 
-// ─── LED indicator (systems panel row) ─────────────────────────────────
+// ─── Radar / spider chart for the systems indicators ───────────────────
 
-function LedRow({ label, value, max = 100 }: { label: string; value: number | null; max?: number }) {
-  const isNull = value == null
-  const pct = isNull ? 0 : Math.max(0, Math.min(max, value)) / max * 100
-  const color = statusColor(value)
+function RadarChart({
+  items, size = 280,
+}: { items: Array<{ label: string; value: number | null }>; size?: number }) {
+  const cx = size / 2, cy = size / 2
+  const r = size * 0.30                      // outer-ring radius
+  const n = items.length
+
+  function angleFor(i: number): number {
+    return (i / n) * 360 - 90               // index 0 at the top
+  }
+  function point(i: number, ratio: number) {
+    const a = (angleFor(i) * Math.PI) / 180
+    return { x: cx + r * ratio * Math.cos(a), y: cy + r * ratio * Math.sin(a) }
+  }
+
+  // Background ring polygons
+  const rings = [0.25, 0.5, 0.75, 1].map((t) => {
+    const pts = Array.from({ length: n }, (_, i) => {
+      const p = point(i, t)
+      return `${p.x},${p.y}`
+    }).join(' ')
+    return { t, pts }
+  })
+
+  // Score polygon
+  const scorePts = items.map((item, i) => {
+    const ratio = item.value == null ? 0 : Math.max(0, Math.min(100, item.value)) / 100
+    const p = point(i, ratio)
+    return `${p.x},${p.y}`
+  }).join(' ')
+
   return (
-    <div className="grid grid-cols-[10px_1fr_28px] items-center gap-2">
-      <span
-        className="inline-block w-2.5 h-2.5 rounded-full"
-        style={{
-          background: color,
-          boxShadow: isNull ? 'none' : `0 0 6px ${color}`,
-        }}
-        aria-hidden="true"
+    <svg viewBox={`0 0 ${size} ${size}`} className="block" style={{ width: '100%', maxWidth: size, height: 'auto' }} aria-label="Systems radar">
+      <defs>
+        <radialGradient id="radar-fill" cx="0.5" cy="0.5" r="0.5">
+          <stop offset="0%"   stopColor={COCKPIT.accent} stopOpacity={0.30} />
+          <stop offset="100%" stopColor={COCKPIT.accent} stopOpacity={0.05} />
+        </radialGradient>
+      </defs>
+      {/* Background rings */}
+      {rings.map((g, i) => (
+        <polygon
+          key={i}
+          points={g.pts}
+          fill={i === rings.length - 1 ? 'rgba(15,23,42,0.6)' : 'none'}
+          stroke={COCKPIT.trim}
+          strokeWidth={0.5}
+        />
+      ))}
+      {/* Ring labels (only at 25/50/75/100 along the right axis) */}
+      {[0.25, 0.5, 0.75, 1].map((t) => (
+        <text
+          key={t}
+          x={cx + 3}
+          y={cy - r * t}
+          dominantBaseline="middle"
+          style={{ fontSize: 7, fill: COCKPIT.textLo, fontFamily: 'monospace' }}
+        >
+          {Math.round(t * 100)}
+        </text>
+      ))}
+      {/* Axes */}
+      {items.map((_, i) => {
+        const p = point(i, 1)
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={COCKPIT.trim} strokeWidth={0.5} />
+      })}
+      {/* Score polygon */}
+      <polygon
+        points={scorePts}
+        fill="url(#radar-fill)"
+        stroke={COCKPIT.accent}
+        strokeWidth={1.5}
+        strokeLinejoin="round"
+        style={{ filter: `drop-shadow(0 0 4px ${COCKPIT.accent})` }}
       />
-      <div>
-        <div className="text-[10px] uppercase tracking-wider font-medium" style={{ color: isNull ? COCKPIT.inactive : COCKPIT.textHi }}>
-          {label}
-        </div>
-        <div className="h-1 rounded-full bg-slate-700 mt-0.5 overflow-hidden">
-          <div className="h-full transition-all" style={{ width: `${pct}%`, background: color }} />
-        </div>
-      </div>
-      <div className="text-right text-[11px] font-mono tabular-nums" style={{ color: isNull ? COCKPIT.inactive : COCKPIT.textHi }}>
-        {isNull ? '---' : Math.round(value!)}
-      </div>
-    </div>
+      {/* Score dots */}
+      {items.map((item, i) => {
+        if (item.value == null) return (
+          <circle key={i} cx={point(i, 0).x} cy={point(i, 0).y} r={2} fill={COCKPIT.inactive} />
+        )
+        const ratio = Math.max(0, Math.min(100, item.value)) / 100
+        const p = point(i, ratio)
+        return (
+          <circle
+            key={i}
+            cx={p.x} cy={p.y} r={3}
+            fill={statusColor(item.value)}
+            stroke={COCKPIT.bg}
+            strokeWidth={1}
+            style={{ filter: `drop-shadow(0 0 3px ${statusColor(item.value)})` }}
+          />
+        )
+      })}
+      {/* Axis labels */}
+      {items.map((item, i) => {
+        const p = point(i, 1.20)
+        const cosA = Math.cos((angleFor(i) * Math.PI) / 180)
+        const ta = cosA > 0.35 ? 'start' : cosA < -0.35 ? 'end' : 'middle'
+        return (
+          <text
+            key={i}
+            x={p.x} y={p.y}
+            textAnchor={ta}
+            dominantBaseline="middle"
+            style={{ fontSize: 8.5, fill: item.value == null ? COCKPIT.inactive : COCKPIT.textHi, fontFamily: 'monospace', letterSpacing: '0.5px' }}
+          >
+            {item.label.toUpperCase()}
+          </text>
+        )
+      })}
+    </svg>
   )
 }
 
@@ -490,15 +575,30 @@ export function ExecutiveDashboard({
           </div>
         </div>
 
-        {/* Systems panel */}
-        <div className="rounded-md border border-slate-700 p-3" style={{ background: COCKPIT.panel }}>
+        {/* Systems panel — radar */}
+        <div className="rounded-md border border-slate-700 p-3 flex flex-col" style={{ background: COCKPIT.panel }}>
           <div className="flex items-baseline justify-between mb-2">
-            <span className="text-[9px] font-bold tracking-[3px]" style={{ color: COCKPIT.accent }}>◉ SYSTEMS · 10 INDICATORS</span>
+            <span className="text-[9px] font-bold tracking-[3px]" style={{ color: COCKPIT.accent }}>◉ SYSTEMS · RADAR</span>
             <span className="text-[8px]" style={{ color: COCKPIT.textLo }}>● GRN OK · ● AMB caution · ● RED critical · ● --- unknown</span>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5">
+          <div className="flex items-center justify-center flex-1 min-h-[260px]">
+            <RadarChart items={subScores} size={300} />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-x-3 gap-y-0.5 mt-2 text-[9px] font-mono">
             {subScores.map((s) => (
-              <LedRow key={s.key} label={s.label} value={s.value} />
+              <div key={s.key} className="flex items-center gap-1">
+                <span
+                  className="inline-block w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: statusColor(s.value) }}
+                  aria-hidden="true"
+                />
+                <span className="truncate" style={{ color: s.value == null ? COCKPIT.inactive : COCKPIT.textHi }}>
+                  {s.label.split(' ')[0].toUpperCase()}
+                </span>
+                <span className="tabular-nums ml-auto" style={{ color: s.value == null ? COCKPIT.inactive : COCKPIT.textHi }}>
+                  {s.value == null ? '---' : Math.round(s.value)}
+                </span>
+              </div>
             ))}
           </div>
         </div>

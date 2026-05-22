@@ -124,26 +124,52 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
     userProfile.riskAppetite <= 2 ? 'Conservative' :
     userProfile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'
 
+  // Visibility gates for the dashboard launchers
+  const gdDashEnabled   = !!(gdState?.inference || v10State?.composites)
+  const riskDashEnabled = !!(chosenId || quizState?.completed || profilerResult || v10State?.composites)
+
+  function LaunchersRail() {
+    return (
+      <aside className="flex flex-col gap-1.5 shrink-0 w-[120px] sm:w-[140px]">
+        <LauncherBtn
+          icon="🎯"
+          label="Goal Discovery"
+          sub="Dashboard"
+          tone="indigo"
+          onClick={() => toggleOpen('gd-dash')}
+          disabled={!gdDashEnabled}
+          disabledTitle="Complete Goal Discovery first"
+        />
+        <LauncherBtn
+          icon="⚖️"
+          label="Risk Profile"
+          sub="Dashboard"
+          tone="navy"
+          onClick={() => toggleOpen('risk-dash')}
+          disabled={!riskDashEnabled}
+          disabledTitle="Take an assessment first"
+        />
+        <LauncherBtn
+          icon="📊"
+          label="Executive"
+          sub="Dashboard"
+          tone="slate"
+          onClick={() => toggleOpen('exec-dash')}
+        />
+      </aside>
+    )
+  }
+
   return (
     <div className="space-y-4">
-      {/* ── Executive Dashboard launcher ─────────────────── */}
-      <div className="flex items-center justify-end">
-        <button
-          type="button"
-          onClick={() => toggleOpen('exec-dash')}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-bold bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm"
-        >
-          <span aria-hidden="true">📊</span>
-          Open Executive Dashboard
-          <span aria-hidden="true">↗</span>
-        </button>
-      </div>
-
       {/* ── Hero strip ────────────────────────────────────── */}
       <ProfileHero />
 
       {/* ── 01 — Goal Discovery & Psychometric Assessment (indigo) */}
       <ToneCard num="01" tone="indigo" title="Goal Discovery & Psychometric Assessment" subtitle="Adaptive intelligence · the deeper tools that personalise your plan">
+        <div className="flex flex-col sm:flex-row gap-3">
+        <LaunchersRail />
+        <div className="flex-1 min-w-0">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {/* Goal Discovery */}
           <AssessmentCard
@@ -185,25 +211,15 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
           />
         </div>
-        {/* Open Goal Discovery dashboard as a popup */}
-        {(gdState?.inference || v10State?.composites) && (
-          <div className="mt-3 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => toggleOpen('gd-dash')}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold bg-indigo-700 text-white hover:bg-indigo-800 transition-colors"
-            >
-              <span aria-hidden="true">📊</span>
-              View Goal Discovery dashboard
-              <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-        )}
+        </div>
+        </div>
       </ToneCard>
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
       <ToneCard num="02" tone="navy" title="Risk Profile & Risk Assessment" subtitle="Your current setting and quick / detailed calibration">
-        <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-3">
+        <LaunchersRail />
+        <div className="flex-1 min-w-0 space-y-4">
           {/* ── Subheader: Risk Profile ─── */}
           <section>
             <SubHeader tone="navy" eyebrow="Risk Profile" subtitle="Current match · slider · score history" />
@@ -294,20 +310,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             </div>
           </section>
         </div>
-        {/* Open Risk Profile & Risk Assessment dashboard as a popup */}
-        {(chosenId || quizState?.completed || profilerResult || v10State?.composites) && (
-          <div className="mt-3 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => toggleOpen('risk-dash')}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-md text-xs font-bold bg-blue-700 text-white hover:bg-blue-800 transition-colors"
-            >
-              <span aria-hidden="true">📊</span>
-              View Risk Assessment dashboard
-              <span aria-hidden="true">↗</span>
-            </button>
-          </div>
-        )}
+        </div>
       </ToneCard>
 
       {/* ── Modals — assessments render in pop-up windows ── */}
@@ -582,6 +585,54 @@ interface ToneCardProps {
   tone: Tone
   framed?: boolean   // when true, renders the body without the bordered inner pad (used by ProfileGrid which has its own chrome)
   children: ReactNode
+}
+
+// ── LauncherBtn — compact dashboard-launcher button for the left rail ──
+
+type LauncherTone = Tone | 'slate'
+
+interface LauncherBtnProps {
+  icon: string
+  label: string
+  sub: string
+  tone: LauncherTone
+  onClick: () => void
+  disabled?: boolean
+  disabledTitle?: string
+}
+
+const LAUNCHER_TONE: Record<Tone, { bg: string; bgHover: string; ring: string }> = {
+  navy:   { bg: 'bg-blue-700',    bgHover: 'hover:bg-blue-800',    ring: 'focus:ring-blue-300' },
+  amber:  { bg: 'bg-amber-600',   bgHover: 'hover:bg-amber-700',   ring: 'focus:ring-amber-300' },
+  green:  { bg: 'bg-emerald-600', bgHover: 'hover:bg-emerald-700', ring: 'focus:ring-emerald-300' },
+  indigo: { bg: 'bg-indigo-700',  bgHover: 'hover:bg-indigo-800',  ring: 'focus:ring-indigo-300' },
+  // Slate is the executive (neutral) tone for this rail; not in TONES, so handle inline.
+}
+
+function LauncherBtn({ icon, label, sub, tone, onClick, disabled, disabledTitle }: LauncherBtnProps) {
+  // 'slate' is the executive tone; handled by the fallback in LAUNCHER_TONE below.
+  const t = (LAUNCHER_TONE as Record<string, { bg: string; bgHover: string; ring: string }>)[tone]
+    ?? { bg: 'bg-slate-900', bgHover: 'hover:bg-slate-800', ring: 'focus:ring-slate-400' }
+  return (
+    <button
+      type="button"
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
+      title={disabled ? disabledTitle : `Open ${label} dashboard`}
+      className={`w-full text-left rounded-md px-2.5 py-2 transition-colors flex flex-col gap-0.5 shadow-sm ${
+        disabled
+          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+          : `${t.bg} ${t.bgHover} text-white focus:outline-none focus:ring-2 ${t.ring}`
+      }`}
+    >
+      <span className="flex items-center justify-between gap-1.5">
+        <span className="text-base leading-none" aria-hidden="true">{icon}</span>
+        <span className="text-[10px] leading-none opacity-70" aria-hidden="true">↗</span>
+      </span>
+      <span className="text-[11px] font-bold leading-tight tracking-tight">{label}</span>
+      <span className="text-[9px] uppercase tracking-wider opacity-80">{sub}</span>
+    </button>
+  )
 }
 
 function ToneCard({ num, title, subtitle, tone, framed = false, children }: ToneCardProps) {
