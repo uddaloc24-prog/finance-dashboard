@@ -219,6 +219,7 @@ export function Dashboard({
                 title="Wealth Snapshot"
                 subtitle="8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income"
                 status={<AssetInventoryStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_WEALTH} />}
               >
                 <AssetInventory
                   profile={profile}
@@ -235,6 +236,7 @@ export function Dashboard({
                 title="Loans & Liabilities"
                 subtitle="4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy"
                 status={<LoansStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_LOANS} />}
               >
                 <LoansLiabilities
                   profile={profile}
@@ -249,6 +251,7 @@ export function Dashboard({
                 title="Monthly Budget"
                 subtitle="Detailed breakdown — drives the monthly withdrawal"
                 status={<ExpensesStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_BUDGET} />}
               >
                 <ExpenseEditor
                   profile={profile}
@@ -263,6 +266,7 @@ export function Dashboard({
                 title="Profile & Settings"
                 subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
                 status={<ProfileStatus profile={profile} buckets={buckets} />}
+                helpExamples={<HelpList items={HELP_PROFILE} />}
               >
                 <ProfileSettings
                   profile={profile}
@@ -279,6 +283,7 @@ export function Dashboard({
                 title="Demographics & Longevity"
                 subtitle="Current age, retirement age, life expectancy"
                 status={<DemographicsStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_DEMOGRAPHICS} />}
               >
                 <DemographicsForm
                   profile={profile}
@@ -293,6 +298,7 @@ export function Dashboard({
                 title="Inflation Assumptions"
                 subtitle="Split rates for general, healthcare, education"
                 status={<InflationStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_INFLATION} />}
               >
                 <InflationAssumptions
                   profile={profile}
@@ -307,6 +313,7 @@ export function Dashboard({
                 title="Insurance Cover"
                 subtitle="3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term"
                 status={<InsuranceStatus profile={profile} />}
+                helpExamples={<HelpList items={HELP_INSURANCE} />}
               >
                 <InsuranceCover
                   profile={profile}
@@ -442,6 +449,88 @@ export function Dashboard({
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
     </div>
+  )
+}
+
+// ── Plan-step example content ─────────────────────────────────────────
+// Concise example entries shown inside the "Show example entries" panel
+// at the top of each Plan-step modal. Keep each item one-line.
+
+interface HelpItem { label: string; value: string; note?: string }
+
+const HELP_WEALTH: HelpItem[] = [
+  { label: 'Bank FD',              value: '₹2,00,000',     note: 'Liquid · ~₹1,400/mo interest if held' },
+  { label: 'Mutual Funds (mixed)', value: '₹12,50,000',    note: 'Invested · 0/mo (no SWP yet)' },
+  { label: 'SCSS (senior)',        value: '₹15,00,000',    note: 'Liquid · ~₹10,250/mo quarterly payout' },
+  { label: 'PPF',                  value: '₹8,00,000',     note: 'Invested · compounds annually, no income' },
+  { label: 'Stocks (Indian)',      value: '₹5,50,000',     note: 'Liquid · 0/mo (no dividend stream)' },
+  { label: 'Self-occupied home',   value: '₹85,00,000',    note: 'Invested · market value · 0/mo' },
+  { label: 'Rental property',      value: '₹50,00,000',    note: 'Invested · ₹18,000/mo rent' },
+  { label: 'Physical gold',        value: '₹6,00,000',     note: 'Liquid · 0/mo' },
+]
+
+const HELP_LOANS: HelpItem[] = [
+  { label: 'Home loan',     value: '₹35,00,000 outstanding', note: '8.5% · ₹32,000 EMI · MaxGain flag for HDFC/SBI overdraft variant' },
+  { label: 'Car loan',      value: '₹3,50,000',              note: '9.5% · ₹6,000 EMI · ~5 years left' },
+  { label: 'Credit card',   value: '₹85,000',                note: '36–42% · pay in full to avoid' },
+  { label: 'Personal loan', value: '₹0 (inactive)',          note: 'Mark Active = off when fully paid' },
+  { label: 'Strategy',      value: 'Avalanche',              note: 'Pay highest-rate first (saves most interest)' },
+]
+
+const HELP_BUDGET: HelpItem[] = [
+  { label: 'Rent / EMI',          value: '₹25,000 · monthly',     note: 'Essential — biggest line item for most' },
+  { label: 'Food & Groceries',    value: '₹15,000 · monthly',     note: 'Essential' },
+  { label: 'Utilities',           value: '₹4,500 · monthly',      note: 'Electricity + internet + gas combined' },
+  { label: 'Health premium',      value: '₹35,000 · yearly',      note: '≈ ₹2,917/mo equivalent — auto-converted' },
+  { label: 'Travel (vacations)',  value: '₹1,50,000 · yearly',    note: '≈ ₹12,500/mo equivalent' },
+  { label: 'Tuition / coaching',  value: '₹50,000 · quarterly',   note: '≈ ₹16,667/mo equivalent' },
+]
+
+const HELP_PROFILE: HelpItem[] = [
+  { label: 'Corpus',              value: '₹1.25 Cr',        note: 'Total investable retirement corpus' },
+  { label: 'Monthly withdrawal',  value: '₹60,000',         note: 'Net of any SIP/passive income — see Budget' },
+  { label: 'SIP (passive income)', value: '₹0 (retired)',   note: 'Non-zero only if you have ongoing rental / dividend' },
+  { label: 'Tax bracket',         value: '20% slab',        note: '0% (rebated) / 5% / 20% / 30%' },
+  { label: 'Inflation',           value: '6.5%',            note: 'Default — Step 06 splits into general / health / education' },
+]
+
+const HELP_DEMOGRAPHICS: HelpItem[] = [
+  { label: 'Current age',       value: '58',           note: 'Today' },
+  { label: 'Retirement age',    value: '62',           note: 'When the plan starts drawing from corpus' },
+  { label: 'Life expectancy',   value: '88',           note: 'Conservative for Indian context — plan to 90 is safer' },
+  { label: 'Spouse age',        value: '55 (optional)', note: 'Used for joint-longevity planning' },
+  { label: 'City tier',         value: 'Metro',        note: 'Drives the cost-of-living overlay' },
+]
+
+const HELP_INFLATION: HelpItem[] = [
+  { label: 'General inflation', value: '6%',  note: 'Indian long-term average (RBI target band ~4 ± 2%)' },
+  { label: 'Healthcare',        value: '10%', note: 'Premiums + treatment costs rise faster than CPI' },
+  { label: 'Education',         value: '12%', note: 'For grand-/children\'s tuition; can override down if uninvolved' },
+  { label: 'Conservative tilt', value: '+1% each', note: 'Recommended when in doubt — better to over-prepare' },
+]
+
+const HELP_INSURANCE: HelpItem[] = [
+  { label: 'Family floater',     value: 'Cover ₹15 L · Premium ₹35,000/yr · Active', note: 'Base health policy for the household' },
+  { label: 'Super top-up',       value: 'Cover ₹50 L · Premium ₹15,000/yr · Active', note: 'Stacks on top of base; high-deductible' },
+  { label: 'Term plan',          value: 'Cover ₹2 Cr · Premium ₹25,000/yr · MWP ✓', note: 'MWP Act keeps proceeds creditor-safe' },
+  { label: 'Critical illness',   value: 'Cover ₹25 L · Premium ₹18,000/yr',         note: 'Lump sum on diagnosis' },
+  { label: 'Personal accident',  value: 'Cover ₹50 L · Premium ₹6,000/yr',          note: 'Disability + accidental death' },
+]
+
+function HelpList({ items }: { items: HelpItem[] }) {
+  return (
+    <ul className="space-y-1">
+      {items.map((it, i) => (
+        <li key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,2.5fr)] gap-2 items-baseline">
+          <span className="font-semibold text-slate-900">{it.label}</span>
+          <span className="font-mono tabular-nums text-slate-700">{it.value}</span>
+          {it.note && <span className="text-slate-500 italic text-[10.5px]">{it.note}</span>}
+        </li>
+      ))}
+      <li className="pt-1.5 text-[10px] text-slate-500 italic">
+        Numbers are illustrative — replace with your own values; entries you don't have can stay blank.
+      </li>
+    </ul>
   )
 }
 

@@ -30,17 +30,20 @@ interface Props {
   open?: boolean
   onToggle?: () => void
   status?: ReactNode
+  /** Example entries shown inside the modal under the "Show examples" toggle. */
+  helpExamples?: ReactNode
   children: ReactNode
 }
 
-export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, children }: Props) {
+export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, helpExamples, children }: Props) {
   const [internalOpen, setInternalOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const isControlled = openProp !== undefined
   const open = isControlled ? !!openProp : internalOpen
   const t = TONES[tone]
 
   function handleOpen()  { isControlled ? onToggle?.() : setInternalOpen(true)  }
-  function handleClose() { isControlled ? onToggle?.() : setInternalOpen(false) }
+  function handleClose() { isControlled ? onToggle?.() : setInternalOpen(false); setHelpOpen(false) }
 
   return (
     <>
@@ -105,7 +108,40 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
         size="3xl"
         onClose={handleClose}
       >
-        {children}
+        <div className="space-y-3">
+          {/* Help panel — collapsible example entries */}
+          {helpExamples && (
+            <div className={`rounded-md border-2 ${helpOpen ? t.border : 'border-slate-200'} bg-white transition-colors`}>
+              <button
+                type="button"
+                onClick={() => setHelpOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left"
+                aria-expanded={helpOpen}
+              >
+                <span className="flex items-baseline gap-1.5 min-w-0">
+                  <span aria-hidden="true" className="text-base leading-none">💡</span>
+                  <span className={`text-[10px] font-bold tracking-[2px] uppercase ${t.text}`}>Need help?</span>
+                  <span className="text-[11px] text-slate-600 truncate">
+                    {helpOpen ? 'Hide example entries' : 'Show example entries'}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border ${t.numBorder} ${t.numBg} ${t.text} text-[10px] transition-transform ${helpOpen ? 'rotate-180' : ''}`}
+                  aria-hidden="true"
+                >
+                  ▾
+                </span>
+              </button>
+              {helpOpen && (
+                <div className={`border-t-2 ${t.numBorder} ${t.numBg} px-3 py-2.5 text-[11.5px] text-slate-700 leading-relaxed`}>
+                  {helpExamples}
+                </div>
+              )}
+            </div>
+          )}
+
+          {children}
+        </div>
       </Modal>
     </>
   )
