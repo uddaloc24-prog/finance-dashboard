@@ -124,36 +124,97 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
     userProfile.riskAppetite <= 2 ? 'Conservative' :
     userProfile.riskAppetite === 3 ? 'Moderate' : 'Aggressive'
 
-  // Visibility gates for the dashboard launchers
+  // ── Smart-launcher status computations ──────────────────────────────
   const gdDashEnabled   = !!(gdState?.inference || v10State?.composites)
   const riskDashEnabled = !!(chosenId || quizState?.completed || profilerResult || v10State?.composites)
 
-  function LaunchersRail() {
+  // Goal Discovery status — what would the GD dashboard know?
+  const gdStatus: LauncherStatus[] = []
+  if (gdState?.inference?.persona.primary) {
+    gdStatus.push({ label: `Persona: ${gdState.inference.persona.primary.id}`, tone: 'good' })
+    const active = Object.values(gdState.inference.signals).filter((s) => s.score != null && s.score >= 0.7).length
+    gdStatus.push({ label: `Signals ${active}/12 active`, tone: active > 0 ? 'good' : 'muted' })
+  } else if (gdState) {
+    const visited = gdState.visited?.length ?? 1
+    gdStatus.push({ label: `${visited}/6 blocks visited`, tone: 'warn' })
+    gdStatus.push({ label: 'Process & apply →', tone: 'muted' })
+  } else {
+    gdStatus.push({ label: 'Not started', tone: 'muted' })
+  }
+  if (v10State?.completed) {
+    gdStatus.push({ label: 'v10 composites ready', tone: 'good' })
+  } else if (v10State) {
+    gdStatus.push({ label: `v10 ${v10State.currentIndex}/${v10State.questionSeq.length}`, tone: 'warn' })
+  }
+
+  // Risk Profile status — what would the Risk dashboard surface?
+  const riskStatus: LauncherStatus[] = []
+  if (chosenId) {
+    const profileName = profileById(chosenId).name
+    riskStatus.push({ label: profileName, tone: 'good' })
+  } else {
+    riskStatus.push({ label: 'No profile set', tone: 'muted' })
+  }
+  riskStatus.push({ label: `Appetite ${userProfile.riskAppetite}/5`, tone: 'good' })
+  if (quizState?.completed) {
+    riskStatus.push({ label: `Quick ${quizState.totalScore}/50`, tone: 'good' })
+  }
+  if (profilerResult) {
+    riskStatus.push({ label: `Deep ${Math.round(profilerResult.riskScore)}/100`, tone: 'good' })
+  }
+  if (v10State?.composites) {
+    riskStatus.push({ label: `v10 ${Math.round(v10State.composites.riskProfile)}/100`, tone: 'good' })
+  }
+
+  // Executive status — aggregates EVERYTHING the cockpit shows
+  // (count of known sub-scores out of 10).
+  const execKnown = (() => {
+    let n = 0
+    // Net worth + debt freedom + money health + risk-appetite + risk-capacity always knowable
+    if ((userProfile.assetInventory || userProfile.loanProfile)) n += 1                  // net worth
+    if (userProfile.loanProfile) n += 1                                                    // debt freedom
+    n += 1                                                                                 // appetite (slider always present)
+    if (userProfile.assetInventory || userProfile.loanProfile || userProfile.expenses) n += 2  // capacity + money health
+    if (v10State?.composites) n += 2                                                       // cog bias + scam resilience
+    if (gdState?.inference) n += 1                                                         // goal clarity
+    if (chosenId || quizState?.completed || v10State?.composites) n += 1                   // risk profile
+    if (gdState?.answers['block-5']?.['applicable'] && gdState.answers['block-5']['applicable'] !== 'no') n += 1   // spousal
+    return Math.min(10, n)
+  })()
+  const execStatus: LauncherStatus[] = [
+    { label: `${execKnown}/10 systems known`, tone: execKnown >= 7 ? 'good' : execKnown >= 4 ? 'warn' : 'muted' },
+    { label: gdState && v10State?.composites ? 'Full read available' : 'Partial read', tone: gdState && v10State?.composites ? 'good' : 'muted' },
+  ]
+
+  function LaunchersRail({ orientation = 'col' }: { orientation?: 'col' | 'row' }) {
     return (
-      <aside className="flex flex-col gap-1.5 shrink-0 w-[120px] sm:w-[140px]">
+      <aside className={orientation === 'col' ? 'flex flex-col gap-2 shrink-0 w-full md:w-[170px]' : 'flex flex-row gap-2'}>
         <LauncherBtn
           icon="🎯"
           label="Goal Discovery"
           sub="Dashboard"
           tone="indigo"
+          status={gdStatus}
           onClick={() => toggleOpen('gd-dash')}
           disabled={!gdDashEnabled}
-          disabledTitle="Complete Goal Discovery first"
+          disabledTitle="Complete Goal Discovery first (Process & apply)"
         />
         <LauncherBtn
           icon="⚖️"
           label="Risk Profile"
           sub="Dashboard"
           tone="navy"
+          status={riskStatus}
           onClick={() => toggleOpen('risk-dash')}
           disabled={!riskDashEnabled}
-          disabledTitle="Take an assessment first"
+          disabledTitle="Take any one assessment first"
         />
         <LauncherBtn
           icon="📊"
           label="Executive"
-          sub="Dashboard"
+          sub="Cockpit"
           tone="slate"
+          status={execStatus}
           onClick={() => toggleOpen('exec-dash')}
         />
       </aside>
@@ -165,12 +226,13 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
       {/* ── Hero strip ────────────────────────────────────── */}
       <ProfileHero />
 
+      {/* ── Launchers + Section 01 + Section 02 in a 3-column layout */}
+      <div className="grid grid-cols-1 md:grid-cols-[170px_1fr_1fr] gap-3 items-start">
+        <LaunchersRail />
+
       {/* ── 01 — Goal Discovery & Psychometric Assessment (indigo) */}
       <ToneCard num="01" tone="indigo" title="Goal Discovery & Psychometric Assessment" subtitle="Adaptive intelligence · the deeper tools that personalise your plan">
-        <div className="flex flex-col sm:flex-row gap-3">
-        <LaunchersRail />
-        <div className="flex-1 min-w-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {/* Goal Discovery */}
           <AssessmentCard
             tone="indigo"
@@ -211,15 +273,11 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             buttonClass="bg-gradient-to-r from-indigo-700 to-violet-700 hover:from-indigo-800 hover:to-violet-800"
           />
         </div>
-        </div>
-        </div>
       </ToneCard>
 
       {/* ── 02 — Risk Profile & Risk Assessment (navy, with two subheaders) */}
       <ToneCard num="02" tone="navy" title="Risk Profile & Risk Assessment" subtitle="Your current setting and quick / detailed calibration">
-        <div className="flex flex-col sm:flex-row gap-3">
-        <LaunchersRail />
-        <div className="flex-1 min-w-0 space-y-4">
+        <div className="space-y-4">
           {/* ── Subheader: Risk Profile ─── */}
           <section>
             <SubHeader tone="navy" eyebrow="Risk Profile" subtitle="Current match · slider · score history" />
@@ -310,8 +368,8 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
             </div>
           </section>
         </div>
-        </div>
       </ToneCard>
+      </div>
 
       {/* ── Modals — assessments render in pop-up windows ── */}
       <Modal
@@ -591,11 +649,17 @@ interface ToneCardProps {
 
 type LauncherTone = Tone | 'slate'
 
+interface LauncherStatus {
+  label: string
+  tone: 'good' | 'warn' | 'muted'
+}
+
 interface LauncherBtnProps {
   icon: string
   label: string
   sub: string
   tone: LauncherTone
+  status: LauncherStatus[]
   onClick: () => void
   disabled?: boolean
   disabledTitle?: string
@@ -609,8 +673,7 @@ const LAUNCHER_TONE: Record<Tone, { bg: string; bgHover: string; ring: string }>
   // Slate is the executive (neutral) tone for this rail; not in TONES, so handle inline.
 }
 
-function LauncherBtn({ icon, label, sub, tone, onClick, disabled, disabledTitle }: LauncherBtnProps) {
-  // 'slate' is the executive tone; handled by the fallback in LAUNCHER_TONE below.
+function LauncherBtn({ icon, label, sub, tone, status, onClick, disabled, disabledTitle }: LauncherBtnProps) {
   const t = (LAUNCHER_TONE as Record<string, { bg: string; bgHover: string; ring: string }>)[tone]
     ?? { bg: 'bg-slate-900', bgHover: 'hover:bg-slate-800', ring: 'focus:ring-slate-400' }
   return (
@@ -619,18 +682,33 @@ function LauncherBtn({ icon, label, sub, tone, onClick, disabled, disabledTitle 
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       title={disabled ? disabledTitle : `Open ${label} dashboard`}
-      className={`w-full text-left rounded-md px-2.5 py-2 transition-colors flex flex-col gap-0.5 shadow-sm ${
+      className={`w-full text-left rounded-md transition-colors flex flex-col shadow-sm overflow-hidden ${
         disabled
           ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
           : `${t.bg} ${t.bgHover} text-white focus:outline-none focus:ring-2 ${t.ring}`
       }`}
     >
-      <span className="flex items-center justify-between gap-1.5">
-        <span className="text-base leading-none" aria-hidden="true">{icon}</span>
+      {/* Top: icon + open arrow */}
+      <span className="flex items-center justify-between gap-1.5 px-2.5 pt-2 pb-1">
+        <span className="text-lg leading-none" aria-hidden="true">{icon}</span>
         <span className="text-[10px] leading-none opacity-70" aria-hidden="true">↗</span>
       </span>
-      <span className="text-[11px] font-bold leading-tight tracking-tight">{label}</span>
-      <span className="text-[9px] uppercase tracking-wider opacity-80">{sub}</span>
+      {/* Title */}
+      <span className="px-2.5 text-[11px] font-bold leading-tight tracking-tight">{label}</span>
+      <span className="px-2.5 text-[9px] uppercase tracking-wider opacity-80 mb-1">{sub}</span>
+      {/* Status bullets */}
+      <div className="bg-black/15 px-2.5 py-1.5 space-y-0.5">
+        {status.map((s, i) => {
+          const dot = s.tone === 'good' ? 'bg-emerald-300' : s.tone === 'warn' ? 'bg-amber-300' : 'bg-white/40'
+          const text = s.tone === 'muted' ? 'opacity-70' : ''
+          return (
+            <div key={i} className={`text-[9.5px] flex items-baseline gap-1 leading-snug ${text}`}>
+              <span className={`inline-block w-1 h-1 rounded-full ${dot} shrink-0 translate-y-[-1px]`} aria-hidden="true" />
+              <span className="truncate">{s.label}</span>
+            </div>
+          )
+        })}
+      </div>
     </button>
   )
 }
