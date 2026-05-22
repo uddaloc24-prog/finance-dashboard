@@ -194,19 +194,21 @@ function groupTotal(inv: AssetInventoryT, group: AssetGroup): number {
 //   3: Value input (160px)
 //   4: Income input or "—" (160px)
 //   5: Actions (auto)
+// Five-column layout at lg; collapses to a 2-row layout at md (label on row 1,
+// controls in a balanced sub-grid on row 2); stacks vertically on mobile.
 const ROW_GRID =
-  'grid items-center gap-3 sm:gap-4 ' +
+  'grid items-center gap-3 sm:gap-3.5 ' +
   'grid-cols-[1fr] ' +
-  'lg:grid-cols-[minmax(0,1.8fr)_180px_160px_160px_auto]'
+  'lg:grid-cols-[minmax(0,2.1fr)_170px_minmax(150px,1fr)_minmax(150px,1fr)_auto]'
 
 function ColumnHeaders() {
   return (
     <div className={`${ROW_GRID} px-5 py-2.5 bg-gradient-to-b from-slate-100 to-slate-50 border-b-2 border-slate-200 hidden lg:grid`}>
       <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600">Asset Class</span>
       <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-center">Status</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">Value</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">Monthly Income</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600">Actions</span>
+      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right tabular-nums">Value (₹)</span>
+      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right tabular-nums">Monthly Income (₹)</span>
+      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">Actions</span>
     </div>
   )
 }
@@ -234,27 +236,30 @@ function MoneyInput({ value, placeholder = '0', onCommit, textColor, suffix, ari
 
   if (disabled) {
     return (
-      <div className="flex items-center justify-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-md px-2 py-2 text-slate-400 text-xs italic">
-        — n/a —
+      <div
+        className="flex items-center justify-end bg-slate-50/70 border border-dashed border-slate-200 rounded-md px-2.5 py-1.5 text-slate-400 text-[11px] italic"
+        title="Only available when the asset is set to Invested"
+      >
+        not applicable
       </div>
     )
   }
 
   return (
-    <div className="flex items-center gap-1.5 bg-white border-2 border-slate-200 rounded-md px-2.5 py-2 hover:border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-colors">
-      <span className="text-sm font-bold text-slate-500 shrink-0">₹</span>
+    <div className="group flex items-baseline gap-1.5 bg-white border-2 border-slate-200 rounded-md px-2.5 py-1.5 hover:border-slate-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-colors">
+      <span className="text-[12px] font-bold text-slate-400 shrink-0">₹</span>
       <input
         type="text"
         inputMode="numeric"
         value={text}
         placeholder={placeholder}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => setText(e.target.value.replace(/[^\d]/g, ''))}
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && commit()}
         aria-label={ariaLabel}
-        className={`flex-1 min-w-0 bg-transparent text-sm font-bold ${textColor} outline-none tabular-nums text-right`}
+        className={`flex-1 min-w-0 bg-transparent text-[13px] font-bold ${textColor} outline-none tabular-nums text-right placeholder:font-normal placeholder:text-slate-300`}
       />
-      {suffix && <span className="shrink-0">{suffix}</span>}
+      {suffix && <span className="shrink-0 leading-none">{suffix}</span>}
     </div>
   )
 }
@@ -278,103 +283,125 @@ function AssetRow({ entry, sub, textColor, onChange, onUpload, uploadBusy }: Ass
     onChange({ ...entry, optimize: !entry.optimize })
   }
 
+  const hasValue = entry.amount > 0
+  const accent = hasValue ? (entry.status === 'liquid' ? 'before:bg-emerald-500' : 'before:bg-blue-500') : 'before:bg-transparent'
+
   return (
-    <div className={`${ROW_GRID} px-5 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0 even:bg-slate-50/30`}>
-      {/* Label */}
+    <div
+      className={[
+        ROW_GRID,
+        'relative pl-5 pr-4 lg:pr-5 py-2.5 lg:py-2 transition-colors border-b border-slate-100 last:border-b-0 even:bg-slate-50/40 hover:bg-slate-50',
+        // Left-edge tone accent — only when the row has a value
+        `before:absolute before:left-0 before:top-1 before:bottom-1 before:w-0.5 before:rounded-r ${accent}`,
+      ].join(' ')}
+    >
+      {/* Label + hint */}
       <div className="min-w-0">
         <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm font-bold text-slate-900">{sub.label}</span>
+          <span className="text-[13px] font-bold text-slate-900 leading-snug">{sub.label}</span>
           {entry.optimize && entry.amount > 0 && (
             <span className="shrink-0 text-[9px] font-bold uppercase tracking-[1.5px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">
-              ★ Flagged for review
+              ★ Flagged
             </span>
           )}
         </div>
         {sub.hint && (
-          <div className="text-[11px] text-slate-500 leading-snug mt-0.5" title={sub.hint}>
+          <div className="text-[10.5px] text-slate-500 leading-snug mt-0.5 line-clamp-2" title={sub.hint}>
             {sub.hint}
           </div>
         )}
       </div>
 
-      {/* Status — segmented */}
-      <div
-        className="inline-flex bg-slate-100 rounded-md p-0.5 gap-0.5 w-full"
-        role="group"
-        aria-label="Move to Liquid Corpus or Invested Corpus"
-      >
-        {STATUS_OPTIONS.map((opt) => {
-          const active = entry.status === opt.key
-          return (
+      {/* Mobile / md sub-grid wrapper — only renders below lg.
+          Status, Value, Monthly Income, Actions sit in a 2-col grid for
+          tablet / phone so they wrap consistently. At lg+, the parent
+          grid takes over and these become four separate cells. */}
+      <div className="grid grid-cols-2 gap-2 lg:contents">
+        {/* Status — segmented */}
+        <div
+          className="inline-flex bg-slate-100 rounded-md p-0.5 gap-0.5 w-full col-span-2 lg:col-span-1 border border-slate-200"
+          role="group"
+          aria-label="Move to Liquid Corpus or Invested Corpus"
+        >
+          {STATUS_OPTIONS.map((opt) => {
+            const active = entry.status === opt.key
+            return (
+              <button
+                key={opt.key}
+                type="button"
+                onClick={() => setStatus(opt.key)}
+                aria-pressed={active}
+                title={opt.help}
+                className={[
+                  'flex-1 px-2 py-1 text-[11px] font-bold rounded transition-colors tracking-tight',
+                  active ? `${opt.activeBg} text-white shadow-sm`
+                         : 'text-slate-600 hover:text-slate-900 hover:bg-white',
+                ].join(' ')}
+              >
+                {opt.label}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Value */}
+        <div className="lg:contents">
+          <span className="lg:hidden text-[9px] font-bold tracking-[2px] uppercase text-slate-500 -mb-1">Value (₹)</span>
+          <MoneyInput
+            value={entry.amount}
+            placeholder="0"
+            textColor={textColor}
+            ariaLabel={`${sub.label} value`}
+            onCommit={(v) => onChange({ ...entry, amount: v })}
+          />
+        </div>
+
+        {/* Monthly income — only when invested */}
+        <div className="lg:contents">
+          <span className="lg:hidden text-[9px] font-bold tracking-[2px] uppercase text-slate-500 -mb-1">Monthly (₹)</span>
+          <MoneyInput
+            value={entry.monthlyIncome}
+            placeholder="0"
+            textColor="text-blue-700"
+            ariaLabel={`${sub.label} monthly income`}
+            suffix={<span className="text-[10px] text-slate-400 font-semibold">/mo</span>}
+            disabled={entry.status !== 'invested'}
+            onCommit={(v) => onChange({ ...entry, monthlyIncome: v })}
+          />
+        </div>
+
+        {/* Actions — Upload (MFs) + Optimize (MFs / Stocks) */}
+        <div className="flex flex-wrap gap-1.5 lg:flex-nowrap lg:justify-end col-span-2 lg:col-span-1">
+          {sub.uploadable && onUpload && (
             <button
-              key={opt.key}
               type="button"
-              onClick={() => setStatus(opt.key)}
-              aria-pressed={active}
-              title={opt.help}
-              className={[
-                'flex-1 px-2 py-1.5 text-xs font-bold rounded transition-colors',
-                active ? `${opt.activeBg} text-white shadow-sm`
-                       : 'text-slate-600 hover:text-slate-900 hover:bg-white',
-              ].join(' ')}
+              onClick={onUpload}
+              disabled={uploadBusy}
+              className="px-2.5 py-1.5 text-[10px] font-bold rounded-md border border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-wait whitespace-nowrap"
+              title="Upload CAS / portfolio statement to auto-fill total"
             >
-              {opt.label}
+              {uploadBusy ? '⌛ Reading…' : '↥ Upload CAS'}
             </button>
-          )
-        })}
-      </div>
-
-      {/* Value */}
-      <MoneyInput
-        value={entry.amount}
-        placeholder="0"
-        textColor={textColor}
-        ariaLabel={`${sub.label} value`}
-        onCommit={(v) => onChange({ ...entry, amount: v })}
-      />
-
-      {/* Monthly income — only when invested */}
-      <MoneyInput
-        value={entry.monthlyIncome}
-        placeholder="0"
-        textColor="text-blue-700"
-        ariaLabel={`${sub.label} monthly income`}
-        suffix={<span className="text-[10px] text-slate-500 font-semibold">/mo</span>}
-        disabled={entry.status !== 'invested'}
-        onCommit={(v) => onChange({ ...entry, monthlyIncome: v })}
-      />
-
-      {/* Actions — Upload (MFs) + Optimize (MFs / Stocks) */}
-      <div className="flex flex-wrap gap-1.5 lg:flex-nowrap lg:justify-end">
-        {sub.uploadable && onUpload && (
-          <button
-            type="button"
-            onClick={onUpload}
-            disabled={uploadBusy}
-            className="px-2.5 py-1.5 text-[10px] font-bold rounded-md border-2 border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400 transition-colors disabled:opacity-50 disabled:cursor-wait whitespace-nowrap"
-            title="Upload CAS / portfolio statement to auto-fill total"
-          >
-            {uploadBusy ? '⌛ Reading…' : '↥ Upload CAS'}
-          </button>
-        )}
-        {sub.optimisable && (
-          <button
-            type="button"
-            onClick={toggleOptimize}
-            className={[
-              'px-2.5 py-1.5 text-[10px] font-bold rounded-md border-2 transition-colors whitespace-nowrap',
-              entry.optimize
-                ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
-                : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400',
-            ].join(' ')}
-            title="Flag this portfolio for optimisation review"
-          >
-            {entry.optimize ? '★ Flagged' : '★ Optimize'}
-          </button>
-        )}
-        {!sub.uploadable && !sub.optimisable && (
-          <span className="text-[10px] text-slate-400 italic hidden lg:block">—</span>
-        )}
+          )}
+          {sub.optimisable && (
+            <button
+              type="button"
+              onClick={toggleOptimize}
+              className={[
+                'px-2.5 py-1.5 text-[10px] font-bold rounded-md border transition-colors whitespace-nowrap',
+                entry.optimize
+                  ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                  : 'border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400',
+              ].join(' ')}
+              title="Flag this portfolio for optimisation review"
+            >
+              {entry.optimize ? '★ Flagged' : '★ Optimize'}
+            </button>
+          )}
+          {!sub.uploadable && !sub.optimisable && (
+            <span className="text-[10px] text-slate-300 italic hidden lg:block">—</span>
+          )}
+        </div>
       </div>
     </div>
   )
