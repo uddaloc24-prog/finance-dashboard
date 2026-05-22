@@ -33,7 +33,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   )
   // Single-open assessment / dashboard row. Quiz modals AND dashboard
   // popups all share this state so only one floats at a time.
-  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10' | 'gd-dash' | 'risk-dash' | 'exec-dash'
+  type AssessmentKind = 'quiz' | 'profiler' | 'gd' | 'v10' | 'gd-dash' | 'risk-dash' | 'exec-dash' | 'profile-grid'
   const [openAssessment, setOpenAssessment] = useState<AssessmentKind | null>(null)
   const showQuiz = openAssessment === 'quiz'
   const showProfiler = openAssessment === 'profiler'
@@ -42,6 +42,7 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   const showGdDash = openAssessment === 'gd-dash'
   const showRiskDash = openAssessment === 'risk-dash'
   const showExecDash = openAssessment === 'exec-dash'
+  const showProfileGrid = openAssessment === 'profile-grid'
   function toggleOpen(kind: AssessmentKind) {
     setOpenAssessment((cur) => (cur === kind ? null : kind))
   }
@@ -284,6 +285,16 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
           {/* ── Subheader: Risk Profile ─── */}
           <section>
             <SubHeader tone="navy" eyebrow="Risk Profile" subtitle="Current match · slider · score history" />
+            {/* All Five Profiles toggle — opens the comparison in a popup */}
+            <div className="mt-2">
+              <ToggleLauncher
+                icon="🔍"
+                label="All Five Risk Profiles"
+                sub={showProfileGrid ? 'Comparison open' : 'Compare side-by-side'}
+                on={showProfileGrid}
+                onClick={() => toggleOpen('profile-grid')}
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
               {matchedProfile ? (
                 <div className="rounded-lg border-2 border-blue-200 bg-blue-50/60 p-3">
@@ -494,6 +505,36 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
         />
       </Modal>
 
+      <Modal
+        open={showProfileGrid}
+        title="All Five Risk Profiles"
+        subtitle="The same ₹1 Cr reference plan rendered for every profile, scaled to your corpus"
+        accent="emerald"
+        size="3xl"
+        onClose={closeAll}
+      >
+        <div className="space-y-3">
+          <p className="text-[11px] text-slate-600 leading-snug max-w-3xl">
+            Use this side-by-side comparison to validate the assessment, see what changes between profiles, or pick a
+            different match if the recommendation feels off. Click any column's "Use this plan" to apply that profile.
+          </p>
+          <ProfileGrid userCorpus={userProfile.corpus} matchedId={chosenId} onSelect={handleChoose} />
+          <div className="bg-white border-2 border-slate-200 rounded-lg px-3 py-3 mt-2">
+            <div className="flex items-baseline gap-2 mb-1.5">
+              <span className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">Note · how to read</span>
+              <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
+            </div>
+            <ul className="text-[11px] text-slate-600 space-y-1 leading-snug">
+              <li><strong className="text-slate-800">Allocation bar</strong> — share of corpus per bucket (B1 liquidity / B2 fixed floor / B3 stability / B4 growth). Equity % is the equity-weighted share of B3 + B4.</li>
+              <li><strong className="text-slate-800">Year-1 mo</strong> — combined monthly income produced by the recommended instrument mix at retirement start.</li>
+              <li><strong className="text-slate-800">Year-10 mo</strong> — same income measure 10 years in, after equity refill compounding kicks in.</li>
+              <li><strong className="text-slate-800">Year-20 corpus</strong> — projected ending balance. Green when corpus exceeds your starting amount.</li>
+              <li>Figures are scaled from the academic PDF's ₹1 Cr reference plan to your actual corpus.</li>
+            </ul>
+          </div>
+        </div>
+      </Modal>
+
       {/* Hint banner — when quiz done but profile not selected */}
       {!showQuiz && quizProfile && !chosenId && (
         <div className="bg-blue-50 border-2 border-blue-300 rounded-lg px-4 py-3 text-xs text-blue-900 flex items-center gap-2">
@@ -505,30 +546,6 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
         </div>
       )}
 
-      {/* ── 03 — All five profiles, side by side ──────────── */}
-      <ToneCard num="03" tone="green" title="All Five Risk Profiles" subtitle="Side-by-side comparison" framed>
-        <p className="text-[11px] text-slate-600 mb-3 leading-snug max-w-3xl">
-          The same ₹1 Cr reference plan rendered for every profile, then scaled to your actual corpus. Use this to validate
-          the assessment, see what changes between profiles, or pick a different match if the recommendation feels off.
-        </p>
-        <ProfileGrid userCorpus={userProfile.corpus} matchedId={chosenId} onSelect={handleChoose} />
-      </ToneCard>
-
-      {/* Legend / explanatory footer */}
-      <div className="bg-white border-2 border-slate-200 rounded-lg px-4 py-3.5">
-        <div className="flex items-baseline gap-2 mb-2">
-          <span className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700 tabular-nums">Note</span>
-          <span className="h-px flex-1 bg-slate-200" aria-hidden="true" />
-        </div>
-        <h4 className="text-xs font-bold text-slate-900 mb-2">How to read the comparison grid</h4>
-        <ul className="text-[11px] text-slate-600 space-y-1 leading-snug">
-          <li><strong className="text-slate-800">Allocation bar</strong> — share of corpus per bucket (B1 liquidity / B2 fixed floor / B3 stability / B4 growth). Equity % is the equity-weighted share of B3 + B4.</li>
-          <li><strong className="text-slate-800">Year-1 mo</strong> — combined monthly income produced by the recommended instrument mix at retirement start.</li>
-          <li><strong className="text-slate-800">Year-10 mo</strong> — same income measure 10 years in, after equity refill compounding kicks in.</li>
-          <li><strong className="text-slate-800">Year-20 corpus</strong> — projected ending balance. Green when corpus exceeds your starting amount.</li>
-          <li>Figures are scaled from the academic PDF's ₹1 Cr reference plan to your actual corpus.</li>
-        </ul>
-      </div>
     </div>
   )
 }
@@ -647,6 +664,53 @@ interface ToneCardProps {
   tone: Tone
   framed?: boolean   // when true, renders the body without the bordered inner pad (used by ProfileGrid which has its own chrome)
   children: ReactNode
+}
+
+// ── ToggleLauncher — on/off switch + label; opens a popup on click ─────
+
+interface ToggleLauncherProps {
+  icon: string
+  label: string
+  sub: string
+  on: boolean
+  onClick: () => void
+}
+
+function ToggleLauncher({ icon, label, sub, on, onClick }: ToggleLauncherProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={on ? 'Close comparison popup' : 'Open comparison popup'}
+      className={`w-full flex items-center gap-3 rounded-lg border-2 px-3 py-2.5 transition-all shadow-sm ${
+        on
+          ? 'border-emerald-400 bg-emerald-50/70 text-emerald-900 hover:bg-emerald-100/60'
+          : 'border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:bg-emerald-50/30'
+      }`}
+    >
+      <span className="text-xl leading-none shrink-0" aria-hidden="true">{icon}</span>
+      <div className="flex-1 min-w-0 text-left">
+        <div className="text-xs font-bold tracking-tight leading-tight">{label}</div>
+        <div className={`text-[10px] uppercase tracking-[1.5px] mt-0.5 ${on ? 'text-emerald-700' : 'text-slate-500'}`}>{sub}</div>
+      </div>
+      {/* On / Off switch */}
+      <span
+        className={`relative inline-flex shrink-0 w-10 h-5 rounded-full border transition-colors ${
+          on ? 'bg-emerald-500 border-emerald-600' : 'bg-slate-200 border-slate-300'
+        }`}
+        aria-hidden="true"
+      >
+        <span
+          className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${
+            on ? 'left-[1.25rem]' : 'left-0.5'
+          }`}
+        />
+      </span>
+      <span className={`text-[9px] font-bold uppercase tracking-[2px] shrink-0 w-6 text-right ${on ? 'text-emerald-700' : 'text-slate-400'}`}>
+        {on ? 'ON' : 'OFF'}
+      </span>
+    </button>
+  )
 }
 
 // ── LauncherBtn — compact dashboard-launcher button for the left rail ──
