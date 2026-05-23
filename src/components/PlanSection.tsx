@@ -99,7 +99,9 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
         </div>
       </section>
 
-      {/* Modal — wide enough that all asset rows render as a single row */}
+      {/* Modal — wide enough that all asset rows render as a single row.
+          Help is exposed via a "?" button in the modal header; expanded
+          content renders directly above the editor when active. */}
       <Modal
         open={open}
         title={`Step ${parseInt(num, 10)} · ${title}`}
@@ -107,39 +109,24 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
         accent={TONE_TO_MODAL[tone]}
         size="3xl"
         onClose={handleClose}
+        onHelp={helpExamples ? (() => setHelpOpen((v) => !v)) : undefined}
+        helpActive={helpOpen && !!helpExamples}
       >
         <div className="space-y-3">
-          {/* Help panel — collapsible example entries */}
-          {helpExamples && (
-            <div className={`rounded-md border-2 ${helpOpen ? t.border : 'border-slate-200'} bg-white transition-colors`}>
-              <button
-                type="button"
-                onClick={() => setHelpOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left"
-                aria-expanded={helpOpen}
-              >
-                <span className="flex items-baseline gap-1.5 min-w-0">
-                  <span aria-hidden="true" className="text-base leading-none">💡</span>
-                  <span className={`text-[10px] font-bold tracking-[2px] uppercase ${t.text}`}>Need help?</span>
-                  <span className="text-[11px] text-slate-600 truncate">
-                    {helpOpen ? 'Hide example entries' : 'Show example entries'}
-                  </span>
+          {helpExamples && helpOpen && (
+            <div className={`rounded-lg border-2 ${t.border} ${t.numBg} px-4 py-3 shadow-sm`}>
+              <div className="flex items-baseline gap-2 mb-2 pb-2 border-b border-slate-200/70">
+                <span aria-hidden="true" className="text-lg leading-none">💡</span>
+                <span className={`text-[11px] font-extrabold tracking-[2px] uppercase ${t.text}`}>Examples for this step</span>
+                <span className="text-[11px] font-bold text-slate-700">
+                  · Step {parseInt(num, 10)} · {title}
                 </span>
-                <span
-                  className={`shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full border ${t.numBorder} ${t.numBg} ${t.text} text-[10px] transition-transform ${helpOpen ? 'rotate-180' : ''}`}
-                  aria-hidden="true"
-                >
-                  ▾
-                </span>
-              </button>
-              {helpOpen && (
-                <div className={`border-t-2 ${t.numBorder} ${t.numBg} px-3 py-2.5 text-[11.5px] text-slate-700 leading-relaxed`}>
-                  {helpExamples}
-                </div>
-              )}
+              </div>
+              <div className="text-[12.5px] font-medium text-slate-800 leading-relaxed">
+                {helpExamples}
+              </div>
             </div>
           )}
-
           {children}
         </div>
       </Modal>

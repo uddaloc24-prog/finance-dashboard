@@ -519,15 +519,15 @@ const HELP_INSURANCE: HelpItem[] = [
 
 function HelpList({ items }: { items: HelpItem[] }) {
   return (
-    <ul className="space-y-1">
+    <ul className="space-y-1.5">
       {items.map((it, i) => (
-        <li key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,2.5fr)] gap-2 items-baseline">
-          <span className="font-semibold text-slate-900">{it.label}</span>
-          <span className="font-mono tabular-nums text-slate-700">{it.value}</span>
-          {it.note && <span className="text-slate-500 italic text-[10.5px]">{it.note}</span>}
+        <li key={i} className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,2.5fr)] gap-3 items-baseline">
+          <span className="font-bold text-slate-900">{it.label}</span>
+          <span className="font-mono font-bold tabular-nums text-slate-900">{it.value}</span>
+          {it.note && <span className="text-slate-600 italic">{it.note}</span>}
         </li>
       ))}
-      <li className="pt-1.5 text-[10px] text-slate-500 italic">
+      <li className="pt-2 mt-1 border-t border-slate-200/70 text-[11px] font-medium text-slate-500 italic">
         Numbers are illustrative — replace with your own values; entries you don't have can stay blank.
       </li>
     </ul>

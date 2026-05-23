@@ -15,6 +15,10 @@ interface Props {
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
   /** Tone-keyed accent stripe across the top. Defaults to slate. */
   accent?: 'navy' | 'amber' | 'indigo' | 'emerald' | 'rose' | 'slate'
+  /** When provided, renders a "?" help button next to the close button. */
+  onHelp?: () => void
+  /** Set true to mark the help button as currently expanded. */
+  helpActive?: boolean
 }
 
 const SIZE_CLASS: Record<NonNullable<Props['size']>, string> = {
@@ -37,7 +41,7 @@ const ACCENT_CLASS: Record<NonNullable<Props['accent']>, string> = {
   slate:   'bg-slate-700',
 }
 
-export function Modal({ open, title, subtitle, onClose, children, size = 'xl', accent = 'slate' }: Props) {
+export function Modal({ open, title, subtitle, onClose, children, size = 'xl', accent = 'slate', onHelp, helpActive }: Props) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -79,13 +83,29 @@ export function Modal({ open, title, subtitle, onClose, children, size = 'xl', a
               <p className="text-[11px] text-slate-500 mt-0.5 leading-snug">{subtitle}</p>
             )}
           </div>
+          {onHelp && (
+            <button
+              type="button"
+              onClick={onHelp}
+              className={`shrink-0 w-9 h-9 rounded-md font-bold text-xl leading-none transition-colors flex items-center justify-center border-2 ${
+                helpActive
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 hover:border-amber-400'
+              }`}
+              aria-label={helpActive ? 'Hide examples' : 'Show examples'}
+              aria-pressed={helpActive}
+              title={helpActive ? 'Hide help / examples' : 'Show help / examples'}
+            >
+              ?
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
-            className="shrink-0 w-8 h-8 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center"
+            className="shrink-0 w-9 h-9 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors flex items-center justify-center"
             aria-label="Close"
           >
-            <span aria-hidden="true" className="text-xl leading-none">×</span>
+            <span aria-hidden="true" className="text-xl leading-none font-bold">×</span>
           </button>
         </header>
         <div className="flex-1 overflow-y-auto p-3 sm:p-4 bg-slate-50/40">
