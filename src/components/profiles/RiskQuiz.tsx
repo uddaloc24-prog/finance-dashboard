@@ -4,6 +4,31 @@ import { QUIZ_QUESTIONS } from '../../lib/data/quiz'
 import { profileFromScore, RISK_PROFILES } from '../../lib/data/riskProfiles'
 import { storage } from '../../lib/storage'
 import { Button } from '../ui/Button'
+import { HoverExplain } from '../ui/HoverExplain'
+
+// Hover-trigger explanations per quiz question. Keyed by question id.
+const QUIZ_EXPLAIN: Record<string, string> = {
+  'q1-horizon':
+    'How long the corpus has to last. Shorter horizons favour capital safety (B1/B2). Longer horizons let you ride equity volatility (B3/B4) and need an inflation hedge.',
+  'q2-secondary-income':
+    'Pensions / rental / spouse working reduce dependence on the corpus. More secondary income = higher capacity for an equity tilt.',
+  'q3-essential-share':
+    'Rent, food and healthcare are eaten first by the withdrawal stream. High essentials → need a stable B1/B2 floor; low essentials → flexibility to tilt to growth.',
+  'q4-crash-reaction':
+    'Behavioural test under stress. The honest answer matters more than the "right" one — pick what you would actually do.',
+  'q5-volatility-tolerance':
+    'How much month-to-month swing you can stomach without acting impulsively. Frequent portfolio-checking + high anxiety usually means lower tolerance.',
+  'q6-investing-experience':
+    'Familiarity with equity reduces the chance of panic-selling at the bottom. First-time equity investors do best with index funds + automation.',
+  'q7-emergency-fund':
+    'Separate-from-corpus cash is your real cushion. The deeper this is, the more risk capacity you have — and the more you can keep B4 invested through bad years.',
+  'q8-legacy':
+    'Leaving an inheritance forces a lower safe-withdrawal rate. "Spend every rupee" allows ~1% extra. Be honest with yourself — half-hearted legacy goals usually backfire.',
+  'q9-inflation-priority':
+    'Inflation hedge usually requires equity (B3/B4). At 6%, ₹1 today buys ~₹0.55 in 10 years — real income matters more than rupee-stated income.',
+  'q10-management-effort':
+    'Active engagement enables Monte Carlo sanity checks + rebalancing. If set-and-forget, default to index funds + a balanced advantage fund.',
+}
 
 interface Props {
   initialState: QuizState | null
@@ -92,24 +117,26 @@ export function RiskQuiz({ initialState, onComplete, onSkipToProfile }: Props) {
         </span>
       </div>
 
-      <h3 className="text-base font-semibold text-gray-900 leading-snug">{q.question}</h3>
+      <HoverExplain hint={QUIZ_EXPLAIN[q.id]} tone="navy" className="space-y-3">
+        <h3 className="text-base font-semibold text-gray-900 leading-snug">{q.question}</h3>
 
-      <div className="space-y-2">
-        {q.options.map((opt) => (
-          <button
-            key={opt.label}
-            type="button"
-            onClick={() => setAnswers({ ...answers, [q.id]: opt.score })}
-            className={`w-full text-left px-4 py-3 rounded-lg border transition-colors text-sm ${
-              chosen === opt.score
-                ? 'bg-blue-50 border-blue-400 text-blue-900'
-                : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            {opt.label}
-          </button>
-        ))}
-      </div>
+        <div className="space-y-2">
+          {q.options.map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setAnswers({ ...answers, [q.id]: opt.score })}
+              className={`w-full text-left px-4 py-3 rounded-lg border transition-colors text-sm ${
+                chosen === opt.score
+                  ? 'bg-blue-50 border-blue-400 text-blue-900'
+                  : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </HoverExplain>
 
       <div className="flex justify-between">
         <Button

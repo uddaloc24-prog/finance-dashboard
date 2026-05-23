@@ -15,6 +15,25 @@ import { storage } from '../../lib/storage'
 import { runInference } from '../../lib/psychometric/inference'
 import { transcribeAudio, TranscribeError } from '../../lib/psychometric/audioTranscribe'
 import { Button } from '../ui/Button'
+import { HoverExplain } from '../ui/HoverExplain'
+
+const KINDER_HINTS = {
+  q1: 'Imagine the financial pressure removed. The first images that come to mind — places, people, activities — are the ones to write down. No need to polish.',
+  q2: 'A finite runway forces priorities. What disappears immediately? What stays exactly the same? Listing both sides is the diagnostic, not just the changes.',
+  q3: 'Regret thinking surfaces hidden goals. Naming what you "didn\'t do" or "didn\'t become" often reveals the corpus that matters most.',
+} as const
+
+const BLOCK0_HINT =
+  'Scene tags flag the life events that should shape the plan — a layoff or windfall changes everything. "Other" opens a free-text box for nuance.'
+
+const BLOCK1_HINT =
+  'Aim for 3–7 named goals. A short, concrete name beats a vague label ("Retire at 60" not "Retirement"). Amount can be a range; horizon "not sure" is fine.'
+
+const BLOCK4_HINT =
+  'Forced choices reveal priorities better than ranking does. "Which goal would you drop / shrink first?" is more diagnostic than "which is most important?"'
+
+const BLOCK5_HINT =
+  'Drop-goal divergence — what you would drop vs what your partner would drop — is the single most diagnostic question in the whole flow. Worth a conversation if they differ.'
 import {
   BLOCK3_PROBES,
   GD_BLOCKS,
@@ -190,15 +209,21 @@ interface BlockProps {
 function BlockZero({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }) {
   const tags = (get<string[]>('tags') ?? []) as string[]
   const showOther = tags.includes('other')
+  return (
+    <HoverExplain hint={BLOCK0_HINT} tone="indigo">
+      <BlockZeroInner tags={tags} showOther={showOther} get={get} set={set} groqApiKey={groqApiKey} />
+    </HoverExplain>
+  )
+}
+
+function BlockZeroInner({ tags, showOther, get, set, groqApiKey }: { tags: string[]; showOther: boolean } & BlockProps & { groqApiKey?: string }) {
 
   function toggleTag(value: string) {
     let next = tags.includes(value) ? tags.filter((t) => t !== value) : [...tags, value]
-    // "Nothing major" clears all others; selecting anything else clears "Nothing major"
     if (value === 'none' && next.includes('none')) next = ['none']
     else if (value !== 'none' && next.includes('none')) next = next.filter((t) => t !== 'none')
     set('tags', next)
   }
-
   return (
     <div className="space-y-3">
       <p className="text-xs text-slate-600 leading-snug">Select any that apply — or skip if nothing major is happening right now.</p>
@@ -251,7 +276,15 @@ function readGoals(block: GdBlockAnswers | undefined): GoalEntry[] {
   return Array.isArray(raw) && typeof raw[0] === 'object' ? (raw as unknown as GoalEntry[]) : []
 }
 
-function BlockOne({ get, set }: BlockProps) {
+function BlockOne(props: BlockProps) {
+  return (
+    <HoverExplain hint={BLOCK1_HINT} tone="indigo">
+      <BlockOneInner {...props} />
+    </HoverExplain>
+  )
+}
+
+function BlockOneInner({ get, set }: BlockProps) {
   const goals = (get('goals') as unknown as GoalEntry[]) ?? []
   const [libraryOpen, setLibraryOpen] = useState(goals.length === 0)
   // Single-open accordion: only one category expands at a time. Click the
@@ -500,6 +533,7 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
       <KinderItem
         meta={KINDER_Q1}
         groqApiKey={groqApiKey}
+        hint={KINDER_HINTS.q1}
         textValue={(get<string>('q1Text') as string) ?? ''}
         onTextChange={(v) => set('q1Text', v)}
         extra={
@@ -529,6 +563,7 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
       <KinderItem
         meta={KINDER_Q2}
         groqApiKey={groqApiKey}
+        hint={KINDER_HINTS.q2}
         textValue={(get<string>('q2Text') as string) ?? ''}
         onTextChange={(v) => set('q2Text', v)}
         extra={
@@ -541,6 +576,7 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
       <KinderItem
         meta={KINDER_Q3}
         groqApiKey={groqApiKey}
+        hint={KINDER_HINTS.q3}
         textValue={(get<string>('q3Text') as string) ?? ''}
         onTextChange={(v) => set('q3Text', v)}
         extra={
@@ -554,34 +590,37 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
 }
 
 function KinderItem({
-  meta, textValue, onTextChange, extra, groqApiKey,
+  meta, textValue, onTextChange, extra, groqApiKey, hint,
 }: {
   meta: { badge: string; tagline: string; prompt: string; placeholder: string }
   textValue: string
   onTextChange: (v: string) => void
   extra: React.ReactNode
   groqApiKey?: string
+  hint?: string
 }) {
   return (
-    <div className="rounded-md border-2 border-amber-100 bg-amber-50/30 p-3 space-y-2">
-      <div>
-        <div className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">{meta.badge}</div>
-        <div className="text-[11px] text-slate-500 italic mt-0.5">{meta.tagline}</div>
+    <HoverExplain hint={hint} tone="amber">
+      <div className="rounded-md border-2 border-amber-100 bg-amber-50/30 p-3 space-y-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[2px] uppercase text-amber-700">{meta.badge}</div>
+          <div className="text-[11px] text-slate-500 italic mt-0.5">{meta.tagline}</div>
+        </div>
+        <p className="text-sm text-slate-800 leading-relaxed">{meta.prompt}</p>
+        <textarea
+          rows={4}
+          value={textValue}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder={meta.placeholder}
+          className="w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 outline-none text-sm bg-white"
+        />
+        <AudioInput
+          groqApiKey={groqApiKey}
+          onTranscribed={(text) => onTextChange(appendTranscribed(textValue, text))}
+        />
+        {extra}
       </div>
-      <p className="text-sm text-slate-800 leading-relaxed">{meta.prompt}</p>
-      <textarea
-        rows={4}
-        value={textValue}
-        onChange={(e) => onTextChange(e.target.value)}
-        placeholder={meta.placeholder}
-        className="w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 outline-none text-sm bg-white"
-      />
-      <AudioInput
-        groqApiKey={groqApiKey}
-        onTranscribed={(text) => onTextChange(appendTranscribed(textValue, text))}
-      />
-      {extra}
-    </div>
+    </HoverExplain>
   )
 }
 
@@ -836,7 +875,15 @@ function BlockThree({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
 
 // ─── Block 4 ─────────────────────────────────────────────────────────────
 
-function BlockFour({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
+function BlockFour(props: BlockProps & { goals: GoalEntry[] }) {
+  return (
+    <HoverExplain hint={BLOCK4_HINT} tone="amber">
+      <BlockFourInner {...props} />
+    </HoverExplain>
+  )
+}
+
+function BlockFourInner({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
   const goalOptions: OptionLite[] = goals
     .filter((g) => g.name.trim().length > 0)
     .map((g) => ({ value: g.name, label: g.name }))
@@ -884,7 +931,15 @@ function BlockFour({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
 
 // ─── Block 5 ─────────────────────────────────────────────────────────────
 
-function BlockFive({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
+function BlockFive(props: BlockProps & { goals: GoalEntry[] }) {
+  return (
+    <HoverExplain hint={BLOCK5_HINT} tone="amber">
+      <BlockFiveInner {...props} />
+    </HoverExplain>
+  )
+}
+
+function BlockFiveInner({ get, set, goals }: BlockProps & { goals: GoalEntry[] }) {
   const applicable = (get<string>('applicable') as string) ?? ''
   const goalOptions: OptionLite[] = goals.filter((g) => g.name.trim().length > 0).map((g) => ({ value: g.name, label: g.name }))
 
