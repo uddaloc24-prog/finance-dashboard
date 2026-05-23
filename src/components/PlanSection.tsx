@@ -43,6 +43,9 @@ interface Props {
   external?: boolean
   /** When external+compact, marks this badge as the currently active one. */
   active?: boolean
+  /** Compact badge size when in wheel mode. 'md' (default) = 128/144 px,
+   *  'sm' shrinks to ~88 px so it fits inside a narrower wheel column. */
+  size?: 'sm' | 'md'
   children: ReactNode
 }
 
@@ -53,7 +56,7 @@ const TONE_3D: Record<Tone, { body: string; bodyHover: string; lip: string }> = 
   rose:  { body: 'from-rose-400 via-rose-500 to-rose-700',            bodyHover: 'hover:from-rose-300 hover:via-rose-400 hover:to-rose-600',            lip: 'rgb(136,19,55)' },
 }
 
-export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, helpExamples, compact, shortTitle, icon, external, active, children }: Props) {
+export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, helpExamples, compact, shortTitle, icon, external, active, size = 'md', children }: Props) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const isControlled = openProp !== undefined
@@ -66,6 +69,10 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
 
   // ─── Compact circular badge (used by the Plan-tab wheel) ─────────────
   if (compact) {
+    const sm = size === 'sm'
+    const dimCls = sm
+      ? 'w-[88px] h-[88px]'
+      : 'w-32 h-32 sm:w-36 sm:h-36'
     const badge = (
       <button
         type="button"
@@ -74,7 +81,8 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
         aria-pressed={external ? active : undefined}
         title={`Step ${parseInt(num, 10)} · ${title}`}
         className={[
-          'group relative w-32 h-32 sm:w-36 sm:h-36 rounded-full select-none flex flex-col items-center justify-center gap-0.5 text-white',
+          'group relative rounded-full select-none flex flex-col items-center justify-center gap-0.5 text-white',
+          dimCls,
           'transition-all duration-100 border-2',
           active ? 'border-white ring-4 ring-amber-300' : 'border-white/60',
           'focus:outline-none focus:ring-4 focus:ring-amber-300',
@@ -89,12 +97,21 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
           transform: active ? 'translateY(3px)' : undefined,
         }}
       >
-        <span className="font-serif italic text-[11px] font-bold tracking-wider opacity-90 leading-none">step</span>
-        <span className="font-serif text-3xl font-extrabold tabular-nums leading-none drop-shadow-sm">{num}</span>
-        {icon && <span className="text-xl leading-none mt-0.5" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{icon}</span>}
-        <span className="text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2">
-          {shortTitle ?? title}
-        </span>
+        {!sm && (
+          <span className="font-serif italic text-[11px] font-bold tracking-wider opacity-90 leading-none">step</span>
+        )}
+        <span className={`font-serif font-extrabold tabular-nums leading-none drop-shadow-sm ${sm ? 'text-xl' : 'text-3xl'}`}>{num}</span>
+        {icon && <span className={`leading-none mt-0.5 ${sm ? 'text-base' : 'text-xl'}`} aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{icon}</span>}
+        {!sm && (
+          <span className="text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2">
+            {shortTitle ?? title}
+          </span>
+        )}
+        {sm && (
+          <span className="text-[9px] font-extrabold uppercase tracking-[1px] leading-tight text-center px-1 mt-0.5 max-w-[80px] truncate">
+            {shortTitle ?? title}
+          </span>
+        )}
       </button>
     )
     // External mode: parent handles the editor surface. Just the badge.

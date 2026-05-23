@@ -588,19 +588,23 @@ function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, 
   const active = steps.find((s) => s.num === openStep) ?? null
   const TONE_TO_ACCENT = { navy: 'navy', rose: 'rose', green: 'emerald', amber: 'amber' } as const
 
+  // When a step is open: wheel shrinks to a narrow left rail and the side
+  // panel takes the larger right column with enough room for the asset-row
+  // 5-col grid to render at full width without wrapping.
   return (
     <div className={active
-      ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(380px,1.45fr)] gap-4 items-start'
+      ? 'grid grid-cols-1 xl:grid-cols-[minmax(280px,360px)_minmax(720px,1fr)] gap-4 items-start'
       : ''}
     >
-      {/* Wheel column — shrinks when a step is open */}
-      <div className={active ? 'lg:max-w-[460px] mx-auto w-full' : ''}>
-        <PlanWheel>
+      {/* Wheel column — auto-shrinks badges + radius when active */}
+      <div className={active ? 'xl:max-w-[360px] mx-auto w-full' : ''}>
+        <PlanWheel compact={!!active}>
           {steps.map((s, i) => (
-            <WheelStep key={s.num} idx={i}>
+            <WheelStep key={s.num} idx={i} radius={active ? 120 : 230}>
               <PlanSection
                 compact
                 external
+                size={active ? 'sm' : 'md'}
                 active={openStep === s.num}
                 open={openStep === s.num}
                 onToggle={() => setOpenStep(openStep === s.num ? null : s.num)}
@@ -643,19 +647,29 @@ function angleToXY(idx: number, total: number, radius: number): { x: number; y: 
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
 }
 
-function PlanWheel({ children }: { children: ReactNode }) {
+function PlanWheel({ children, compact }: { children: ReactNode; compact?: boolean }) {
+  const maxW = compact ? 360 : 680
   return (
     <>
       {/* Desktop: circular layout */}
-      <div className="hidden md:block relative w-full max-w-[680px] aspect-square mx-auto my-4">
+      <div className="hidden md:block relative w-full aspect-square mx-auto my-2" style={{ maxWidth: `${maxW}px` }}>
         {/* Decorative outer ring */}
         <div className="absolute inset-[14%] rounded-full border-2 border-dashed border-slate-200" aria-hidden="true" />
-        {/* Center wordmark */}
+        {/* Center wordmark — shrinks in compact mode */}
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none select-none">
-          <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Step 1 · Plan</span>
-          <span className="font-serif italic text-2xl sm:text-3xl font-extralight text-slate-800 mt-1">your plan</span>
-          <span className="font-serif text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">7 steps</span>
-          <span className="text-[10px] text-slate-500 italic mt-1">click any badge to open</span>
+          {compact ? (
+            <>
+              <span className="font-serif italic text-base font-extralight text-slate-700">your plan</span>
+              <span className="font-serif text-xl font-extrabold tracking-tight text-slate-900">7 steps</span>
+            </>
+          ) : (
+            <>
+              <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Step 1 · Plan</span>
+              <span className="font-serif italic text-2xl sm:text-3xl font-extralight text-slate-800 mt-1">your plan</span>
+              <span className="font-serif text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">7 steps</span>
+              <span className="text-[10px] text-slate-500 italic mt-1">click any badge to open</span>
+            </>
+          )}
         </div>
         {children}
       </div>
@@ -667,8 +681,8 @@ function PlanWheel({ children }: { children: ReactNode }) {
   )
 }
 
-function WheelStep({ idx, children }: { idx: number; children: ReactNode }) {
-  const { x, y } = angleToXY(idx, PLAN_WHEEL_COUNT, 230)
+function WheelStep({ idx, children, radius = 230 }: { idx: number; children: ReactNode; radius?: number }) {
+  const { x, y } = angleToXY(idx, PLAN_WHEEL_COUNT, radius)
   return (
     <>
       {/* Desktop absolute position */}

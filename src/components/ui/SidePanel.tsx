@@ -46,8 +46,8 @@ export function SidePanel({ title, subtitle, accent = 'slate', helpExamples, num
 
   return (
     <aside
-      className="relative rounded-xl bg-white border-2 border-slate-200 shadow-2xl flex flex-col overflow-hidden"
-      style={{ maxHeight: 'calc(100vh - 9rem)' }}
+      className="relative rounded-xl bg-white border-2 border-slate-200 shadow-2xl flex flex-col overflow-hidden w-full"
+      style={{ maxHeight: 'calc(100vh - 6rem)', minHeight: '60vh' }}
       role="region"
       aria-label={title}
     >
