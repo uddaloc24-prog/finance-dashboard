@@ -34,6 +34,17 @@ interface SubAsset {
   hint?: string
   optimisable?: boolean
   uploadable?: boolean
+  /**
+   * Whether the asset realistically produces ongoing cash:
+   *   monthly = an input field is shown (rent, SCSS, PMVVY, REIT, bond coupon, etc.)
+   *   none    = the cell is a quiet "—" with a tooltip (PPF, EPF, gold, NPS, etc.)
+   * Default is 'monthly' (back-compat).
+   */
+  incomeKind?: 'monthly' | 'none'
+  /** When set, the Liquid/Invested toggle is replaced with a static badge. */
+  fixedStatus?: AssetStatus
+  /** Tooltip explaining why a field is fixed / hidden. */
+  fixedReason?: string
 }
 
 interface AssetGroup {
@@ -51,81 +62,90 @@ const GROUPS: AssetGroup[] = [
     key: 'liquid', num: '01', title: 'Liquid & Cash', desc: 'Spendable within 24 hours',
     tone: 'sky', icon: '💧',
     subs: [
-      { key: 'savings',    label: 'Savings A/c',     hint: 'All bank savings balances' },
-      { key: 'sweepFdr',   label: 'Sweep / Auto-FDR', hint: 'Auto-sweep linked FDs' },
-      { key: 'cashOnHand', label: 'Cash on hand',    hint: 'Physical cash + petty' },
+      // Cash-like balances are always liquid; bank interest auto-compounds, no income capture needed.
+      { key: 'savings',    label: 'Savings A/c',      hint: 'All bank savings balances',     incomeKind: 'none', fixedStatus: 'liquid', fixedReason: 'Cash is always liquid; bank interest compounds in account' },
+      { key: 'sweepFdr',   label: 'Sweep / Auto-FDR', hint: 'Auto-sweep linked FDs',         incomeKind: 'none', fixedStatus: 'liquid', fixedReason: 'Auto-swept back into the savings account' },
+      { key: 'cashOnHand', label: 'Cash on hand',     hint: 'Physical cash + petty',         incomeKind: 'none', fixedStatus: 'liquid', fixedReason: 'Cash is always liquid; no income' },
     ],
   },
   {
     key: 'fixedIncome', num: '02', title: 'Fixed Income', desc: 'FDs, bonds — predictable yield',
     tone: 'navy', icon: '🏦',
     subs: [
-      { key: 'bankFds',         label: 'Bank FDs' },
-      { key: 'bankRds',         label: 'Recurring Deposits' },
-      { key: 'corporateBonds',  label: 'Corporate / NCD bonds', hint: 'NBFC, corporate, NCDs' },
-      { key: 'govtBonds',       label: 'Govt Securities',       hint: 'G-Sec, T-bills' },
-      { key: 'rbiFrb',          label: 'RBI Floating-Rate Bonds' },
+      { key: 'bankFds',         label: 'Bank FDs',                                                             incomeKind: 'monthly' },
+      // Recurring deposits accumulate; no payout till maturity.
+      { key: 'bankRds',         label: 'Recurring Deposits',     hint: 'Monthly contribution accrual',         incomeKind: 'none', fixedReason: 'RDs accumulate — no payout until maturity' },
+      { key: 'corporateBonds',  label: 'Corporate / NCD bonds',  hint: 'NBFC, corporate, NCDs · coupon',       incomeKind: 'monthly' },
+      { key: 'govtBonds',       label: 'Govt Securities',        hint: 'G-Sec, T-bills · coupon',              incomeKind: 'monthly' },
+      { key: 'rbiFrb',          label: 'RBI Floating-Rate Bonds', hint: 'Semi-annual coupon · enter monthly equivalent', incomeKind: 'monthly' },
     ],
   },
   {
     key: 'retirement', num: '03', title: 'Senior & Retirement Schemes', desc: 'PPF · EPF · NPS · SCSS · POMIS',
     tone: 'emerald', icon: '🏛️',
     subs: [
-      { key: 'scss',     label: 'SCSS',          hint: 'Senior Citizen Savings Scheme' },
-      { key: 'pomis',    label: 'POMIS',         hint: 'Post Office Monthly Income' },
-      { key: 'pmvvy',    label: 'PMVVY',         hint: 'LIC pension scheme' },
-      { key: 'ppf',      label: 'PPF',           hint: 'Public Provident Fund' },
-      { key: 'epfVpf',   label: 'EPF + VPF',     hint: 'Employee + Voluntary PF' },
-      { key: 'npsTier1', label: 'NPS Tier 1' },
-      { key: 'npsTier2', label: 'NPS Tier 2' },
-      { key: 'sukanya',  label: 'Sukanya Samriddhi' },
+      // Payout schemes
+      { key: 'scss',     label: 'SCSS',              hint: 'Senior Citizen Savings Scheme · quarterly → monthly equivalent', incomeKind: 'monthly' },
+      { key: 'pomis',    label: 'POMIS',             hint: 'Post Office Monthly Income · literal monthly payout',             incomeKind: 'monthly' },
+      { key: 'pmvvy',    label: 'PMVVY',             hint: 'LIC pension · monthly annuity',                                   incomeKind: 'monthly' },
+      // Compounding / locked schemes
+      { key: 'ppf',      label: 'PPF',               hint: 'Public Provident Fund · compounds annually · 15-yr lock',         incomeKind: 'none', fixedReason: 'PPF interest is reinvested annually until maturity' },
+      { key: 'epfVpf',   label: 'EPF + VPF',         hint: 'Employee + Voluntary PF · compounds till withdrawal',             incomeKind: 'none', fixedReason: 'EPF compounds until withdrawal at retirement' },
+      { key: 'npsTier1', label: 'NPS Tier 1',        hint: 'Locked till 60 · no ongoing payout',                              incomeKind: 'none', fixedReason: 'No payout till 60 (then 40% annuity + 60% lump sum)' },
+      { key: 'npsTier2', label: 'NPS Tier 2',        hint: 'Fully liquid · no payout',                                        incomeKind: 'none', fixedStatus: 'liquid', fixedReason: 'NPS Tier 2 has no income stream; treated as liquid' },
+      { key: 'sukanya',  label: 'Sukanya Samriddhi', hint: 'Daughter-specific · locked till 18 / 21 / marriage',              incomeKind: 'none', fixedReason: 'Locked till the girl child reaches 18/21; no interim payout' },
     ],
   },
   {
     key: 'mutualFunds', num: '04', title: 'Mutual Funds', desc: 'All MFs (Equity · Index · Hybrid · Debt · ELSS · Gold) — clubbed',
     tone: 'amber', icon: '📊',
     subs: [
-      { key: 'mutualFunds', label: 'Total MF Portfolio', hint: 'Sum of every MF · upload CAS for detail · use Optimize for review', optimisable: true, uploadable: true },
+      // MFs may have SWP set up; income optional.
+      { key: 'mutualFunds', label: 'Total MF Portfolio', hint: 'Sum of every MF · monthly income only if an SWP is active', optimisable: true, uploadable: true, incomeKind: 'monthly' },
     ],
   },
   {
     key: 'directEquity', num: '05', title: 'Direct Equity', desc: 'Indian + international stocks held directly',
     tone: 'orange', icon: '📈',
     subs: [
-      { key: 'stocksIndia', label: 'Indian stocks',    hint: 'Direct equity — NSE/BSE',      optimisable: true },
-      { key: 'stocksIntl',  label: 'US / Intl stocks', hint: 'Direct foreign equity / RSUs', optimisable: true },
+      // Dividends are irregular and small — not modelled as monthly income here.
+      { key: 'stocksIndia', label: 'Indian stocks',    hint: 'Direct equity — NSE/BSE',      optimisable: true, incomeKind: 'none', fixedReason: 'Indian-stock dividends are sporadic; treated as capital appreciation only' },
+      { key: 'stocksIntl',  label: 'US / Intl stocks', hint: 'Direct foreign equity / RSUs', optimisable: true, incomeKind: 'none', fixedReason: 'Foreign dividends are irregular; treated as capital appreciation' },
     ],
   },
   {
     key: 'realEstate', num: '06', title: 'Real Estate', desc: 'Residential, commercial, land — rental income flows to passive',
     tone: 'rose', icon: '🏠',
     subs: [
-      { key: 'selfOccupiedHome',   label: 'Self-occupied home', hint: 'Your primary residence' },
-      { key: 'secondHome',         label: 'Second home',        hint: 'Additional residential — rental income' },
-      { key: 'commercialProperty', label: 'Commercial',         hint: 'Shop, office, warehouse' },
-      { key: 'landPlot',           label: 'Land / Plot',        hint: 'Undeveloped land' },
-      { key: 'reits',              label: 'REITs',              hint: 'Listed real-estate trusts' },
-      { key: 'invits',             label: 'InvITs',             hint: 'Infra investment trusts' },
+      // Self-occupied = no income, always "invested" (you live in it; can't liquidate without moving).
+      { key: 'selfOccupiedHome',   label: 'Self-occupied home', hint: 'Your primary residence', incomeKind: 'none', fixedStatus: 'invested', fixedReason: 'You live here — no rental income, not realistically liquid' },
+      { key: 'secondHome',         label: 'Second home',        hint: 'Additional residential · rental income',  incomeKind: 'monthly' },
+      { key: 'commercialProperty', label: 'Commercial',         hint: 'Shop, office, warehouse · rental income', incomeKind: 'monthly' },
+      // Raw land typically generates nothing till sold.
+      { key: 'landPlot',           label: 'Land / Plot',        hint: 'Undeveloped land · capital growth only',  incomeKind: 'none', fixedReason: 'Undeveloped land generates no ongoing income' },
+      { key: 'reits',              label: 'REITs',              hint: 'Listed real-estate trusts · distributions', incomeKind: 'monthly' },
+      { key: 'invits',             label: 'InvITs',             hint: 'Infra investment trusts · distributions',   incomeKind: 'monthly' },
     ],
   },
   {
     key: 'gold', num: '07', title: 'Gold & Precious Metals', desc: 'Cultural & inflation-hedge holdings',
     tone: 'gold', icon: '🟡',
     subs: [
-      { key: 'physicalGold', label: 'Physical gold', hint: 'Jewelry, coins, bars (market value)' },
-      { key: 'sgb',          label: 'SGB',           hint: 'Sovereign Gold Bonds (2.5% yield)' },
-      { key: 'silver',       label: 'Silver',        hint: 'Physical or ETFs' },
+      { key: 'physicalGold', label: 'Physical gold', hint: 'Jewelry, coins, bars (market value)',                  incomeKind: 'none', fixedReason: 'Physical gold has no cash yield' },
+      // SGB has 2.5% semi-annual interest — small but real. Allow input.
+      { key: 'sgb',          label: 'SGB',           hint: 'Sovereign Gold Bonds · 2.5% semi-annual · enter monthly equivalent', incomeKind: 'monthly' },
+      { key: 'silver',       label: 'Silver',        hint: 'Physical or ETFs',                                     incomeKind: 'none', fixedReason: 'Silver has no cash yield' },
     ],
   },
   {
     key: 'alternative', num: '08', title: 'Alternative & Other', desc: 'Insurance, crypto, business equity, foreign',
     tone: 'purple', icon: '🌐',
     subs: [
-      { key: 'ulipsEndowment',  label: 'ULIPs / Endowment',  hint: 'Surrender / cash value' },
-      { key: 'crypto',          label: 'Crypto',             hint: 'BTC, ETH, etc.' },
-      { key: 'businessEquity',  label: 'Business equity',    hint: 'Stake in own / private business' },
-      { key: 'foreignAssets',   label: 'Foreign assets',     hint: 'RSUs, overseas accounts, property' },
-      { key: 'collectibles',    label: 'Collectibles',       hint: 'Art, antiques, watches' },
+      { key: 'ulipsEndowment',  label: 'ULIPs / Endowment',  hint: 'Surrender / cash value', incomeKind: 'none', fixedReason: 'Endowment / ULIP pays out only at maturity or surrender' },
+      { key: 'crypto',          label: 'Crypto',             hint: 'BTC, ETH, etc. · capital only', incomeKind: 'none', fixedReason: 'Crypto yields (staking) are excluded — too volatile to model as steady income' },
+      { key: 'businessEquity',  label: 'Business equity',    hint: 'Stake in own / private business · dividend / draw', incomeKind: 'monthly' },
+      { key: 'foreignAssets',   label: 'Foreign assets',     hint: 'RSUs, overseas accounts, property · dividend / rent', incomeKind: 'monthly' },
+      { key: 'collectibles',    label: 'Collectibles',       hint: 'Art, antiques, watches', incomeKind: 'none', fixedReason: 'Collectibles appreciate but produce no income' },
     ],
   },
 ]
@@ -276,7 +296,12 @@ interface AssetRowProps {
 }
 
 function AssetRow({ entry, sub, textColor, onChange, onUpload, uploadBusy }: AssetRowProps) {
+  // Normalise to declared shape — fixedStatus assets shouldn't carry stale data
+  const effectiveStatus = sub.fixedStatus ?? entry.status
+  const incomeKind = sub.incomeKind ?? 'monthly'
+
   function setStatus(s: AssetStatus) {
+    if (sub.fixedStatus) return
     if (s !== entry.status) onChange({ ...entry, status: s })
   }
   function toggleOptimize() {
@@ -284,7 +309,7 @@ function AssetRow({ entry, sub, textColor, onChange, onUpload, uploadBusy }: Ass
   }
 
   const hasValue = entry.amount > 0
-  const accent = hasValue ? (entry.status === 'liquid' ? 'before:bg-emerald-500' : 'before:bg-blue-500') : 'before:bg-transparent'
+  const accent = hasValue ? (effectiveStatus === 'liquid' ? 'before:bg-emerald-500' : 'before:bg-blue-500') : 'before:bg-transparent'
 
   return (
     <div
@@ -317,32 +342,50 @@ function AssetRow({ entry, sub, textColor, onChange, onUpload, uploadBusy }: Ass
           tablet / phone so they wrap consistently. At lg+, the parent
           grid takes over and these become four separate cells. */}
       <div className="grid grid-cols-2 gap-2 lg:contents">
-        {/* Status — segmented */}
-        <div
-          className="inline-flex bg-slate-100 rounded-md p-0.5 gap-0.5 w-full col-span-2 lg:col-span-1 border border-slate-200"
-          role="group"
-          aria-label="Move to Liquid Corpus or Invested Corpus"
-        >
-          {STATUS_OPTIONS.map((opt) => {
-            const active = entry.status === opt.key
-            return (
-              <button
-                key={opt.key}
-                type="button"
-                onClick={() => setStatus(opt.key)}
-                aria-pressed={active}
-                title={opt.help}
-                className={[
-                  'flex-1 px-2 py-1 text-[11px] font-bold rounded transition-colors tracking-tight',
-                  active ? `${opt.activeBg} text-white shadow-sm`
-                         : 'text-slate-600 hover:text-slate-900 hover:bg-white',
-                ].join(' ')}
-              >
-                {opt.label}
-              </button>
-            )
-          })}
-        </div>
+        {/* Status — segmented (or fixed badge for assets that don't toggle) */}
+        {sub.fixedStatus ? (
+          <div
+            className="col-span-2 lg:col-span-1 flex items-center justify-center"
+            title={sub.fixedReason}
+          >
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded border ${
+                sub.fixedStatus === 'liquid'
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-blue-50 text-blue-800 border-blue-200'
+              }`}
+            >
+              <span aria-hidden="true">●</span>
+              {sub.fixedStatus === 'liquid' ? 'Liquid (fixed)' : 'Invested (fixed)'}
+            </span>
+          </div>
+        ) : (
+          <div
+            className="inline-flex bg-slate-100 rounded-md p-0.5 gap-0.5 w-full col-span-2 lg:col-span-1 border border-slate-200"
+            role="group"
+            aria-label="Move to Liquid Corpus or Invested Corpus"
+          >
+            {STATUS_OPTIONS.map((opt) => {
+              const active = entry.status === opt.key
+              return (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setStatus(opt.key)}
+                  aria-pressed={active}
+                  title={opt.help}
+                  className={[
+                    'flex-1 px-2 py-1 text-[11px] font-bold rounded transition-colors tracking-tight',
+                    active ? `${opt.activeBg} text-white shadow-sm`
+                           : 'text-slate-600 hover:text-slate-900 hover:bg-white',
+                  ].join(' ')}
+                >
+                  {opt.label}
+                </button>
+              )
+            })}
+          </div>
+        )}
 
         {/* Value */}
         <div className="lg:contents">
@@ -356,18 +399,28 @@ function AssetRow({ entry, sub, textColor, onChange, onUpload, uploadBusy }: Ass
           />
         </div>
 
-        {/* Monthly income — only when invested */}
+        {/* Monthly income — input only when the asset can produce regular cash;
+            otherwise a quiet "—" with a tooltip explaining why. */}
         <div className="lg:contents">
           <span className="lg:hidden text-[9px] font-bold tracking-[2px] uppercase text-slate-500 -mb-1">Monthly (₹)</span>
-          <MoneyInput
-            value={entry.monthlyIncome}
-            placeholder="0"
-            textColor="text-blue-700"
-            ariaLabel={`${sub.label} monthly income`}
-            suffix={<span className="text-[10px] text-slate-400 font-semibold">/mo</span>}
-            disabled={entry.status !== 'invested'}
-            onCommit={(v) => onChange({ ...entry, monthlyIncome: v })}
-          />
+          {incomeKind === 'none' ? (
+            <div
+              className="flex items-center justify-end bg-slate-50/40 border border-dashed border-slate-200 rounded-md px-2.5 py-1.5 text-slate-400 text-[11px] italic"
+              title={sub.fixedReason ?? 'This asset does not produce regular monthly income'}
+            >
+              no payout
+            </div>
+          ) : (
+            <MoneyInput
+              value={entry.monthlyIncome}
+              placeholder="0"
+              textColor="text-blue-700"
+              ariaLabel={`${sub.label} monthly income`}
+              suffix={<span className="text-[10px] text-slate-400 font-semibold">/mo</span>}
+              disabled={effectiveStatus !== 'invested'}
+              onCommit={(v) => onChange({ ...entry, monthlyIncome: v })}
+            />
+          )}
         </div>
 
         {/* Actions — Upload (MFs) + Optimize (MFs / Stocks) */}
