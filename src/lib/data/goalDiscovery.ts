@@ -675,6 +675,116 @@ export const PARTNER_INVOLVEMENT: OptionLite[] = [
   { value: 'partial', label: 'Sometimes / partial' },
 ]
 
+// ─── Per-option hover hints ──────────────────────────────────────────────
+// Short "meaning + example" lookups attached to options across all six
+// GD blocks. Keyed by the option's `value`. UI components use these to
+// show a small tooltip when the user hovers over an option.
+
+export const SCENE_TAG_HINTS: Record<string, string> = {
+  bereavement:        'A recent loss changes priorities. e.g. handling insurance, surviving-spouse income, joint-account access.',
+  divorce:            'Asset split + new single-income reality. e.g. recalculating retirement timeline, separating credit, updating nominees.',
+  layoff:             'Income interruption forces a buffer check. e.g. 6-month emergency fund, COBRA-style health cover, deferring SIPs.',
+  'career-change':    'Income volatility ahead. e.g. consulting → variable income, sabbatical → no income for X months.',
+  illness:            'Healthcare costs become a major line item. e.g. critical-illness top-up, super-top-up policy, treatment reserve.',
+  windfall:           'A lump sum needs a plan. e.g. bonus → SIP step-up, inheritance → tax-aware deployment, sale proceeds → corpus seed.',
+  relocation:         'Cost-of-living shift + asset moves. e.g. metro → tier-2 (lower expenses), abroad → currency hedge.',
+  'child-event':      'Time-bound goal arrives. e.g. wedding ₹15–25 L, foreign education ₹50 L–₹1 Cr, first grandchild education trust.',
+  'parent-event':     'Caregiving cash + time needs. e.g. senior-living ₹40–80k/mo, hospitalisation reserve, full-time caregiver.',
+  'business-event':   'Cash-flow + valuation change. e.g. sale = lump-sum deploy; launch = working-capital drain; loss = rebuild reserve.',
+  'financial-stress': 'Cash-flow tight today. e.g. EMI > 40% of income, no emergency fund, paying off high-interest debt first.',
+  milestone:          'A birthday changes eligibility. e.g. 60 → SCSS opens; 58 → EPS pension; 65 → senior health premiums climb.',
+  none:               'No major life event — clean slate. Plan optimises the steady-state retirement glide path.',
+  other:              'Describe a situation that doesn\'t match the tags above. The free-text box explains it for the engine.',
+}
+
+export const KINDER_Q1_WHERE_HINTS: Record<string, string> = {
+  home:           'Comfort at base. Indicates low-cost, predictable lifestyle (Conservative-tilt retirees).',
+  nature:         'Outdoor / lower-spend lifestyle. Often aligns with low-corpus, high-time retirement plans.',
+  beach:          'Coastal preference. Maps to lifestyle / vacation-home goals.',
+  mountains:      'Highland / hills preference. Often paired with health-driven relocation.',
+  worship:        'Spiritual centre. Often paired with pilgrimage budgeting and dāna/seva goals.',
+  abroad:         'International lifestyle. Triggers RNOR tax planning, currency hedge, foreign-asset disclosure.',
+  hometown:       'Return to roots. Often lowers cost-of-living projections vs metro baseline.',
+  studio:         'Creative work continues post-retirement. Maps to ongoing equipment / studio expenses.',
+  'vacation-home': 'Multi-residence retirement. Adds property maintenance + second-home liability planning.',
+  urban:          'Metro lifestyle continues. Cost-of-living overlay stays at metro index.',
+}
+
+export const KINDER_Q1_WHOM_HINTS: Record<string, string> = {
+  spouse:     'Spouse central to retirement vision. Triggers joint-longevity planning + spousal alignment.',
+  grandchild: 'Grandchildren in the daily picture. Often pairs with grandchild-education trust or gifting plan.',
+  children:   'Adult children + extended family. Often means parallel goal: supporting their major life events.',
+  parents:    'Ageing parents in the picture. Triggers parent-care budgeting alongside own retirement.',
+  friends:    'Community-anchored retirement. Often lower cost than family-centric models (no support expectations).',
+  alone:      'Solitude-positive. Lifetime-income annuity often makes more sense than legacy planning.',
+  pets:       'Pets as primary companions. Add pet-care reserve + post-lifetime arrangement.',
+  spiritual:  'Spiritual community as anchor. Often pairs with seva fund + minimalist lifestyle goals.',
+}
+
+export const KINDER_Q1_ACTIVITY_HINTS: Record<string, string> = {
+  reading:    'Low-cost intellectual life. Light budget impact; possibly library / subscription line item.',
+  creating:   'Creative work / making. May need ongoing tools, studio space, materials budget.',
+  exercise:   'Health-driven retirement. Maps to gym / coach / equipment line item; positive longevity signal.',
+  meditation: 'Inner work. Low cost; often pairs with retreats budget.',
+  cooking:    'Food-centred lifestyle. Slightly higher grocery line; lower restaurant spend.',
+  gardening:  'Garden-tending. Suggests home with outdoor space + ongoing supply costs.',
+  writing:    'Memoir / journal / blogging. Low cost; often paired with publishing aspirations.',
+  teaching:   'Mentoring / teaching. Often generates modest income; reduces drawdown pressure.',
+  music:      'Performance / practice. Instrument, classes, possible group fees.',
+  travel:     'Travel-heavy retirement. Significant lifestyle budget; vacation goal usually anchor.',
+  volunteer:  'Seva / community service. Low cost + meaning; often pairs with charity-giving fund.',
+  hobbies:    'Collecting / pursuing. Could be high-cost depending on hobby (watches vs gardening).',
+}
+
+export const KINDER_Q2_STOP_HINTS: Record<string, string> = {
+  'Working entirely':                  'Hard retire. Withdrawal starts now — no further income.',
+  'Long-distance commutes':            'Geographic simplification — possibly relocation or remote-only.',
+  'Specific obligations / boards':     'Drop board seats / committee work — frees time, may lose token income.',
+  'Caring for others':                 'Hand off caregiver role — usually needs paid caregiver budgeting.',
+  'Saving / accumulating':             'Switch from accumulation to drawdown — corpus is "the answer".',
+  'Social obligations':                'Drop expensive social commitments — simpler, cheaper lifestyle.',
+  'Nothing changes':                   'Same trajectory continues — runway is enough as-is.',
+}
+
+export const KINDER_Q2_START_HINTS: Record<string, string> = {
+  'Travel':                  'Travel-led retirement. Big lifestyle budget — front-loaded if 5-10 yr horizon.',
+  'Time with family':        'Family-centric retirement. Low extra cost; possibly relocation closer to family.',
+  'A creative project':      'Book / film / music. Low to medium cost; potential income late-stage.',
+  'Health / wellness focus': 'Coach, gym, retreats, regimen. Mid-cost; positive longevity signal.',
+  'Mentoring / teaching':    'Teaching, advising. Could generate income.',
+  'Spiritual practice':      'Retreats, pilgrimage, study. Mid-cost depending on travel.',
+  'Letting go':              'Reduce commitments and expenses. Lower-cost trajectory.',
+  'Nothing changes':         'Same priorities — runway is enough.',
+}
+
+export const KINDER_Q3_THEMES_HINTS: Record<string, string> = {
+  'Career path not taken':           'Hidden career goal — possibly a second-career fund.',
+  'Relationships not nurtured':      'Time-with-people goal — usually low-cost (travel, visits).',
+  'Experiences missed':              'Travel / adventure goal — front-load if horizon ≤ 10y.',
+  'Creative work not done':          'Book / music / art — equipment + sabbatical budgeting.',
+  'Things left unsaid':              'Family conversations — usually no monetary action, just timing.',
+  'Risks not taken':                 'Entrepreneurial / FIRE goal — may need a venture buffer.',
+  'Health not prioritized':          'Reset budget for fitness / preventive care; longevity impact significant.',
+  'Personal growth not pursued':     'Course / coaching / sabbatical fund.',
+  'No major regrets':                'Strong sign of contentment — focus on optimising the current plan.',
+  'Other':                           'Unique regret — explained in your own words above.',
+}
+
+export const TRADEOFF_FUND_HINTS: Record<string, string> = {
+  'Push retirement later':              'Most powerful lever. e.g. retire 62 → 65 ≈ +25% sustainable spend.',
+  'Add part-time income':               '₹40–80k/mo consulting / teaching can cover most shortfalls.',
+  'Reduce monthly expenses':            '10–15% expense cut compounds — usually possible without lifestyle loss.',
+  'Use up a planned legacy':            'Removing legacy target frees ~1% extra SWR.',
+  'Take on calculated investment risk': 'Tilt B3/B4 up by 10% — adds equity risk for higher expected return.',
+  'Not sure':                           'Default — engine will model all four options for comparison.',
+}
+
+export const PARTNER_INVOLVEMENT_HINTS: Record<string, string> = {
+  no:      'No partner / sole decision-maker. Plan focuses on individual longevity and goals.',
+  yes:     'Joint decisions throughout. Triggers spousal-alignment scoring.',
+  partial: 'Shared on big calls only. Some divergence likely on day-to-day goals.',
+}
+
 // ─── Block metadata ──────────────────────────────────────────────────────
 
 export const GD_BLOCKS = [

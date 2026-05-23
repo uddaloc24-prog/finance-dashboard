@@ -56,6 +56,15 @@ import {
   KINDER_Q3_THEMES,
   PARTNER_INVOLVEMENT,
   TRADEOFF_FUND_OPTIONS,
+  SCENE_TAG_HINTS,
+  KINDER_Q1_WHERE_HINTS,
+  KINDER_Q1_WHOM_HINTS,
+  KINDER_Q1_ACTIVITY_HINTS,
+  KINDER_Q2_STOP_HINTS,
+  KINDER_Q2_START_HINTS,
+  KINDER_Q3_THEMES_HINTS,
+  TRADEOFF_FUND_HINTS,
+  PARTNER_INVOLVEMENT_HINTS,
   type GoalLibraryItem,
   type OptionLite,
   type ProbeDef,
@@ -230,20 +239,23 @@ function BlockZeroInner({ tags, showOther, get, set, groqApiKey }: { tags: strin
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
         {GD_SCENE_TAGS.map((t) => {
           const isOn = tags.includes(t.value)
+          const hint = SCENE_TAG_HINTS[t.value]
           return (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => toggleTag(t.value)}
-              className={`text-left px-2.5 py-2 rounded-md border-2 transition-colors text-[12px] flex items-center gap-1.5 ${
-                isOn
-                  ? 'bg-amber-50 border-amber-400 text-amber-900'
-                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-              }`}
-            >
-              {t.icon && <span className="text-sm">{t.icon}</span>}
-              <span className="leading-tight">{t.label}</span>
-            </button>
+            <OptionWithHover key={t.value} hint={hint}>
+              <button
+                type="button"
+                onClick={() => toggleTag(t.value)}
+                title={hint}
+                className={`w-full text-left px-2.5 py-2 rounded-md border-2 transition-colors text-[12px] flex items-center gap-1.5 ${
+                  isOn
+                    ? 'bg-amber-50 border-amber-400 text-amber-900'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                }`}
+              >
+                {t.icon && <span className="text-sm">{t.icon}</span>}
+                <span className="leading-tight">{t.label}</span>
+              </button>
+            </OptionWithHover>
           )
         })}
       </div>
@@ -542,18 +554,21 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
             <PictureGrid
               label="Where would you be?"
               options={KINDER_Q1_WHERE}
+              hints={KINDER_Q1_WHERE_HINTS}
               selected={(get<string[]>('q1Where') as string[]) ?? []}
               onChange={(v) => set('q1Where', v)}
             />
             <PictureGrid
               label="With whom?"
               options={KINDER_Q1_WHOM}
+              hints={KINDER_Q1_WHOM_HINTS}
               selected={(get<string[]>('q1Whom') as string[]) ?? []}
               onChange={(v) => set('q1Whom', v)}
             />
             <PictureGrid
               label="Doing what?"
               options={KINDER_Q1_ACTIVITY}
+              hints={KINDER_Q1_ACTIVITY_HINTS}
               selected={(get<string[]>('q1Activity') as string[]) ?? []}
               onChange={(v) => set('q1Activity', v)}
             />
@@ -568,8 +583,8 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
         onTextChange={(v) => set('q2Text', v)}
         extra={
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
-            <SelectField label="What would you stop?" value={(get<string>('q2Stop') as string) ?? ''} options={KINDER_Q2_STOP} onChange={(v) => set('q2Stop', v)} />
-            <SelectField label="What would you start?" value={(get<string>('q2Start') as string) ?? ''} options={KINDER_Q2_START} onChange={(v) => set('q2Start', v)} />
+            <SelectField label="What would you stop?" value={(get<string>('q2Stop') as string) ?? ''} options={KINDER_Q2_STOP} hints={KINDER_Q2_STOP_HINTS} onChange={(v) => set('q2Stop', v)} />
+            <SelectField label="What would you start?" value={(get<string>('q2Start') as string) ?? ''} options={KINDER_Q2_START} hints={KINDER_Q2_START_HINTS} onChange={(v) => set('q2Start', v)} />
           </div>
         }
       />
@@ -581,7 +596,7 @@ function BlockTwo({ get, set, groqApiKey }: BlockProps & { groqApiKey?: string }
         onTextChange={(v) => set('q3Text', v)}
         extra={
           <div className="mt-2">
-            <SelectField label="Regret theme" value={(get<string>('q3Theme') as string) ?? ''} options={KINDER_Q3_THEMES} onChange={(v) => set('q3Theme', v)} />
+            <SelectField label="Regret theme" value={(get<string>('q3Theme') as string) ?? ''} options={KINDER_Q3_THEMES} hints={KINDER_Q3_THEMES_HINTS} onChange={(v) => set('q3Theme', v)} />
           </div>
         }
       />
@@ -704,8 +719,8 @@ function blockProgress(blockId: GoalDiscoveryBlockId, answers: GoalDiscoveryStat
 const EXCLUSIVE_PICTURE_VALUES = new Set(['alone'])
 
 function PictureGrid({
-  label, options, selected, onChange,
-}: { label: string; options: OptionLite[]; selected: string[]; onChange: (next: string[]) => void }) {
+  label, options, selected, onChange, hints,
+}: { label: string; options: OptionLite[]; selected: string[]; onChange: (next: string[]) => void; hints?: Record<string, string> }) {
   function toggle(value: string) {
     const isOn = selected.includes(value)
     let next: string[]
@@ -724,20 +739,23 @@ function PictureGrid({
       <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
         {options.map((o) => {
           const isOn = selected.includes(o.value)
+          const hint = hints?.[o.value]
           return (
-            <button
-              key={o.value}
-              type="button"
-              onClick={() => toggle(o.value)}
-              className={`flex flex-col items-center justify-center gap-0.5 px-1.5 py-2 rounded-md border-2 transition-colors text-center ${
-                isOn
-                  ? 'bg-amber-50 border-amber-400 text-amber-900'
-                  : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-              }`}
-            >
-              <span className="text-xl" aria-hidden="true">{o.icon ?? '•'}</span>
-              <span className="text-[10px] leading-tight">{o.label}</span>
-            </button>
+            <OptionWithHover key={o.value} hint={hint}>
+              <button
+                type="button"
+                onClick={() => toggle(o.value)}
+                title={hint}
+                className={`w-full flex flex-col items-center justify-center gap-0.5 px-1.5 py-2 rounded-md border-2 transition-colors text-center ${
+                  isOn
+                    ? 'bg-amber-50 border-amber-400 text-amber-900'
+                    : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <span className="text-xl" aria-hidden="true">{o.icon ?? '•'}</span>
+                <span className="text-[10px] leading-tight">{o.label}</span>
+              </button>
+            </OptionWithHover>
           )
         })}
       </div>
@@ -923,6 +941,7 @@ function BlockFourInner({ get, set, goals }: BlockProps & { goals: GoalEntry[] }
         label=""
         value={(get<string>('fund') as string) ?? ''}
         options={TRADEOFF_FUND_OPTIONS}
+        hints={TRADEOFF_FUND_HINTS}
         onChange={(v) => set('fund', v)}
       />
     </div>
@@ -949,6 +968,7 @@ function BlockFiveInner({ get, set, goals }: BlockProps & { goals: GoalEntry[] }
         label="Partner involved in financial decisions?"
         value={applicable}
         options={PARTNER_INVOLVEMENT}
+        hints={PARTNER_INVOLVEMENT_HINTS}
         onChange={(v) => set('applicable', v)}
       />
       {(applicable === 'yes' || applicable === 'partial') && (
@@ -1001,24 +1021,66 @@ function BlockFiveInner({ get, set, goals }: BlockProps & { goals: GoalEntry[] }
 // ─── shared SelectField ─────────────────────────────────────────────────
 
 function SelectField({
-  label, value, options, onChange,
-}: { label: string; value: string; options: OptionLite[]; onChange: (v: string) => void }) {
+  label, value, options, onChange, hints,
+}: { label: string; value: string; options: OptionLite[]; onChange: (v: string) => void; hints?: Record<string, string> }) {
+  const currentHint = hints?.[value]
   return (
     <label className="block">
       {label && <span className="text-[11px] font-bold text-slate-700">{label}</span>}
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        title={currentHint}
         className={`${label ? 'mt-1 ' : ''}w-full px-3 py-2 rounded-md border-2 border-slate-200 focus:border-amber-400 outline-none text-sm bg-white`}
       >
         <option value="">— optional —</option>
         {options.map((o) => (
-          <option key={o.value} value={o.value}>
+          <option key={o.value} value={o.value} title={hints?.[o.value]}>
             {o.icon ? `${o.icon}  ` : ''}{o.label}
           </option>
         ))}
       </select>
+      {currentHint && (
+        <span className="block mt-1 text-[10.5px] text-slate-500 italic leading-snug">
+          <span aria-hidden="true">💡</span> {currentHint}
+        </span>
+      )}
     </label>
+  )
+}
+
+// ── OptionWithHover — wraps a button option with a custom hover tooltip ──
+// Renders the tooltip absolutely below the option so it can carry rich
+// formatting (longer than a native browser title). Falls back to the
+// native `title` attribute on the inner element so screen-readers and
+// touch devices still get the explanation.
+function OptionWithHover({ children, hint }: { children: React.ReactNode; hint?: string }) {
+  const [show, setShow] = useState(false)
+  if (!hint) return <>{children}</>
+  return (
+    <div
+      className="relative"
+      onMouseEnter={() => setShow(true)}
+      onMouseLeave={() => setShow(false)}
+      onFocus={() => setShow(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) setShow(false)
+      }}
+    >
+      {children}
+      {show && (
+        <div
+          role="tooltip"
+          className="absolute z-30 left-1/2 -translate-x-1/2 top-full mt-1.5 w-max max-w-[260px] rounded-md border-l-4 border-indigo-300 bg-white px-3 py-2 text-[11px] text-slate-700 italic leading-snug shadow-lg"
+          style={{ pointerEvents: 'none' }}
+        >
+          <span className="inline-flex items-baseline gap-1.5">
+            <span aria-hidden="true" className="text-sm">💡</span>
+            <span className="not-italic font-medium">{hint}</span>
+          </span>
+        </div>
+      )}
+    </div>
   )
 }
 
