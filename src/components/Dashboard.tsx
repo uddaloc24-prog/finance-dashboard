@@ -11,6 +11,7 @@ import { DemographicsForm } from './DemographicsForm'
 import { ExpenseEditor } from './ExpenseEditor'
 import { InflationAssumptions } from './InflationAssumptions'
 import { PlanSection } from './PlanSection'
+import { SidePanel } from './ui/SidePanel'
 import { CashflowSummary } from './CashflowSummary'
 import { RetirementWelcome } from './RetirementWelcome'
 import { AssetInventory } from './AssetInventory'
@@ -83,6 +84,7 @@ export function Dashboard({
     if (!storage.getGuideSeen()) return 'guide'
     return 'plan'
   })
+  const [openPlanStep, setOpenPlanStep] = useState<string | null>(null)
   const { data: marketData } = useMarketData(profile.refreshInterval)
 
   // Effective monthly draw nets passive income against withdrawal: only the
@@ -211,7 +213,19 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <PlanIntro />
 
-            {/* 01–07 — Wheel layout (desktop) — circular 3D step badges. */}
+            {/* Wheel + (optional) right-side panel. When a step is open the
+                wheel column shrinks to the left and the side panel takes the
+                right; when nothing is open the wheel is centred full-width. */}
+            <PlanLayout
+              openStep={openPlanStep}
+              setOpenStep={setOpenPlanStep}
+              profile={profile}
+              buckets={buckets}
+              onProfileUpdate={onProfileUpdate}
+              onBucketsUpdate={onBucketsUpdate}
+            />
+            {/* Legacy wheel render (kept hidden for reference) ─── */}
+            {false && (
             <PlanWheel>
               <WheelStep idx={0}>
                 <PlanSection
@@ -291,6 +305,7 @@ export function Dashboard({
                 </PlanSection>
               </WheelStep>
             </PlanWheel>
+            )}
 
             {/* (the legacy grid layout below is retired — kept commented for reference)
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start" hidden>
@@ -530,6 +545,89 @@ export function Dashboard({
         {/* Step navigation — Previous / Next between tabs */}
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
+    </div>
+  )
+}
+
+// ── PlanLayout — wheel + right-side panel (Plan tab) ──────────────────
+// When openStep is null the wheel takes the full width. When a step is
+// open the wheel shrinks to ~40% on the left and a SidePanel renders on
+// the right with the active step's editor + Save & Exit footer.
+
+interface PlanStepConfig {
+  num: string
+  tone: 'navy' | 'rose' | 'green' | 'amber'
+  shortTitle: string
+  title: string
+  subtitle: string
+  icon: string
+  status: ReactNode
+  helpExamples: ReactNode
+  editor: ReactNode
+}
+
+interface PlanLayoutProps {
+  openStep: string | null
+  setOpenStep: (n: string | null) => void
+  profile: UserProfile
+  buckets: BucketState
+  onProfileUpdate: (p: UserProfile) => void
+  onBucketsUpdate: (b: BucketState) => void
+}
+
+function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, onBucketsUpdate }: PlanLayoutProps) {
+  const steps: PlanStepConfig[] = [
+    { num: '01', tone: 'navy',  shortTitle: 'Wealth',       title: 'Wealth Snapshot',         subtitle: '8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income', icon: '💼', status: <AssetInventoryStatus profile={profile} />, helpExamples: <HelpList items={HELP_WEALTH} />,        editor: <AssetInventory profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" /> },
+    { num: '02', tone: 'rose',  shortTitle: 'Loans',        title: 'Loans & Liabilities',     subtitle: '4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy', icon: '💳', status: <LoansStatus profile={profile} />,           helpExamples: <HelpList items={HELP_LOANS} />,         editor: <LoansLiabilities profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '03', tone: 'green', shortTitle: 'Budget',       title: 'Monthly Budget',          subtitle: 'Detailed breakdown — drives the monthly withdrawal', icon: '📊', status: <ExpensesStatus profile={profile} />,             helpExamples: <HelpList items={HELP_BUDGET} />,        editor: <ExpenseEditor profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '04', tone: 'navy',  shortTitle: 'Profile',      title: 'Profile & Settings',      subtitle: 'Corpus, tax bracket, withdrawal & SIP schedule', icon: '⚙️', status: <ProfileStatus profile={profile} buckets={buckets} />, helpExamples: <HelpList items={HELP_PROFILE} />,     editor: <ProfileSettings profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" /> },
+    { num: '05', tone: 'amber', shortTitle: 'Demographics', title: 'Demographics & Longevity', subtitle: 'Current age, retirement age, life expectancy', icon: '👥', status: <DemographicsStatus profile={profile} />,        helpExamples: <HelpList items={HELP_DEMOGRAPHICS} />,  editor: <DemographicsForm profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '06', tone: 'rose',  shortTitle: 'Inflation',    title: 'Inflation Assumptions',   subtitle: 'Split rates for general, healthcare, education', icon: '📈', status: <InflationStatus profile={profile} />,             helpExamples: <HelpList items={HELP_INFLATION} />,     editor: <InflationAssumptions profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '07', tone: 'rose',  shortTitle: 'Insurance',    title: 'Insurance Cover',         subtitle: '3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term', icon: '🛡️', status: <InsuranceStatus profile={profile} />,           helpExamples: <HelpList items={HELP_INSURANCE} />,     editor: <InsuranceCover profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+  ]
+  const active = steps.find((s) => s.num === openStep) ?? null
+  const TONE_TO_ACCENT = { navy: 'navy', rose: 'rose', green: 'emerald', amber: 'amber' } as const
+
+  return (
+    <div className={active
+      ? 'grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(380px,1.45fr)] gap-4 items-start'
+      : ''}
+    >
+      {/* Wheel column — shrinks when a step is open */}
+      <div className={active ? 'lg:max-w-[460px] mx-auto w-full' : ''}>
+        <PlanWheel>
+          {steps.map((s, i) => (
+            <WheelStep key={s.num} idx={i}>
+              <PlanSection
+                compact
+                external
+                active={openStep === s.num}
+                open={openStep === s.num}
+                onToggle={() => setOpenStep(openStep === s.num ? null : s.num)}
+                num={s.num} tone={s.tone} icon={s.icon} shortTitle={s.shortTitle} title={s.title}
+                subtitle={s.subtitle} status={s.status} helpExamples={s.helpExamples}
+              >
+                {/* children unused in external mode */}
+                <></>
+              </PlanSection>
+            </WheelStep>
+          ))}
+        </PlanWheel>
+      </div>
+
+      {/* Right-side panel */}
+      {active && (
+        <SidePanel
+          num={active.num}
+          title={active.title}
+          subtitle={active.subtitle}
+          accent={TONE_TO_ACCENT[active.tone]}
+          helpExamples={active.helpExamples}
+          onClose={() => setOpenStep(null)}
+        >
+          {active.editor}
+        </SidePanel>
+      )}
     </div>
   )
 }

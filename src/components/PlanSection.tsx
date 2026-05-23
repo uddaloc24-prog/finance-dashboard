@@ -38,6 +38,11 @@ interface Props {
   shortTitle?: string
   /** Optional icon glyph shown in compact mode. */
   icon?: string
+  /** When true, compact mode renders only the badge — the parent handles the
+   *  editor surface (e.g. as a side panel). The Modal is suppressed. */
+  external?: boolean
+  /** When external+compact, marks this badge as the currently active one. */
+  active?: boolean
   children: ReactNode
 }
 
@@ -48,7 +53,7 @@ const TONE_3D: Record<Tone, { body: string; bodyHover: string; lip: string }> = 
   rose:  { body: 'from-rose-400 via-rose-500 to-rose-700',            bodyHover: 'hover:from-rose-300 hover:via-rose-400 hover:to-rose-600',            lip: 'rgb(136,19,55)' },
 }
 
-export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, helpExamples, compact, shortTitle, icon, children }: Props) {
+export function PlanSection({ num, title, subtitle, tone, open: openProp, onToggle, status, helpExamples, compact, shortTitle, icon, external, active, children }: Props) {
   const [internalOpen, setInternalOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const isControlled = openProp !== undefined
@@ -61,32 +66,43 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
 
   // ─── Compact circular badge (used by the Plan-tab wheel) ─────────────
   if (compact) {
+    const badge = (
+      <button
+        type="button"
+        onClick={handleOpen}
+        aria-label={`Open ${title} inputs`}
+        aria-pressed={external ? active : undefined}
+        title={`Step ${parseInt(num, 10)} · ${title}`}
+        className={[
+          'group relative w-32 h-32 sm:w-36 sm:h-36 rounded-full select-none flex flex-col items-center justify-center gap-0.5 text-white',
+          'transition-all duration-100 border-2',
+          active ? 'border-white ring-4 ring-amber-300' : 'border-white/60',
+          'focus:outline-none focus:ring-4 focus:ring-amber-300',
+          'active:translate-y-[2px]',
+          `bg-gradient-to-b ${t3d.body} ${t3d.bodyHover}`,
+        ].join(' ')}
+        style={{
+          boxShadow: active
+            ? `0 2px 0 0 ${t3d.lip}, 0 4px 10px -3px rgba(15,23,42,0.55), inset 0 2px 4px rgba(0,0,0,0.25), inset 0 -1px 0 rgba(255,255,255,0.30)`
+            : `0 5px 0 0 ${t3d.lip}, 0 10px 18px -6px rgba(15,23,42,0.45), inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -2px 0 rgba(0,0,0,0.22)`,
+          textShadow: '0 1px 1px rgba(0,0,0,0.40)',
+          transform: active ? 'translateY(3px)' : undefined,
+        }}
+      >
+        <span className="font-serif italic text-[11px] font-bold tracking-wider opacity-90 leading-none">step</span>
+        <span className="font-serif text-3xl font-extrabold tabular-nums leading-none drop-shadow-sm">{num}</span>
+        {icon && <span className="text-xl leading-none mt-0.5" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{icon}</span>}
+        <span className="text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2">
+          {shortTitle ?? title}
+        </span>
+      </button>
+    )
+    // External mode: parent handles the editor surface. Just the badge.
+    if (external) return badge
+    // Internal mode: badge + modal.
     return (
       <>
-        <button
-          type="button"
-          onClick={handleOpen}
-          aria-label={`Open ${title} inputs`}
-          title={`Step ${parseInt(num, 10)} · ${title}`}
-          className={[
-            'group relative w-32 h-32 sm:w-36 sm:h-36 rounded-full select-none flex flex-col items-center justify-center gap-0.5 text-white',
-            'transition-all duration-100 border-2 border-white/60',
-            'focus:outline-none focus:ring-4 focus:ring-amber-300',
-            'active:translate-y-[2px]',
-            `bg-gradient-to-b ${t3d.body} ${t3d.bodyHover}`,
-          ].join(' ')}
-          style={{
-            boxShadow: `0 5px 0 0 ${t3d.lip}, 0 10px 18px -6px rgba(15,23,42,0.45), inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -2px 0 rgba(0,0,0,0.22)`,
-            textShadow: '0 1px 1px rgba(0,0,0,0.40)',
-          }}
-        >
-          <span className="font-serif italic text-[11px] font-bold tracking-wider opacity-90 leading-none">step</span>
-          <span className="font-serif text-3xl font-extrabold tabular-nums leading-none drop-shadow-sm">{num}</span>
-          {icon && <span className="text-xl leading-none mt-0.5" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{icon}</span>}
-          <span className="text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2">
-            {shortTitle ?? title}
-          </span>
-        </button>
+        {badge}
         <PlanModal
           open={open} num={num} title={title} subtitle={subtitle} tone={tone}
           helpExamples={helpExamples} helpOpen={helpOpen} setHelpOpen={setHelpOpen}
