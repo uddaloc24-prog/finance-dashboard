@@ -87,16 +87,39 @@ export function Modal({ open, title, subtitle, onClose, children, size = 'xl', a
             <button
               type="button"
               onClick={onHelp}
-              className={`shrink-0 w-9 h-9 rounded-md font-bold text-xl leading-none transition-colors flex items-center justify-center border-2 ${
-                helpActive
-                  ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                  : 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100 hover:border-amber-400'
-              }`}
               aria-label={helpActive ? 'Hide examples' : 'Show examples'}
               aria-pressed={helpActive}
               title={helpActive ? 'Hide help / examples' : 'Show help / examples'}
+              className={[
+                'shrink-0 inline-flex items-center justify-center gap-1 select-none',
+                'rounded-md font-extrabold tracking-[2px] text-xs',
+                'h-9 px-3.5 transition-all duration-100',
+                'border border-amber-700',
+                helpActive
+                  // Pressed / sunken — darker, lower, less shadow
+                  ? [
+                      'translate-y-[1px]',
+                      'bg-gradient-to-b from-amber-600 to-amber-700 text-amber-50',
+                      'shadow-[inset_0_2px_4px_rgba(120,53,15,0.5),0_1px_0_rgba(120,53,15,0.4)]',
+                    ].join(' ')
+                  // Raised / 3D
+                  : [
+                      'bg-gradient-to-b from-amber-400 via-amber-500 to-amber-600 text-white',
+                      // Outer drop shadow + bottom edge "lip" + subtle inner highlight
+                      'shadow-[0_3px_0_0_rgb(120,53,15),0_5px_8px_-2px_rgba(120,53,15,0.45),inset_0_1px_0_rgba(255,255,255,0.45)]',
+                      'hover:from-amber-300 hover:via-amber-400 hover:to-amber-500',
+                      'active:translate-y-[2px]',
+                      'active:shadow-[0_1px_0_0_rgb(120,53,15),inset_0_1px_2px_rgba(120,53,15,0.3)]',
+                    ].join(' '),
+              ].join(' ')}
+              style={{
+                textShadow: helpActive
+                  ? '0 1px 1px rgba(120,53,15,0.6)'
+                  : '0 1px 1px rgba(120,53,15,0.55), 0 -1px 0 rgba(255,255,255,0.25)',
+              }}
             >
-              ?
+              <span aria-hidden="true" className="text-sm leading-none">?</span>
+              <span>HELP</span>
             </button>
           )}
           <button
