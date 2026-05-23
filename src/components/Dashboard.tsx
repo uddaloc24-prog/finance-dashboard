@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, type ReactNode } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions } from '../types'
 import type { TabId } from '../constants'
 import { totalCorpus, b1RunwayMonths } from '../lib/calculations'
@@ -211,8 +211,89 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <PlanIntro />
 
-            {/* 01–07 — all steps in a single 2-col grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
+            {/* 01–07 — Wheel layout (desktop) — circular 3D step badges. */}
+            <PlanWheel>
+              <WheelStep idx={0}>
+                <PlanSection
+                  compact
+                  num="01" tone="navy" icon="💼" shortTitle="Wealth" title="Wealth Snapshot"
+                  subtitle="8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income"
+                  status={<AssetInventoryStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_WEALTH} />}
+                >
+                  <AssetInventory profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={1}>
+                <PlanSection
+                  compact
+                  num="02" tone="rose" icon="💳" shortTitle="Loans" title="Loans & Liabilities"
+                  subtitle="4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy"
+                  status={<LoansStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_LOANS} />}
+                >
+                  <LoansLiabilities profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={2}>
+                <PlanSection
+                  compact
+                  num="03" tone="green" icon="📊" shortTitle="Budget" title="Monthly Budget"
+                  subtitle="Detailed breakdown — drives the monthly withdrawal"
+                  status={<ExpensesStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_BUDGET} />}
+                >
+                  <ExpenseEditor profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={3}>
+                <PlanSection
+                  compact
+                  num="04" tone="navy" icon="⚙️" shortTitle="Profile" title="Profile & Settings"
+                  subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
+                  status={<ProfileStatus profile={profile} buckets={buckets} />}
+                  helpExamples={<HelpList items={HELP_PROFILE} />}
+                >
+                  <ProfileSettings profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={4}>
+                <PlanSection
+                  compact
+                  num="05" tone="amber" icon="👥" shortTitle="Demographics" title="Demographics & Longevity"
+                  subtitle="Current age, retirement age, life expectancy"
+                  status={<DemographicsStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_DEMOGRAPHICS} />}
+                >
+                  <DemographicsForm profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={5}>
+                <PlanSection
+                  compact
+                  num="06" tone="rose" icon="📈" shortTitle="Inflation" title="Inflation Assumptions"
+                  subtitle="Split rates for general, healthcare, education"
+                  status={<InflationStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_INFLATION} />}
+                >
+                  <InflationAssumptions profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+              <WheelStep idx={6}>
+                <PlanSection
+                  compact
+                  num="07" tone="rose" icon="🛡️" shortTitle="Insurance" title="Insurance Cover"
+                  subtitle="3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term"
+                  status={<InsuranceStatus profile={profile} />}
+                  helpExamples={<HelpList items={HELP_INSURANCE} />}
+                >
+                  <InsuranceCover profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" />
+                </PlanSection>
+              </WheelStep>
+            </PlanWheel>
+
+            {/* (the legacy grid layout below is retired — kept commented for reference)
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start" hidden>
               <PlanSection
                 num="01"
                 tone="navy"
@@ -322,6 +403,7 @@ export function Dashboard({
                 />
               </PlanSection>
             </div>
+            */}
 
             {/* Cashflow summary — single column, full-width footer */}
             <CashflowSummary profile={profile} buckets={buckets} />
@@ -449,6 +531,60 @@ export function Dashboard({
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
     </div>
+  )
+}
+
+// ── PlanWheel — circular layout for the seven Plan steps ──────────────
+
+/** Number of steps in the wheel — used for angle math. */
+const PLAN_WHEEL_COUNT = 7
+
+function angleToXY(idx: number, total: number, radius: number): { x: number; y: number } {
+  // Start at 12 o'clock and go clockwise.
+  const angle = (idx / total) * 2 * Math.PI - Math.PI / 2
+  return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
+}
+
+function PlanWheel({ children }: { children: ReactNode }) {
+  return (
+    <>
+      {/* Desktop: circular layout */}
+      <div className="hidden md:block relative w-full max-w-[680px] aspect-square mx-auto my-4">
+        {/* Decorative outer ring */}
+        <div className="absolute inset-[14%] rounded-full border-2 border-dashed border-slate-200" aria-hidden="true" />
+        {/* Center wordmark */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none select-none">
+          <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Step 1 · Plan</span>
+          <span className="font-serif italic text-2xl sm:text-3xl font-extralight text-slate-800 mt-1">your plan</span>
+          <span className="font-serif text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">7 steps</span>
+          <span className="text-[10px] text-slate-500 italic mt-1">click any badge to open</span>
+        </div>
+        {children}
+      </div>
+      {/* Mobile: 2-col grid fallback */}
+      <div className="md:hidden grid grid-cols-2 gap-3 justify-items-center">
+        {children}
+      </div>
+    </>
+  )
+}
+
+function WheelStep({ idx, children }: { idx: number; children: ReactNode }) {
+  const { x, y } = angleToXY(idx, PLAN_WHEEL_COUNT, 230)
+  return (
+    <>
+      {/* Desktop absolute position */}
+      <div
+        className="hidden md:block absolute"
+        style={{ left: '50%', top: '50%', transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))` }}
+      >
+        {children}
+      </div>
+      {/* Mobile: in-flow */}
+      <div className="md:hidden">
+        {children}
+      </div>
+    </>
   )
 }
 
