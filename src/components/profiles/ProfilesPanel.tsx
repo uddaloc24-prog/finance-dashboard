@@ -733,49 +733,106 @@ interface LauncherBtnProps {
   disabledTitle?: string
 }
 
-const LAUNCHER_TONE: Record<Tone, { bg: string; bgHover: string; ring: string }> = {
-  navy:   { bg: 'bg-blue-700',    bgHover: 'hover:bg-blue-800',    ring: 'focus:ring-blue-300' },
-  amber:  { bg: 'bg-amber-600',   bgHover: 'hover:bg-amber-700',   ring: 'focus:ring-amber-300' },
-  green:  { bg: 'bg-emerald-600', bgHover: 'hover:bg-emerald-700', ring: 'focus:ring-emerald-300' },
-  indigo: { bg: 'bg-indigo-700',  bgHover: 'hover:bg-indigo-800',  ring: 'focus:ring-indigo-300' },
-  slate:  { bg: 'bg-slate-900',   bgHover: 'hover:bg-slate-800',   ring: 'focus:ring-slate-400' },
+// 3D-button palette per launcher tone — each entry carries the gradient
+// stops, the bottom-lip colour for the "key" depth, the inner highlight
+// override, and the focus-ring tint.
+const LAUNCHER_TONE_3D: Record<Tone, {
+  body: string         // tailwind classes for the raised body gradient
+  bodyHover: string    // hover-state lightened body
+  lip: string          // box-shadow CSS rgb() for the bottom 3-px solid lip
+  ring: string         // focus ring colour utility
+}> = {
+  navy:   { body: 'from-blue-400 via-blue-500 to-blue-700',          bodyHover: 'hover:from-blue-300 hover:via-blue-400 hover:to-blue-600',          lip: 'rgb(30,58,138)',  ring: 'focus:ring-blue-300' },
+  amber:  { body: 'from-amber-400 via-amber-500 to-amber-700',        bodyHover: 'hover:from-amber-300 hover:via-amber-400 hover:to-amber-600',        lip: 'rgb(120,53,15)',  ring: 'focus:ring-amber-300' },
+  green:  { body: 'from-emerald-400 via-emerald-500 to-emerald-700',  bodyHover: 'hover:from-emerald-300 hover:via-emerald-400 hover:to-emerald-600',  lip: 'rgb(6,78,59)',    ring: 'focus:ring-emerald-300' },
+  indigo: { body: 'from-indigo-400 via-indigo-600 to-violet-700',      bodyHover: 'hover:from-indigo-300 hover:via-indigo-500 hover:to-violet-600',      lip: 'rgb(49,46,129)',  ring: 'focus:ring-indigo-300' },
+  slate:  { body: 'from-slate-700 via-slate-800 to-slate-950',         bodyHover: 'hover:from-slate-600 hover:via-slate-700 hover:to-slate-900',         lip: 'rgb(2,6,23)',     ring: 'focus:ring-slate-400' },
+}
+
+// Catchy mixed-typography label per launcher. The "primary" word gets a
+// display treatment, the secondary follows in a quieter style.
+function LauncherTitle({ label }: { label: string }) {
+  // Goal Discovery / Risk Profile / Executive — split on the first space.
+  const [primary, ...rest] = label.split(' ')
+  const secondary = rest.join(' ')
+  return (
+    <div className="flex items-baseline gap-1.5 flex-wrap">
+      <span className="font-serif italic text-base sm:text-lg font-extrabold leading-none tracking-tight">
+        {primary}
+      </span>
+      {secondary && (
+        <span className="font-sans text-[11px] font-extrabold uppercase tracking-[2px] leading-none">
+          {secondary}
+        </span>
+      )}
+    </div>
+  )
 }
 
 function LauncherBtn({ icon, label, sub, tone, status, onClick, disabled, disabledTitle }: LauncherBtnProps) {
-  const t = (LAUNCHER_TONE as Record<string, { bg: string; bgHover: string; ring: string }>)[tone]
-    ?? { bg: 'bg-slate-900', bgHover: 'hover:bg-slate-800', ring: 'focus:ring-slate-400' }
+  const t = (LAUNCHER_TONE_3D as Record<string, typeof LAUNCHER_TONE_3D[Tone]>)[tone] ?? LAUNCHER_TONE_3D.slate
   return (
     <button
       type="button"
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
       title={disabled ? disabledTitle : `Open ${label} dashboard`}
-      className={`flex-1 min-h-[120px] w-full text-left rounded-lg border-2 transition-all flex flex-col shadow-sm overflow-hidden ${
+      className={[
+        'group relative flex-1 min-h-[140px] w-full text-left rounded-lg overflow-hidden select-none flex flex-col',
+        'transition-all duration-100',
         disabled
-          ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed'
-          : `${t.bg} ${t.bgHover} text-white border-transparent hover:shadow-md focus:outline-none focus:ring-2 ${t.ring}`
-      }`}
+          ? 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-sm'
+          : [
+              `bg-gradient-to-b ${t.body} ${t.bodyHover} text-white border border-black/20`,
+              'focus:outline-none focus:ring-2 ' + t.ring,
+              'active:translate-y-[2px]',
+            ].join(' '),
+      ].join(' ')}
+      style={disabled ? undefined : {
+        // 3D physics: bottom solid "lip" + outer drop + inner top highlight
+        boxShadow: `0 4px 0 0 ${t.lip}, 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.20)`,
+      }}
     >
       {/* Header band */}
-      <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-        <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
-        <span className="text-[10px] leading-none opacity-80" aria-hidden="true">↗</span>
+      <div className="flex items-center justify-between gap-2 px-3 pt-3">
+        <span
+          className="text-2xl leading-none drop-shadow-sm"
+          aria-hidden="true"
+          style={!disabled ? { filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' } : undefined}
+        >
+          {icon}
+        </span>
+        <span className="text-[10px] leading-none font-bold opacity-90" aria-hidden="true">↗</span>
       </div>
-      <div className="px-3 pt-1.5 pb-2">
-        <div className="text-xs font-bold tracking-tight leading-tight">{label}</div>
-        <div className="text-[9px] uppercase tracking-[2px] opacity-80 mt-0.5">{sub}</div>
+      <div
+        className="px-3 pt-2 pb-2.5"
+        style={!disabled ? { textShadow: '0 1px 1px rgba(0,0,0,0.45), 0 -1px 0 rgba(255,255,255,0.10)' } : undefined}
+      >
+        <LauncherTitle label={label} />
+        <div className="font-mono text-[9px] uppercase tracking-[2.5px] opacity-85 mt-1">{sub}</div>
       </div>
-      {/* Status bullets */}
-      <div className={`mt-auto px-3 py-2 space-y-0.5 border-t ${disabled ? 'border-slate-200 bg-slate-50' : 'border-black/20 bg-black/15'}`}>
+      {/* Status bullets — sit in a slightly darker inset to read as a separate ledge */}
+      <div
+        className={[
+          'mt-auto px-3 py-2 space-y-0.5',
+          disabled
+            ? 'border-t border-slate-200 bg-slate-50'
+            : 'border-t border-black/30 bg-black/25 backdrop-blur-[2px]',
+        ].join(' ')}
+      >
         {status.map((s, i) => {
           const dot = disabled ? 'bg-slate-300' :
             s.tone === 'good' ? 'bg-emerald-300' :
-            s.tone === 'warn' ? 'bg-amber-300' : 'bg-white/50'
-          const text = s.tone === 'muted' && !disabled ? 'opacity-70' : ''
+            s.tone === 'warn' ? 'bg-amber-300' : 'bg-white/60'
+          const text = s.tone === 'muted' && !disabled ? 'opacity-75' : ''
           return (
             <div key={i} className={`text-[10px] flex items-baseline gap-1.5 leading-snug ${text}`}>
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} shrink-0 translate-y-[-1px]`} aria-hidden="true" />
-              <span className="truncate">{s.label}</span>
+              <span
+                className={`inline-block w-1.5 h-1.5 rounded-full ${dot} shrink-0 translate-y-[-1px]`}
+                style={!disabled && s.tone !== 'muted' ? { boxShadow: `0 0 4px ${s.tone === 'good' ? 'rgb(110,231,183)' : 'rgb(252,211,77)'}` } : undefined}
+                aria-hidden="true"
+              />
+              <span className="truncate font-medium">{s.label}</span>
             </div>
           )
         })}

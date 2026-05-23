@@ -157,6 +157,15 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
   const textInfo = getQuestionText(q, personaId)
   const showBridge = !bridgeDismissed && idx === 0 && !!inference?.bridgeSentence
 
+  // Hover-triggered explanation visibility. Shows on pointer-enter of the
+  // question section / options, and on focus-within for keyboard users.
+  // On touch devices (no hover capability) it stays visible permanently
+  // via the media-query fallback in `showExplanationAlways`.
+  const [hoverExplanation, setHoverExplanation] = useState(false)
+  const showExplanationAlways = typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(hover: none)').matches
+
   // Section bookkeeping — show "Construct k of N · <name>"
   const constructsInOrder = useMemo(() => {
     const seen = new Set<string>()
@@ -260,45 +269,64 @@ export function V10Quiz({ initialState, inference, userProfile, currentAge, reti
         </div>
       </div>
 
-      {/* ── Question ──────────────────────────────────────────── */}
-      <div className="space-y-1.5">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span
-            className="inline-flex items-center text-[9px] font-bold tracking-[1.5px] uppercase text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded"
-            title={`This question measures ${q.constructName} (${q.construct}). Code: ${q.code}.`}
-          >
-            {q.construct} · {q.constructName}
-          </span>
-          {textInfo.isRephrased && (
-            <span className="inline-block text-[9px] font-bold tracking-[2px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
-              Rephrased for you
+      {/* ── Question + options — wrapped so hover anywhere shows the hint */}
+      <div
+        onMouseEnter={() => setHoverExplanation(true)}
+        onMouseLeave={() => setHoverExplanation(false)}
+        onFocus={() => setHoverExplanation(true)}
+        onBlur={(e) => {
+          // only hide if focus has left the whole question section
+          if (!e.currentTarget.contains(e.relatedTarget as Node)) setHoverExplanation(false)
+        }}
+        className="space-y-3"
+      >
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span
+              className="inline-flex items-center text-[9px] font-bold tracking-[1.5px] uppercase text-slate-700 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded"
+              title={`This question measures ${q.constructName} (${q.construct}). Code: ${q.code}.`}
+            >
+              {q.construct} · {q.constructName}
             </span>
+            {textInfo.isRephrased && (
+              <span className="inline-block text-[9px] font-bold tracking-[2px] uppercase text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                Rephrased for you
+              </span>
+            )}
+          </div>
+          <h3 className="text-base font-semibold text-slate-900 leading-snug">{textInfo.text}</h3>
+          {/* Hover-triggered explanation tooltip (always-on for touch devices) */}
+          {PSYCH_EXPLANATIONS[q.code] && (hoverExplanation || showExplanationAlways) && (
+            <div
+              className="rounded-md border-l-4 border-indigo-300 bg-indigo-50/60 px-3 py-2 text-[12px] text-slate-700 italic leading-relaxed max-w-3xl shadow-sm"
+              role="tooltip"
+              aria-live="polite"
+            >
+              <span className="inline-flex items-baseline gap-1.5">
+                <span aria-hidden="true">💡</span>
+                <span>{PSYCH_EXPLANATIONS[q.code]}</span>
+              </span>
+            </div>
           )}
         </div>
-        <h3 className="text-base font-semibold text-slate-900 leading-snug">{textInfo.text}</h3>
-        {PSYCH_EXPLANATIONS[q.code] && (
-          <p className="text-[11px] text-slate-500 italic leading-relaxed mt-1 max-w-3xl">
-            {PSYCH_EXPLANATIONS[q.code]}
-          </p>
+
+        {/* ── Prefill banner ─────────────────────────────────────── */}
+        {answer?.prefilled && (
+          <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-900 leading-snug">
+            <span className="font-bold">Pre-filled from your earlier responses.</span> Adjust if you'd like.
+            {answer.prefillEvidence && (
+              <span className="block mt-0.5 italic text-amber-800">"{answer.prefillEvidence}"</span>
+            )}
+          </div>
         )}
+
+        {/* ── Options ───────────────────────────────────────────── */}
+        <OptionList
+          question={q}
+          answer={answer}
+          onPick={(a) => updateAnswer(q.code, a)}
+        />
       </div>
-
-      {/* ── Prefill banner ─────────────────────────────────────── */}
-      {answer?.prefilled && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/70 px-3 py-2 text-[11px] text-amber-900 leading-snug">
-          <span className="font-bold">Pre-filled from your earlier responses.</span> Adjust if you'd like.
-          {answer.prefillEvidence && (
-            <span className="block mt-0.5 italic text-amber-800">"{answer.prefillEvidence}"</span>
-          )}
-        </div>
-      )}
-
-      {/* ── Options ───────────────────────────────────────────── */}
-      <OptionList
-        question={q}
-        answer={answer}
-        onPick={(a) => updateAnswer(q.code, a)}
-      />
 
       {/* ── Controls ──────────────────────────────────────────── */}
       <div className="flex items-center justify-between pt-2 flex-wrap gap-2">
