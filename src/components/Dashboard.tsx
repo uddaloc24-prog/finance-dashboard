@@ -225,24 +225,27 @@ export function Dashboard({
               onBucketsUpdate={onBucketsUpdate}
             />
 
-            {/* Step 04 — Profile & Settings — sits below the wheel as its own
-                full-width section, just above the Cashflow Summary. */}
-            <PlanSection
-              num="04"
-              tone="navy"
-              title="Profile & Settings"
-              subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
-              status={<ProfileStatus profile={profile} buckets={buckets} />}
-              helpExamples={<HelpList items={HELP_PROFILE} />}
-            >
-              <ProfileSettings
-                profile={profile}
-                buckets={buckets}
-                onProfileUpdate={onProfileUpdate}
-                onBucketsUpdate={onBucketsUpdate}
-                chrome="bare"
-              />
-            </PlanSection>
+            {/* Step 04 Profile + Cashflow Summary — side by side in two
+                columns, stacking only below lg. */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
+              <PlanSection
+                num="04"
+                tone="navy"
+                title="Profile & Settings"
+                subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
+                status={<ProfileStatus profile={profile} buckets={buckets} />}
+                helpExamples={<HelpList items={HELP_PROFILE} />}
+              >
+                <ProfileSettings
+                  profile={profile}
+                  buckets={buckets}
+                  onProfileUpdate={onProfileUpdate}
+                  onBucketsUpdate={onBucketsUpdate}
+                  chrome="bare"
+                />
+              </PlanSection>
+              <CashflowSummary profile={profile} buckets={buckets} />
+            </div>
             {/* Legacy wheel render (kept hidden for reference) ─── */}
             {false && (
             <PlanWheel>
@@ -439,8 +442,6 @@ export function Dashboard({
             </div>
             */}
 
-            {/* Cashflow summary — single column, full-width footer */}
-            <CashflowSummary profile={profile} buckets={buckets} />
           </div>
         )}
 
