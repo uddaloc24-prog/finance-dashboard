@@ -224,6 +224,25 @@ export function Dashboard({
               onProfileUpdate={onProfileUpdate}
               onBucketsUpdate={onBucketsUpdate}
             />
+
+            {/* Step 04 — Profile & Settings — sits below the wheel as its own
+                full-width section, just above the Cashflow Summary. */}
+            <PlanSection
+              num="04"
+              tone="navy"
+              title="Profile & Settings"
+              subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
+              status={<ProfileStatus profile={profile} buckets={buckets} />}
+              helpExamples={<HelpList items={HELP_PROFILE} />}
+            >
+              <ProfileSettings
+                profile={profile}
+                buckets={buckets}
+                onProfileUpdate={onProfileUpdate}
+                onBucketsUpdate={onBucketsUpdate}
+                chrome="bare"
+              />
+            </PlanSection>
             {/* Legacy wheel render (kept hidden for reference) ─── */}
             {false && (
             <PlanWheel>
@@ -576,11 +595,13 @@ interface PlanLayoutProps {
 }
 
 function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, onBucketsUpdate }: PlanLayoutProps) {
+  // Six wheel steps; Profile & Settings (04) is intentionally NOT in the
+  // wheel — it renders as a standalone full-width card below the wheel,
+  // just above the Cashflow Summary.
   const steps: PlanStepConfig[] = [
     { num: '01', tone: 'navy',  shortTitle: 'Wealth',       title: 'Wealth Snapshot',         subtitle: '8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income', icon: '💼', status: <AssetInventoryStatus profile={profile} />, helpExamples: <HelpList items={HELP_WEALTH} />,        editor: <AssetInventory profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" /> },
     { num: '02', tone: 'rose',  shortTitle: 'Loans',        title: 'Loans & Liabilities',     subtitle: '4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy', icon: '💳', status: <LoansStatus profile={profile} />,           helpExamples: <HelpList items={HELP_LOANS} />,         editor: <LoansLiabilities profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
     { num: '03', tone: 'green', shortTitle: 'Budget',       title: 'Monthly Budget',          subtitle: 'Detailed breakdown — drives the monthly withdrawal', icon: '📊', status: <ExpensesStatus profile={profile} />,             helpExamples: <HelpList items={HELP_BUDGET} />,        editor: <ExpenseEditor profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
-    { num: '04', tone: 'navy',  shortTitle: 'Profile',      title: 'Profile & Settings',      subtitle: 'Corpus, tax bracket, withdrawal & SIP schedule', icon: '⚙️', status: <ProfileStatus profile={profile} buckets={buckets} />, helpExamples: <HelpList items={HELP_PROFILE} />,     editor: <ProfileSettings profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" /> },
     { num: '05', tone: 'amber', shortTitle: 'Demographics', title: 'Demographics & Longevity', subtitle: 'Current age, retirement age, life expectancy', icon: '👥', status: <DemographicsStatus profile={profile} />,        helpExamples: <HelpList items={HELP_DEMOGRAPHICS} />,  editor: <DemographicsForm profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
     { num: '06', tone: 'rose',  shortTitle: 'Inflation',    title: 'Inflation Assumptions',   subtitle: 'Split rates for general, healthcare, education', icon: '📈', status: <InflationStatus profile={profile} />,             helpExamples: <HelpList items={HELP_INFLATION} />,     editor: <InflationAssumptions profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
     { num: '07', tone: 'rose',  shortTitle: 'Insurance',    title: 'Insurance Cover',         subtitle: '3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term', icon: '🛡️', status: <InsuranceStatus profile={profile} />,           helpExamples: <HelpList items={HELP_INSURANCE} />,     editor: <InsuranceCover profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
@@ -638,8 +659,8 @@ function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, 
 
 // ── PlanWheel — circular layout for the seven Plan steps ──────────────
 
-/** Number of steps in the wheel — used for angle math. */
-const PLAN_WHEEL_COUNT = 7
+/** Number of steps in the wheel — used for angle math. Profile lives outside the wheel. */
+const PLAN_WHEEL_COUNT = 6
 
 function angleToXY(idx: number, total: number, radius: number): { x: number; y: number } {
   // Start at 12 o'clock and go clockwise.
