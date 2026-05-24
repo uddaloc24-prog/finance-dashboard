@@ -328,8 +328,8 @@ src/hooks/useRankedGoals.ts             — React hook wrapping the engine
 - [x] **Decisions §2.1–§2.5 confirmed (2026-05-24)** — weighted sum · persona-keyed weights · single decision-maker · pure-function determinism · 50 ms p95 latency
 - [ ] Persona weight table (§5) signed off
 - [ ] Open questions (§11) answered
-- [ ] `EngineInput` / `EngineOutput` types committed (`src/types/orchestration.ts`) → **Phase 4 / Phase 5 START NOW UNBLOCKED**
-- [ ] Scorers + tests
-- [ ] Engine + golden-master snapshots
-- [ ] `useRankedGoals` hook
+- [x] **Phase 4 shipped (2026-05-24):** `EngineInput` / `EngineOutput` types in `src/types/orchestration.ts` · aggregator in `src/lib/orchestration/inputs.ts` · GD→RawGoal projector in `src/lib/orchestration/goalsFromGd.ts` · live preview on the Engine tab
+- [ ] Scorers + tests (Phase 5)
+- [ ] Engine + golden-master snapshots (Phase 5)
+- [ ] `useRankedGoals` hook (Phase 5)
 - [ ] Strategy Fitter (Phase 6) — separate memo
