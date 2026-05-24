@@ -1,0 +1,904 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`rankGoals — golden masters > plan50 × P1 — security seeker 1`] = `
+"{
+  "ranked": [
+    {
+      "goal": {
+        "id": "goal-retire-corpus",
+        "label": "Retirement corpus top-up",
+        "kind": "corpus-build",
+        "amount": 5000000,
+        "startYear": 2031,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 75,
+        "urgency": 93,
+        "affordability": 14,
+        "riskFit": 100
+      },
+      "composite": 59.2,
+      "priorityWeight": 0.2129496402877698,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-house-renovation",
+        "label": "Home renovation",
+        "kind": "event",
+        "amount": 1500000,
+        "startYear": 2028,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 93,
+        "affordability": 36,
+        "riskFit": 78
+      },
+      "composite": 56.6,
+      "priorityWeight": 0.2035971223021583,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-vacation",
+        "label": "Europe trip",
+        "kind": "event",
+        "amount": 800000,
+        "startYear": 2027,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 97,
+        "affordability": 33,
+        "riskFit": 78
+      },
+      "composite": 56.2,
+      "priorityWeight": 0.20215827338129497,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-child-college",
+        "label": "Child college tuition",
+        "kind": "event",
+        "amount": 3000000,
+        "startYear": 2029,
+        "priority": "must-have",
+        "inflationCategory": "education",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 70,
+        "urgency": 100,
+        "affordability": 4,
+        "riskFit": 100
+      },
+      "composite": 55.6,
+      "priorityWeight": 0.2,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-legacy",
+        "label": "Legacy for grandchildren",
+        "kind": "legacy",
+        "amount": 10000000,
+        "startYear": 2046,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 50,
+        "urgency": 30,
+        "affordability": 58,
+        "riskFit": 56
+      },
+      "composite": 50.400000000000006,
+      "priorityWeight": 0.181294964028777,
+      "disputed": false
+    }
+  ],
+  "weightsUsed": {
+    "importance": 0.2,
+    "urgency": 0.2,
+    "affordability": 0.4,
+    "riskFit": 0.2
+  },
+  "trace": {
+    "personaUsed": "P1",
+    "weightDerivation": "persona-default",
+    "goalRationale": {
+      "goal-retire-corpus": [
+        "Top driver: Risk-fit (100/100)",
+        "Weak Affordability (14/100)",
+        "User-marked must-have",
+        "Target ₹50,00,000 by FY 2031"
+      ],
+      "goal-house-renovation": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (36/100)",
+        "Target ₹15,00,000 by FY 2028"
+      ],
+      "goal-vacation": [
+        "Top driver: Urgency (97/100)",
+        "Weak Affordability (33/100)",
+        "Target ₹8,00,000 by FY 2027"
+      ],
+      "goal-child-college": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (4/100)",
+        "User-marked must-have",
+        "Target ₹30,00,000 by FY 2029"
+      ],
+      "goal-legacy": [
+        "Top driver: Affordability (58/100)",
+        "Weak Urgency (30/100)",
+        "Target ₹1,00,00,000 by FY 2046"
+      ]
+    }
+  },
+  "emittedAt": "2026-05-24T10:00:00.000Z",
+  "inputsHash": "1e7up9m"
+}"
+`;
+
+exports[`rankGoals — golden masters > plan50 × P5 — balanced planner 1`] = `
+"{
+  "ranked": [
+    {
+      "goal": {
+        "id": "goal-retire-corpus",
+        "label": "Retirement corpus top-up",
+        "kind": "corpus-build",
+        "amount": 5000000,
+        "startYear": 2031,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 75,
+        "urgency": 93,
+        "affordability": 14,
+        "riskFit": 78
+      },
+      "composite": 65,
+      "priorityWeight": 0.2205258693808312,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-child-college",
+        "label": "Child college tuition",
+        "kind": "event",
+        "amount": 3000000,
+        "startYear": 2029,
+        "priority": "must-have",
+        "inflationCategory": "education",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 70,
+        "urgency": 100,
+        "affordability": 4,
+        "riskFit": 78
+      },
+      "composite": 63,
+      "priorityWeight": 0.21374045801526717,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-vacation",
+        "label": "Europe trip",
+        "kind": "event",
+        "amount": 800000,
+        "startYear": 2027,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 97,
+        "affordability": 33,
+        "riskFit": 56
+      },
+      "composite": 56.5,
+      "priorityWeight": 0.19168787107718405,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-house-renovation",
+        "label": "Home renovation",
+        "kind": "event",
+        "amount": 1500000,
+        "startYear": 2028,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 93,
+        "affordability": 36,
+        "riskFit": 56
+      },
+      "composite": 56.25,
+      "priorityWeight": 0.19083969465648856,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-legacy",
+        "label": "Legacy for grandchildren",
+        "kind": "legacy",
+        "amount": 10000000,
+        "startYear": 2046,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 50,
+        "urgency": 30,
+        "affordability": 58,
+        "riskFit": 78
+      },
+      "composite": 54,
+      "priorityWeight": 0.183206106870229,
+      "disputed": false
+    }
+  ],
+  "weightsUsed": {
+    "importance": 0.25,
+    "urgency": 0.25,
+    "affordability": 0.25,
+    "riskFit": 0.25
+  },
+  "trace": {
+    "personaUsed": "P5",
+    "weightDerivation": "persona-default",
+    "goalRationale": {
+      "goal-retire-corpus": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (14/100)",
+        "User-marked must-have",
+        "Target ₹50,00,000 by FY 2031"
+      ],
+      "goal-child-college": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (4/100)",
+        "User-marked must-have",
+        "Target ₹30,00,000 by FY 2029"
+      ],
+      "goal-vacation": [
+        "Top driver: Urgency (97/100)",
+        "Weak Affordability (33/100)",
+        "Target ₹8,00,000 by FY 2027"
+      ],
+      "goal-house-renovation": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (36/100)",
+        "Target ₹15,00,000 by FY 2028"
+      ],
+      "goal-legacy": [
+        "Top driver: Risk-fit (78/100)",
+        "Weak Urgency (30/100)",
+        "Target ₹1,00,00,000 by FY 2046"
+      ]
+    }
+  },
+  "emittedAt": "2026-05-24T10:00:00.000Z",
+  "inputsHash": "1kqoahe"
+}"
+`;
+
+exports[`rankGoals — golden masters > plan50 × P7 — builder 1`] = `
+"{
+  "ranked": [
+    {
+      "goal": {
+        "id": "goal-legacy",
+        "label": "Legacy for grandchildren",
+        "kind": "legacy",
+        "amount": 10000000,
+        "startYear": 2046,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 50,
+        "urgency": 30,
+        "affordability": 58,
+        "riskFit": 100
+      },
+      "composite": 65,
+      "priorityWeight": 0.25213343677269207,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-retire-corpus",
+        "label": "Retirement corpus top-up",
+        "kind": "corpus-build",
+        "amount": 5000000,
+        "startYear": 2031,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 75,
+        "urgency": 93,
+        "affordability": 14,
+        "riskFit": 56
+      },
+      "composite": 55.849999999999994,
+      "priorityWeight": 0.21664080682699768,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-child-college",
+        "label": "Child college tuition",
+        "kind": "event",
+        "amount": 3000000,
+        "startYear": 2029,
+        "priority": "must-have",
+        "inflationCategory": "education",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 70,
+        "urgency": 100,
+        "affordability": 4,
+        "riskFit": 56
+      },
+      "composite": 52.3,
+      "priorityWeight": 0.20287044220325837,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-house-renovation",
+        "label": "Home renovation",
+        "kind": "event",
+        "amount": 1500000,
+        "startYear": 2028,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 93,
+        "affordability": 36,
+        "riskFit": 34
+      },
+      "composite": 42.5,
+      "priorityWeight": 0.16485647788983712,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-vacation",
+        "label": "Europe trip",
+        "kind": "event",
+        "amount": 800000,
+        "startYear": 2027,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 97,
+        "affordability": 33,
+        "riskFit": 34
+      },
+      "composite": 42.150000000000006,
+      "priorityWeight": 0.16349883630721496,
+      "disputed": false
+    }
+  ],
+  "weightsUsed": {
+    "importance": 0.35,
+    "urgency": 0.1,
+    "affordability": 0.25,
+    "riskFit": 0.3
+  },
+  "trace": {
+    "personaUsed": "P7",
+    "weightDerivation": "persona-default",
+    "goalRationale": {
+      "goal-legacy": [
+        "Top driver: Risk-fit (100/100)",
+        "Weak Urgency (30/100)",
+        "Target ₹1,00,00,000 by FY 2046"
+      ],
+      "goal-retire-corpus": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (14/100)",
+        "User-marked must-have",
+        "Target ₹50,00,000 by FY 2031"
+      ],
+      "goal-child-college": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (4/100)",
+        "User-marked must-have",
+        "Target ₹30,00,000 by FY 2029"
+      ],
+      "goal-house-renovation": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (36/100)",
+        "Weak Risk-fit (34/100)",
+        "Target ₹15,00,000 by FY 2028"
+      ],
+      "goal-vacation": [
+        "Top driver: Urgency (97/100)",
+        "Weak Risk-fit (34/100)",
+        "Weak Affordability (33/100)",
+        "Target ₹8,00,000 by FY 2027"
+      ]
+    }
+  },
+  "emittedAt": "2026-05-24T10:00:00.000Z",
+  "inputsHash": "10qlsgf"
+}"
+`;
+
+exports[`rankGoals — golden masters > plan65 × P5 — recently retired 1`] = `
+"{
+  "ranked": [
+    {
+      "goal": {
+        "id": "sys-health-cover",
+        "label": "Health cover top-up to age-appropriate floor",
+        "kind": "corpus-build",
+        "amount": 200000,
+        "startYear": 2026,
+        "priority": "must-have",
+        "inflationCategory": "healthcare",
+        "source": "system"
+      },
+      "scores": {
+        "importance": 95,
+        "urgency": 100,
+        "affordability": 0,
+        "riskFit": 56
+      },
+      "composite": 62.75,
+      "priorityWeight": 0.16341145833333334,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "sys-term-life",
+        "label": "Pure-protection term cover (MWP-tagged)",
+        "kind": "corpus-build",
+        "amount": 800000,
+        "startYear": 2026,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "system"
+      },
+      "scores": {
+        "importance": 95,
+        "urgency": 100,
+        "affordability": 0,
+        "riskFit": 56
+      },
+      "composite": 62.75,
+      "priorityWeight": 0.16341145833333334,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-child-college",
+        "label": "Child college tuition",
+        "kind": "event",
+        "amount": 3000000,
+        "startYear": 2029,
+        "priority": "must-have",
+        "inflationCategory": "education",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 70,
+        "urgency": 100,
+        "affordability": 0,
+        "riskFit": 78
+      },
+      "composite": 62,
+      "priorityWeight": 0.16145833333333334,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-retire-corpus",
+        "label": "Retirement corpus top-up",
+        "kind": "corpus-build",
+        "amount": 5000000,
+        "startYear": 2031,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 75,
+        "urgency": 93,
+        "affordability": 0,
+        "riskFit": 78
+      },
+      "composite": 61.5,
+      "priorityWeight": 0.16015625,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-vacation",
+        "label": "Europe trip",
+        "kind": "event",
+        "amount": 800000,
+        "startYear": 2027,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 97,
+        "affordability": 0,
+        "riskFit": 56
+      },
+      "composite": 48.25,
+      "priorityWeight": 0.12565104166666666,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-house-renovation",
+        "label": "Home renovation",
+        "kind": "event",
+        "amount": 1500000,
+        "startYear": 2028,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 93,
+        "affordability": 0,
+        "riskFit": 56
+      },
+      "composite": 47.25,
+      "priorityWeight": 0.123046875,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-legacy",
+        "label": "Legacy for grandchildren",
+        "kind": "legacy",
+        "amount": 10000000,
+        "startYear": 2046,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 50,
+        "urgency": 30,
+        "affordability": 0,
+        "riskFit": 78
+      },
+      "composite": 39.5,
+      "priorityWeight": 0.10286458333333333,
+      "disputed": false
+    }
+  ],
+  "weightsUsed": {
+    "importance": 0.25,
+    "urgency": 0.25,
+    "affordability": 0.25,
+    "riskFit": 0.25
+  },
+  "trace": {
+    "personaUsed": "P5",
+    "weightDerivation": "persona-default",
+    "goalRationale": {
+      "sys-health-cover": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (0/100)",
+        "System-pre-empted (mandatory reserve)",
+        "Target ₹2,00,000 by FY 2026"
+      ],
+      "sys-term-life": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (0/100)",
+        "System-pre-empted (mandatory reserve)",
+        "Target ₹8,00,000 by FY 2026"
+      ],
+      "goal-child-college": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (0/100)",
+        "User-marked must-have",
+        "Target ₹30,00,000 by FY 2029"
+      ],
+      "goal-retire-corpus": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (0/100)",
+        "User-marked must-have",
+        "Target ₹50,00,000 by FY 2031"
+      ],
+      "goal-vacation": [
+        "Top driver: Urgency (97/100)",
+        "Weak Affordability (0/100)",
+        "Target ₹8,00,000 by FY 2027"
+      ],
+      "goal-house-renovation": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (0/100)",
+        "Target ₹15,00,000 by FY 2028"
+      ],
+      "goal-legacy": [
+        "Top driver: Risk-fit (78/100)",
+        "Weak Urgency (30/100)",
+        "Weak Affordability (0/100)",
+        "Target ₹1,00,00,000 by FY 2046"
+      ]
+    }
+  },
+  "emittedAt": "2026-05-24T10:00:00.000Z",
+  "inputsHash": "e0xux9"
+}"
+`;
+
+exports[`rankGoals — golden masters > planUnderProtected × P1 — pre-emption fires 1`] = `
+"{
+  "ranked": [
+    {
+      "goal": {
+        "id": "sys-emergency-fund",
+        "label": "Emergency fund — 6 months of monthly burn",
+        "kind": "corpus-build",
+        "amount": 400000,
+        "startYear": 2026,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "system"
+      },
+      "scores": {
+        "importance": 95,
+        "urgency": 100,
+        "affordability": 33,
+        "riskFit": 78
+      },
+      "composite": 67.80000000000001,
+      "priorityWeight": 0.149010989010989,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-retire-corpus",
+        "label": "Retirement corpus top-up",
+        "kind": "corpus-build",
+        "amount": 5000000,
+        "startYear": 2031,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 75,
+        "urgency": 93,
+        "affordability": 14,
+        "riskFit": 100
+      },
+      "composite": 59.2,
+      "priorityWeight": 0.13010989010989008,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-house-renovation",
+        "label": "Home renovation",
+        "kind": "event",
+        "amount": 1500000,
+        "startYear": 2028,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 93,
+        "affordability": 36,
+        "riskFit": 78
+      },
+      "composite": 56.6,
+      "priorityWeight": 0.12439560439560436,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-vacation",
+        "label": "Europe trip",
+        "kind": "event",
+        "amount": 800000,
+        "startYear": 2027,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "gd-projection"
+      },
+      "scores": {
+        "importance": 40,
+        "urgency": 97,
+        "affordability": 33,
+        "riskFit": 78
+      },
+      "composite": 56.2,
+      "priorityWeight": 0.12351648351648349,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-child-college",
+        "label": "Child college tuition",
+        "kind": "event",
+        "amount": 3000000,
+        "startYear": 2029,
+        "priority": "must-have",
+        "inflationCategory": "education",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 70,
+        "urgency": 100,
+        "affordability": 4,
+        "riskFit": 100
+      },
+      "composite": 55.6,
+      "priorityWeight": 0.12219780219780217,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "sys-health-cover",
+        "label": "Health cover top-up to age-appropriate floor",
+        "kind": "corpus-build",
+        "amount": 1600000,
+        "startYear": 2026,
+        "priority": "must-have",
+        "inflationCategory": "healthcare",
+        "source": "system"
+      },
+      "scores": {
+        "importance": 95,
+        "urgency": 100,
+        "affordability": 0,
+        "riskFit": 78
+      },
+      "composite": 54.6,
+      "priorityWeight": 0.11999999999999997,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "sys-term-life",
+        "label": "Pure-protection term cover (MWP-tagged)",
+        "kind": "corpus-build",
+        "amount": 7000000,
+        "startYear": 2026,
+        "priority": "must-have",
+        "inflationCategory": "general",
+        "source": "system"
+      },
+      "scores": {
+        "importance": 95,
+        "urgency": 100,
+        "affordability": 0,
+        "riskFit": 78
+      },
+      "composite": 54.6,
+      "priorityWeight": 0.11999999999999997,
+      "disputed": false
+    },
+    {
+      "goal": {
+        "id": "goal-legacy",
+        "label": "Legacy for grandchildren",
+        "kind": "legacy",
+        "amount": 10000000,
+        "startYear": 2046,
+        "priority": "nice-to-have",
+        "inflationCategory": "general",
+        "source": "manual"
+      },
+      "scores": {
+        "importance": 50,
+        "urgency": 30,
+        "affordability": 58,
+        "riskFit": 56
+      },
+      "composite": 50.400000000000006,
+      "priorityWeight": 0.11076923076923076,
+      "disputed": false
+    }
+  ],
+  "weightsUsed": {
+    "importance": 0.2,
+    "urgency": 0.2,
+    "affordability": 0.4,
+    "riskFit": 0.2
+  },
+  "trace": {
+    "personaUsed": "P1",
+    "weightDerivation": "persona-default",
+    "goalRationale": {
+      "sys-emergency-fund": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (33/100)",
+        "System-pre-empted (mandatory reserve)",
+        "Target ₹4,00,000 by FY 2026"
+      ],
+      "goal-retire-corpus": [
+        "Top driver: Risk-fit (100/100)",
+        "Weak Affordability (14/100)",
+        "User-marked must-have",
+        "Target ₹50,00,000 by FY 2031"
+      ],
+      "goal-house-renovation": [
+        "Top driver: Urgency (93/100)",
+        "Weak Affordability (36/100)",
+        "Target ₹15,00,000 by FY 2028"
+      ],
+      "goal-vacation": [
+        "Top driver: Urgency (97/100)",
+        "Weak Affordability (33/100)",
+        "Target ₹8,00,000 by FY 2027"
+      ],
+      "goal-child-college": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (4/100)",
+        "User-marked must-have",
+        "Target ₹30,00,000 by FY 2029"
+      ],
+      "sys-health-cover": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (0/100)",
+        "System-pre-empted (mandatory reserve)",
+        "Target ₹16,00,000 by FY 2026"
+      ],
+      "sys-term-life": [
+        "Top driver: Urgency (100/100)",
+        "Weak Affordability (0/100)",
+        "System-pre-empted (mandatory reserve)",
+        "Target ₹70,00,000 by FY 2026"
+      ],
+      "goal-legacy": [
+        "Top driver: Affordability (58/100)",
+        "Weak Urgency (30/100)",
+        "Target ₹1,00,00,000 by FY 2046"
+      ]
+    }
+  },
+  "emittedAt": "2026-05-24T10:00:00.000Z",
+  "inputsHash": "kvetu3"
+}"
+`;
