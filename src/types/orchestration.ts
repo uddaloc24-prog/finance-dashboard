@@ -131,3 +131,57 @@ export interface EngineOutput {
   emittedAt: string          // ISO timestamp of emission
   inputsHash: string         // short content hash of EngineInput — for cache + audit
 }
+
+// ─── Strategy Fitter (Phase 6) ─────────────────────────────────────────
+//
+// Consumes the ranked goals from the engine and emits a concrete
+// investment strategy: per-goal corpus allocation, SIP sizing,
+// 4-bucket split, and an action list. Pure function, deterministic.
+
+/** Per-goal funding plan emitted by the fitter. */
+export interface FittedGoal {
+  goalId: string                                              // matches RawGoal.id
+  rank: number                                                // 1-based, same order as engine ranked
+  corpusAllocated: number                                     // INR from corpus assigned to this goal
+  monthlySipNeeded: number                                    // INR / month to close the gap
+  monthlySipAffordable: number                                // INR / month actually fundable from capacity
+  bucketSplit: { b1: number; b2: number; b3: number; b4: number }  // fractions summing 1.0
+  inflatedCost: number                                        // FV at target year (category-inflated)
+  projectedAtTarget: number                                   // corpus FV + SIP FV at target year
+  shortfall: number                                           // max(0, inflatedCost − projectedAtTarget)
+  status: 'funded' | 'partial' | 'unfunded'                   // funded < 5%, partial < 50%, unfunded ≥ 50%
+}
+
+export interface FitTotals {
+  corpus: number                  // input corpus
+  corpusUsed: number              // ∑ corpusAllocated
+  corpusFree: number              // corpus − corpusUsed
+  sipCapacity: number             // monthlySIP + max(0, passive − burn − EMI)
+  sipUsed: number                 // ∑ monthlySipAffordable
+  sipShortfall: number            // ∑ max(0, sipNeeded − sipAffordable)
+  goalsFunded: number
+  goalsPartial: number
+  goalsUnfunded: number
+}
+
+export interface BucketTargets {
+  b1: number; b2: number; b3: number; b4: number              // INR amounts (sum ≤ corpusUsed)
+  b1Pct: number; b2Pct: number; b3Pct: number; b4Pct: number  // fractions summing 1.0 (of corpusUsed)
+}
+
+export interface FitAction {
+  priority: number
+  category: 'reserve' | 'allocate' | 'sip' | 'rebalance' | 'flag'
+  title: string
+  detail: string
+  amount?: number                 // INR if relevant
+}
+
+export interface StrategyFit {
+  goals: FittedGoal[]
+  totals: FitTotals
+  bucketTargets: BucketTargets
+  actions: FitAction[]
+  emittedAt: string
+  inputsHash: string              // hash of (EngineInput, EngineOutput)
+}

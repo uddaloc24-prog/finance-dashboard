@@ -7,9 +7,8 @@
 
 import type { UserProfile, BucketState } from '../types'
 import { MarkdownView } from './admin/MarkdownView'
-import { buildOrchestrationInputsFromStorage } from '../lib/orchestration/inputs'
-import { useRankedGoals } from '../hooks/useRankedGoals'
-import type { EngineInput, EngineOutput, RankedGoal, CriterionWeights } from '../types/orchestration'
+import { useFittedStrategy } from '../hooks/useFittedStrategy'
+import type { EngineInput, EngineOutput, RankedGoal, CriterionWeights, StrategyFit, FittedGoal, FitAction } from '../types/orchestration'
 
 import engineMemo from '../../tasks/engine-design-memo-2026-05-24.md?raw'
 
@@ -23,9 +22,9 @@ interface Phase { id: string; title: string; status: 'done' | 'active' | 'planne
 const PHASES: Phase[] = [
   { id: 'P1-3', title: 'Cosmetic trim (KPI cuts · insights · constants)',           status: 'done' },
   { id: 'P4',   title: 'Plumbing — Plan↔Profile bridge · GD→Goals projector',       status: 'done' },
-  { id: 'P5',   title: 'Goal Ranking Engine — engine + scorers shipped · tests pending', status: 'active' },
-  { id: 'P6',   title: 'Strategy Fitter',                                           status: 'planned' },
-  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation',           status: 'planned' },
+  { id: 'P5',   title: 'Goal Ranking Engine — shipped · tests pending',             status: 'done' },
+  { id: 'P6',   title: 'Strategy Fitter — shipped (corpus alloc · SIP · buckets · actions)', status: 'active' },
+  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation onto engine output', status: 'planned' },
   { id: 'P8',   title: 'Engine Explain dashboard',                                  status: 'planned' },
   { id: 'P9',   title: 'Snapshot + report integration',                             status: 'planned' },
 ]
@@ -39,8 +38,7 @@ function fmtINR(n: number): string {
 }
 
 export function EnginePage({ profile, buckets }: Props) {
-  const input: EngineInput = buildOrchestrationInputsFromStorage(profile, buckets)
-  const output: EngineOutput = useRankedGoals(profile, buckets)
+  const { input, ranked: output, fit } = useFittedStrategy(profile, buckets)
 
   return (
     <section className="space-y-3">
@@ -82,9 +80,12 @@ export function EnginePage({ profile, buckets }: Props) {
       </section>
 
       {/* Phase 5 live ranking — engine output */}
-      <RankedGoalsView output={output} />
+      <RankedGoalsView output={output} fit={fit} />
 
-      {/* Phase 4 input preview (collapsible — engine is the headline now) */}
+      {/* Phase 6 live fitted strategy */}
+      <FittedStrategyView fit={fit} output={output} />
+
+      {/* Phase 4 input preview (collapsible) */}
       <details className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 overflow-hidden">
         <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-emerald-800 hover:bg-emerald-100/40 transition-colors">
           Phase 4 · EngineInput preview (what the engine consumed)
@@ -93,17 +94,6 @@ export function EnginePage({ profile, buckets }: Props) {
           <EngineInputPreview input={input} />
         </div>
       </details>
-
-      {/* Strategy Fitter placeholder (Phase 6) */}
-      <section className="rounded-md border-2 border-dashed border-slate-300 bg-slate-50/60 p-4 text-center">
-        <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-500">Strategy fitter</div>
-        <div className="font-serif italic text-base text-slate-700 mt-1">
-          Bucket allocation · per-goal SIP · action list
-        </div>
-        <div className="text-[11px] text-slate-500 mt-1.5 max-w-xl mx-auto">
-          Phase 6 will consume the ranked output above and emit a concrete investment strategy.
-        </div>
-      </section>
 
       {/* Design memo */}
       <section className="rounded-md border-2 border-slate-200 bg-white p-4 sm:p-5">
@@ -119,8 +109,9 @@ export function EnginePage({ profile, buckets }: Props) {
 
 // ─── Ranked goals view (Phase 5 — live engine output) ────────────────
 
-function RankedGoalsView({ output }: { output: EngineOutput }) {
+function RankedGoalsView({ output, fit }: { output: EngineOutput; fit: StrategyFit }) {
   const { ranked, weightsUsed, trace, emittedAt, inputsHash } = output
+  const fitByGoal: Record<string, FittedGoal> = Object.fromEntries(fit.goals.map((g) => [g.goalId, g]))
 
   return (
     <section className="rounded-md border-2 border-indigo-200 bg-indigo-50/30 p-4">
@@ -135,14 +126,22 @@ function RankedGoalsView({ output }: { output: EngineOutput }) {
       {/* Weights bar */}
       <WeightBar weights={weightsUsed} />
 
-      {/* Ranked-goal cards */}
+      {/* Ranked-goal cards (with inline fit summary chip per goal) */}
       {ranked.length === 0 ? (
         <div className="rounded border border-dashed border-slate-300 bg-white p-4 mt-3 text-center text-[11px] text-slate-500 italic">
           No goals to rank yet. Add goals via Goal Discovery (Profile tab) or the legacy Goals editor — they'll appear here ranked automatically.
         </div>
       ) : (
         <ol className="space-y-2 mt-3">
-          {ranked.slice(0, 10).map((r, i) => <RankedGoalCard key={r.goal.id} rank={i + 1} rg={r} trace={trace.goalRationale[r.goal.id] ?? []} />)}
+          {ranked.slice(0, 10).map((r, i) => (
+            <RankedGoalCard
+              key={r.goal.id}
+              rank={i + 1}
+              rg={r}
+              trace={trace.goalRationale[r.goal.id] ?? []}
+              fit={fitByGoal[r.goal.id]}
+            />
+          ))}
           {ranked.length > 10 && <li className="text-[10px] text-slate-500 italic text-center pt-1">…and {ranked.length - 10} more (engine ranked all {ranked.length})</li>}
         </ol>
       )}
@@ -184,9 +183,10 @@ function WeightBar({ weights }: { weights: CriterionWeights }) {
   )
 }
 
-function RankedGoalCard({ rank, rg, trace }: { rank: number; rg: RankedGoal; trace: string[] }) {
+function RankedGoalCard({ rank, rg, trace, fit }: { rank: number; rg: RankedGoal; trace: string[]; fit?: FittedGoal }) {
   const sourceTone = rg.goal.source === 'system' ? 'rose' : rg.goal.source === 'gd-projection' ? 'indigo' : 'slate'
   const sourceBg = sourceTone === 'rose' ? 'bg-rose-100 text-rose-700' : sourceTone === 'indigo' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
+  const statusColor = fit?.status === 'funded' ? '#16a34a' : fit?.status === 'partial' ? '#f59e0b' : '#dc2626'
   return (
     <li className="rounded-md border-2 border-slate-200 bg-white p-3">
       <div className="flex items-start gap-3">
@@ -202,6 +202,7 @@ function RankedGoalCard({ rank, rg, trace }: { rank: number; rg: RankedGoal; tra
               <span className="font-serif italic text-sm font-extrabold text-slate-900 leading-tight">{rg.goal.label}</span>
               <span className={`ml-2 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${sourceBg}`}>{rg.goal.source}</span>
               {rg.goal.priority === 'must-have' && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 bg-amber-100 text-amber-800">must</span>}
+              {fit && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5" style={{ background: `${statusColor}18`, color: statusColor }}>{fit.status}</span>}
             </div>
             <div className="text-right shrink-0">
               <div className="font-extrabold text-slate-900 tabular-nums text-[14px]">{Math.round(rg.composite)}<span className="text-[9px] text-slate-500 font-normal">/100</span></div>
@@ -221,6 +222,16 @@ function RankedGoalCard({ rank, rg, trace }: { rank: number; rg: RankedGoal; tra
             <ScoreBar label="RSK" v={rg.scores.riskFit}       color="#ec4899" />
           </div>
 
+          {/* Fit chip — corpus + SIP allocation */}
+          {fit && (fit.corpusAllocated > 0 || fit.monthlySipAffordable > 0) && (
+            <div className="mt-2 pt-1.5 border-t border-slate-100 text-[10.5px] grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <FitChip label="Corpus alloc" value={`₹${fmtINR(fit.corpusAllocated)}`} />
+              <FitChip label="SIP need / afford" value={`${fmtINR(fit.monthlySipNeeded)} / ${fmtINR(fit.monthlySipAffordable)}`} />
+              <FitChip label="Projected"   value={`₹${fmtINR(fit.projectedAtTarget)}`} />
+              <FitChip label="Shortfall"   value={fit.shortfall > 0 ? `₹${fmtINR(fit.shortfall)}` : '—'} tone={fit.shortfall > 0 ? 'rose' : undefined} />
+            </div>
+          )}
+
           {/* Rationale */}
           {trace.length > 0 && (
             <ul className="mt-1.5 text-[10px] text-slate-500 leading-snug">
@@ -230,6 +241,16 @@ function RankedGoalCard({ rank, rg, trace }: { rank: number; rg: RankedGoal; tra
         </div>
       </div>
     </li>
+  )
+}
+
+function FitChip({ label, value, tone }: { label: string; value: string; tone?: 'rose' }) {
+  const fg = tone === 'rose' ? 'text-rose-700' : 'text-slate-900'
+  return (
+    <div>
+      <div className="text-[9px] text-slate-500 uppercase tracking-wider">{label}</div>
+      <div className={`font-bold tabular-nums ${fg}`}>{value}</div>
+    </div>
   )
 }
 
@@ -244,6 +265,109 @@ function ScoreBar({ label, v, color }: { label: string; v: number; color: string
         <div className="h-full" style={{ width: `${Math.min(100, v)}%`, background: color }} />
       </div>
     </div>
+  )
+}
+
+// ─── Fitted strategy view (Phase 6) ──────────────────────────────────
+
+function FittedStrategyView({ fit, output }: { fit: StrategyFit; output: EngineOutput }) {
+  const { totals, bucketTargets, actions } = fit
+  void output
+
+  return (
+    <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Phase 6 · live fitter</div>
+          <div className="font-serif italic text-lg font-extrabold text-slate-900 leading-tight">Fitted strategy</div>
+        </div>
+        <span className="text-[10px] text-slate-500 italic">
+          {totals.goalsFunded}/{fit.goals.length} funded · {totals.goalsPartial} partial · {totals.goalsUnfunded} unfunded
+        </span>
+      </div>
+
+      {/* Top tiles — capacity vs use */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <Tile label="Corpus used"   value={`₹${fmtINR(totals.corpusUsed)}`}   sub={`of ₹${fmtINR(totals.corpus)}`} />
+        <Tile label="Corpus free"   value={`₹${fmtINR(totals.corpusFree)}`}   sub="surplus after goal alloc" tone={totals.corpusFree > 0 ? 'emerald' : undefined} />
+        <Tile label="SIP used"      value={`₹${fmtINR(totals.sipUsed)}/mo`}   sub={`of ₹${fmtINR(totals.sipCapacity)}/mo`} />
+        <Tile label="SIP shortfall" value={totals.sipShortfall > 0 ? `₹${fmtINR(totals.sipShortfall)}/mo` : '—'} sub="goals can't fully fund" tone={totals.sipShortfall > 0 ? 'rose' : undefined} />
+      </div>
+
+      {/* Bucket target bar */}
+      {totals.corpusUsed > 0 && (
+        <div className="mt-3">
+          <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 mb-1">4-bucket allocation (weighted by goal horizons)</div>
+          <div className="flex h-3 rounded-full overflow-hidden border border-slate-200">
+            <div style={{ background: '#10b981', width: `${bucketTargets.b1Pct * 100}%` }} title={`B1 ${(bucketTargets.b1Pct*100).toFixed(0)}%`} />
+            <div style={{ background: '#3b82f6', width: `${bucketTargets.b2Pct * 100}%` }} title={`B2 ${(bucketTargets.b2Pct*100).toFixed(0)}%`} />
+            <div style={{ background: '#a855f7', width: `${bucketTargets.b3Pct * 100}%` }} title={`B3 ${(bucketTargets.b3Pct*100).toFixed(0)}%`} />
+            <div style={{ background: '#f59e0b', width: `${bucketTargets.b4Pct * 100}%` }} title={`B4 ${(bucketTargets.b4Pct*100).toFixed(0)}%`} />
+          </div>
+          <div className="grid grid-cols-4 gap-2 text-[10.5px] mt-1">
+            <BucketLabel name="B1 · Liquid"  pct={bucketTargets.b1Pct} amount={bucketTargets.b1} color="#10b981" />
+            <BucketLabel name="B2 · Debt"    pct={bucketTargets.b2Pct} amount={bucketTargets.b2} color="#3b82f6" />
+            <BucketLabel name="B3 · Hybrid"  pct={bucketTargets.b3Pct} amount={bucketTargets.b3} color="#a855f7" />
+            <BucketLabel name="B4 · Equity"  pct={bucketTargets.b4Pct} amount={bucketTargets.b4} color="#f59e0b" />
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      {actions.length > 0 && (
+        <div className="mt-3">
+          <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 mb-1.5">Recommended actions</div>
+          <ol className="space-y-1.5">
+            {actions.map((a) => <ActionRow key={a.priority} action={a} />)}
+          </ol>
+        </div>
+      )}
+
+      <div className="mt-3 pt-2 border-t border-emerald-200/60 text-[10px] text-slate-500 flex justify-between flex-wrap gap-2">
+        <span>Strategy emitted {new Date(fit.emittedAt).toLocaleString('en-IN')}</span>
+        <span className="font-mono">fit hash: <code className="text-slate-700">{fit.inputsHash}</code></span>
+      </div>
+    </section>
+  )
+}
+
+function Tile({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: 'emerald' | 'rose' }) {
+  const bg = tone === 'emerald' ? 'bg-emerald-50 border-emerald-300' : tone === 'rose' ? 'bg-rose-50 border-rose-300' : 'bg-white border-slate-200'
+  const fg = tone === 'emerald' ? 'text-emerald-700' : tone === 'rose' ? 'text-rose-700' : 'text-slate-700'
+  return (
+    <div className={`rounded-md border-2 ${bg} px-2.5 py-2`}>
+      <div className={`text-[9px] font-bold tracking-[1.5px] uppercase ${fg}`}>{label}</div>
+      <div className="text-base font-extrabold text-slate-900 tabular-nums mt-0.5 leading-tight">{value}</div>
+      {sub && <div className="text-[9px] text-slate-500 mt-0.5">{sub}</div>}
+    </div>
+  )
+}
+
+function BucketLabel({ name, pct, amount, color }: { name: string; pct: number; amount: number; color: string }) {
+  return (
+    <div className="flex flex-col">
+      <span className="inline-flex items-baseline gap-1">
+        <span className="w-2 h-2 rounded-sm inline-block" style={{ background: color }} />
+        <span className="text-slate-700">{name}</span>
+      </span>
+      <span className="font-bold text-slate-900 tabular-nums">{(pct * 100).toFixed(0)}% <span className="text-[10px] text-slate-500 font-normal">· ₹{fmtINR(amount)}</span></span>
+    </div>
+  )
+}
+
+function ActionRow({ action }: { action: FitAction }) {
+  const categoryColor: Record<FitAction['category'], string> = {
+    reserve: '#dc2626', allocate: '#10b981', sip: '#f59e0b', rebalance: '#3b82f6', flag: '#dc2626',
+  }
+  const c = categoryColor[action.category]
+  return (
+    <li className="grid grid-cols-[26px_1fr] gap-2 items-baseline">
+      <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold tabular-nums" style={{ background: `${c}18`, color: c }}>{action.priority}</span>
+      <div>
+        <div className="text-[12px] font-semibold text-slate-900">{action.title}</div>
+        <div className="text-[10.5px] text-slate-600 italic mt-0.5 leading-snug">{action.detail}</div>
+      </div>
+    </li>
   )
 }
 
