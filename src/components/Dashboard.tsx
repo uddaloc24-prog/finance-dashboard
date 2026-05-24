@@ -12,6 +12,11 @@ import { ExpenseEditor } from './ExpenseEditor'
 import { InflationAssumptions } from './InflationAssumptions'
 import { PlanSection } from './PlanSection'
 import { SidePanel } from './ui/SidePanel'
+import { Modal } from './ui/Modal'
+import { NetWorthDashboard } from './plan-dashboards/NetWorthDashboard'
+import { RetirementReadinessDashboard } from './plan-dashboards/RetirementReadinessDashboard'
+import { InsuranceCoverageDashboard } from './plan-dashboards/InsuranceCoverageDashboard'
+import { CashFlowDashboard } from './plan-dashboards/CashFlowDashboard'
 import { CashflowSummary } from './CashflowSummary'
 import { RetirementWelcome } from './RetirementWelcome'
 import { AssetInventory } from './AssetInventory'
@@ -85,6 +90,8 @@ export function Dashboard({
     return 'plan'
   })
   const [openPlanStep, setOpenPlanStep] = useState<string | null>(null)
+  type PlanDash = 'profile' | 'networth' | 'readiness' | 'insurance' | 'cashflow'
+  const [openPlanDash, setOpenPlanDash] = useState<PlanDash | null>(null)
   const { data: marketData } = useMarketData(profile.refreshInterval)
 
   // Effective monthly draw nets passive income against withdrawal: only the
@@ -213,39 +220,79 @@ export function Dashboard({
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
             <PlanIntro />
 
-            {/* Wheel + (optional) right-side panel. When a step is open the
-                wheel column shrinks to the left and the side panel takes the
-                right; when nothing is open the wheel is centred full-width. */}
-            <PlanLayout
-              openStep={openPlanStep}
-              setOpenStep={setOpenPlanStep}
-              profile={profile}
-              buckets={buckets}
-              onProfileUpdate={onProfileUpdate}
-              onBucketsUpdate={onBucketsUpdate}
-            />
-
-            {/* Step 04 Profile + Cashflow Summary — side by side in two
-                columns, stacking only below lg. */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-4 items-start">
-              <PlanSection
-                num="04"
-                tone="navy"
-                title="Profile & Settings"
-                subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
-                status={<ProfileStatus profile={profile} buckets={buckets} />}
-                helpExamples={<HelpList items={HELP_PROFILE} />}
-              >
-                <ProfileSettings
+            {/* Plan-tab launcher rail (left) + wheel/side-panel area (right) */}
+            <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-3 items-start">
+              <PlanLauncherRail openDash={openPlanDash} setOpenDash={setOpenPlanDash} />
+              <div className="min-w-0">
+                <PlanLayout
+                  openStep={openPlanStep}
+                  setOpenStep={setOpenPlanStep}
                   profile={profile}
                   buckets={buckets}
                   onProfileUpdate={onProfileUpdate}
                   onBucketsUpdate={onBucketsUpdate}
-                  chrome="bare"
                 />
-              </PlanSection>
-              <CashflowSummary profile={profile} buckets={buckets} />
+                <div className="mt-3">
+                  <CashflowSummary profile={profile} buckets={buckets} />
+                </div>
+              </div>
             </div>
+
+            {/* Plan-tab dashboard modals */}
+            <Modal
+              open={openPlanDash === 'profile'}
+              title="Profile & Settings"
+              subtitle="Corpus, tax bracket, withdrawal & SIP schedule"
+              accent="navy"
+              size="2xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <ProfileSettings
+                profile={profile} buckets={buckets}
+                onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate}
+                chrome="bare"
+              />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'networth'}
+              title="Net Worth & Balance Sheet"
+              subtitle="Asset / liability breakdown · liquid vs invested · concentration"
+              accent="emerald"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <NetWorthDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'readiness'}
+              title="Retirement Readiness"
+              subtitle="Adequacy · ready-at age · sustainability heuristic"
+              accent="indigo"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <RetirementReadinessDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'insurance'}
+              title="Insurance Coverage Gap"
+              subtitle="Health vs benchmark · life cover · critical illness · MWP"
+              accent="amber"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <InsuranceCoverageDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'cashflow'}
+              title="Cash Flow"
+              subtitle="Monthly inflow vs outflow · surplus deployment plan"
+              accent="rose"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <CashFlowDashboard profile={profile} buckets={buckets} />
+            </Modal>
             {/* Legacy wheel render (kept hidden for reference) ─── */}
             {false && (
             <PlanWheel>
@@ -566,6 +613,74 @@ export function Dashboard({
         <TabNavFooter activeTab={activeTab} onChange={setActiveTab} />
       </main>
     </div>
+  )
+}
+
+// ── PlanLauncherRail — left column of 5 chunky 3D dashboard launchers ─
+
+type PlanDashKey = 'profile' | 'networth' | 'readiness' | 'insurance' | 'cashflow'
+
+interface PlanLauncherDef {
+  key: PlanDashKey
+  icon: string
+  primary: string
+  secondary: string
+  sub: string
+  body: string         // tailwind gradient classes
+  bodyHover: string
+  lip: string          // box-shadow rgb() for the bottom lip
+  ring: string         // focus ring colour
+}
+
+const PLAN_LAUNCHERS: PlanLauncherDef[] = [
+  { key: 'profile',   icon: '⚙️', primary: 'Profile',     secondary: 'SETTINGS', sub: 'CORPUS · TAX · SIP', body: 'from-blue-400 via-blue-500 to-blue-700',         bodyHover: 'hover:from-blue-300 hover:via-blue-400 hover:to-blue-600',         lip: 'rgb(30,58,138)',  ring: 'focus:ring-blue-300' },
+  { key: 'networth',  icon: '💼', primary: 'Net Worth',   secondary: 'BALANCE',  sub: 'ASSETS · LIABILITIES', body: 'from-emerald-400 via-emerald-500 to-emerald-700',  bodyHover: 'hover:from-emerald-300 hover:via-emerald-400 hover:to-emerald-600', lip: 'rgb(6,78,59)',    ring: 'focus:ring-emerald-300' },
+  { key: 'readiness', icon: '🎯', primary: 'Retirement',  secondary: 'READINESS', sub: 'CAN I RETIRE?',      body: 'from-indigo-400 via-indigo-600 to-violet-700',      bodyHover: 'hover:from-indigo-300 hover:via-indigo-500 hover:to-violet-600',     lip: 'rgb(49,46,129)',  ring: 'focus:ring-indigo-300' },
+  { key: 'insurance', icon: '🛡️', primary: 'Insurance',   secondary: 'GAPS',     sub: 'HEALTH · LIFE · CI', body: 'from-amber-400 via-amber-500 to-amber-700',         bodyHover: 'hover:from-amber-300 hover:via-amber-400 hover:to-amber-600',       lip: 'rgb(120,53,15)',  ring: 'focus:ring-amber-300' },
+  { key: 'cashflow',  icon: '💸', primary: 'Cash Flow',   secondary: 'DEEP',     sub: 'INFLOW · OUTFLOW',   body: 'from-rose-400 via-rose-500 to-rose-700',            bodyHover: 'hover:from-rose-300 hover:via-rose-400 hover:to-rose-600',          lip: 'rgb(136,19,55)',  ring: 'focus:ring-rose-300' },
+]
+
+function PlanLauncherRail({ openDash, setOpenDash }: { openDash: PlanDashKey | null; setOpenDash: (k: PlanDashKey | null) => void }) {
+  return (
+    <aside className="flex flex-col gap-2 md:sticky md:top-2 md:self-start">
+      <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-600 px-1 mb-1">Dashboards</div>
+      {PLAN_LAUNCHERS.map((l) => {
+        const active = openDash === l.key
+        return (
+          <button
+            key={l.key}
+            type="button"
+            onClick={() => setOpenDash(active ? null : l.key)}
+            aria-pressed={active}
+            title={`Open ${l.primary} ${l.secondary} dashboard`}
+            className={[
+              'group relative w-full rounded-lg overflow-hidden select-none flex flex-col',
+              'transition-all duration-100',
+              `bg-gradient-to-b ${l.body} ${l.bodyHover} text-white border border-black/20`,
+              'focus:outline-none focus:ring-2 ' + l.ring,
+              active ? 'translate-y-[2px]' : 'active:translate-y-[2px]',
+            ].join(' ')}
+            style={{
+              boxShadow: active
+                ? `0 1px 0 0 ${l.lip}, inset 0 2px 4px rgba(0,0,0,0.25)`
+                : `0 4px 0 0 ${l.lip}, 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.20)`,
+            }}
+          >
+            <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
+              <span className="text-xl leading-none" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{l.icon}</span>
+              <span className="text-[10px] leading-none font-bold opacity-90" aria-hidden="true">↗</span>
+            </div>
+            <div className="px-3 pt-1.5 pb-2.5" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.45), 0 -1px 0 rgba(255,255,255,0.10)' }}>
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="font-serif italic text-base font-extrabold leading-none tracking-tight">{l.primary}</span>
+                <span className="font-sans text-[10px] font-extrabold uppercase tracking-[2px] leading-none">{l.secondary}</span>
+              </div>
+              <div className="font-mono text-[9px] uppercase tracking-[2.5px] opacity-85 mt-1">{l.sub}</div>
+            </div>
+          </button>
+        )
+      })}
+    </aside>
   )
 }
 
