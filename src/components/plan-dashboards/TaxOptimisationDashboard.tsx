@@ -116,13 +116,13 @@ export function TaxOptimisationDashboard({ profile, buckets }: Props) {
         </ol>
       </section>
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">FY 25-26 budget reminders</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">FY 25-26 reference notes</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          <li>● New regime is default since FY 23-24 — pick old regime explicitly to claim 80C/80D/80CCD(1B).</li>
-          <li>● Equity STCG taxed at <strong>20%</strong> (was 15%), LTCG at <strong>12.5%</strong> (was 10%) above ₹1.25L — Budget 2024 changes.</li>
-          <li>● Indexation removed from debt MFs purchased on/after 1 Apr 2023 — taxed at slab rate on redemption.</li>
-          <li>● Tax bracket noted: <strong>{slabLabel}</strong> ({slab}%) — change in Step 04 Profile & Settings.</li>
+          <li>● New regime is the default since FY 23-24; old regime must be opted into to claim 80C/80D/80CCD(1B).</li>
+          <li>● Equity STCG rate is <strong>20%</strong>, LTCG <strong>12.5%</strong> above ₹1.25L — post Budget 2024.</li>
+          <li>● Indexation removed from debt MFs bought on/after 1 Apr 2023.</li>
+          <li>● Tax bracket on file: <strong>{slabLabel}</strong> ({slab}%).</li>
         </ul>
       </section>
 

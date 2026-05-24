@@ -82,11 +82,11 @@ export function DebtDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Lifetime-interest tile dropped — now shown per-loan in the list below */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Kpi label="Total outstanding" value={fmtINR(totalOutstanding)} tone={totalOutstanding > 0 ? 'rose' : 'emerald'} />
         <Kpi label="Monthly EMI"       value={fmtINR(totalEMI)} />
         <Kpi label="DTI ratio"         value={dti > 0 ? `${dti.toFixed(1)}%` : '—'} sub={dti < 35 ? 'comfortable' : dti < 50 ? 'stretched' : 'unsustainable'} tone={dti < 35 ? 'emerald' : dti < 50 ? 'amber' : 'rose'} />
-        <Kpi label="Lifetime interest" value={fmtINR(lifetimeInterest)} sub="at current EMIs" tone="amber" />
       </div>
 
       {rows.length === 0 ? (
@@ -145,14 +145,14 @@ export function DebtDashboard({ profile, buckets }: Props) {
         </>
       )}
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {dti > 50 && <li>● DTI &gt; 50% — corpus is funding interest, not life. Aggressive payoff (Avalanche) recommended.</li>}
-          {dti > 35 && dti <= 50 && <li>● DTI 35–50% — manageable but limits SIP capacity. Refinance high-rate loans first.</li>}
-          {rows.some((r) => (r.entry.interestRate || 0) >= 15) && <li>● You hold ≥15% rate debt (likely credit card / personal). Clear before any new SIP.</li>}
-          {homeLoan && (homeLoan.entry.interestRate || 0) < 9 && <li>● Home loan rate {(homeLoan.entry.interestRate || 0).toFixed(2)}% may be below expected equity return — don't over-prepay; deploy via MaxGain instead.</li>}
-          {rows.length > 0 && <li>● Strategy preference saved under Step 02 → "Loan strategy".</li>}
+          {dti > 50 && <li>● DTI is above 50% — corpus is funding interest rather than life.</li>}
+          {dti > 35 && dti <= 50 && <li>● DTI is in the 35–50% band — manageable but SIP capacity is constrained.</li>}
+          {rows.some((r) => (r.entry.interestRate || 0) >= 15) && <li>● You hold debt at ≥15% rate (likely credit card or personal).</li>}
+          {homeLoan && (homeLoan.entry.interestRate || 0) < 9 && <li>● Home-loan rate is {(homeLoan.entry.interestRate || 0).toFixed(2)}% — below the typical equity-return assumption.</li>}
+          {rows.length > 0 && <li>● Lifetime interest at current EMIs ≈ <strong>{fmtINR(lifetimeInterest)}</strong>.</li>}
         </ul>
       </section>
 

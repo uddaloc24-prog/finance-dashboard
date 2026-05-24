@@ -13,6 +13,7 @@
 
 import type { UserProfile, BucketState, AssetEntry, LoanEntry, InsuranceEntry } from '../../types'
 import { totalCorpus } from '../../lib/calculations'
+import { blendedReturn } from '../../lib/blendedReturn'
 import { DownloadRow } from './NetWorthDashboard'
 import { useState } from 'react'
 import type { ExportFormat } from '../../lib/exporters'
@@ -69,11 +70,12 @@ function computeSubScores(profile: UserProfile, buckets: BucketState): SubScore[
   const dti = incomeProxy > 0 ? (totalEMI / incomeProxy) * 100 : 0
   const debt = liabilities === 0 ? 100 : Math.max(0, 100 - dti * 1.5)
 
-  // 5. Retirement adequacy
+  // 5. Retirement adequacy — uses the user's blended return assumption
   const horizon = Math.max(1, lifeExp - retireAge)
   const yearsTo = Math.max(0, retireAge - age)
+  const nominalReturn = blendedReturn(storage.getReturnAssumptions(), profile.bucketAllocation) / 100
   const required = (profile.monthlyWithdrawal ?? 0) * 12 * horizon * 0.6  // rough PV proxy
-  const projected = corpus * Math.pow(1 + 0.095, yearsTo)
+  const projected = corpus * Math.pow(1 + nominalReturn, yearsTo)
   const adequacy = required > 0 ? Math.min(120, (projected / required) * 100) : 0
   const retirement = Math.min(100, adequacy)
 

@@ -138,13 +138,12 @@ export function TaxCalendarDashboard({ profile, buckets }: Props) {
         </div>
       </section>
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Reminders</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Reference notes</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {slab >= 20 && <li>● 20%/30% slab — pay advance tax 4× a year (15 Jun/Sep/Dec/Mar) to avoid 234B/234C interest.</li>}
-          <li>● SCSS/PPF/NSC rates revise every quarter — use the dates above to time fresh deposits.</li>
-          <li>● Insurance renewals are <em>estimated as one year ahead</em>; for exact dates use the Policy Renewal Date in each policy.</li>
-          <li>● Update will + nominee details after any major event (death, divorce, new asset, child marriage).</li>
+          {slab >= 20 && <li>● At {slab}% slab, advance tax is due 4× a year (15 Jun / Sep / Dec / Mar). Skipping triggers 234B/234C interest.</li>}
+          <li>● SCSS / PPF / NSC rates revise quarterly on the dates shown above.</li>
+          <li>● Insurance renewals shown here are estimated as one year ahead — exact date is the Policy Renewal Date.</li>
         </ul>
       </section>
 

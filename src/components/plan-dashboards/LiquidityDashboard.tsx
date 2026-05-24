@@ -83,11 +83,11 @@ export function LiquidityDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Monthly burn tile moved to Cash Flow dashboard (canonical home) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Kpi label="Liquid (≤1y)"   value={fmtINR(liquid)}   sub={`${pct(liquid, assetTotal)} of gross`} tone="emerald" />
         <Kpi label="Locked (5y+)"   value={fmtINR(longLock)} sub={`${pct(longLock, assetTotal)} of gross`} tone="slate" />
-        <Kpi label="Emergency runway" value={runwayMonths === Infinity ? '∞' : `${runwayMonths.toFixed(1)}m`} sub="liquid ÷ monthly burn" />
-        <Kpi label="Monthly burn"   value={fmtINR(monthlyBurn)} sub="essential+life+health+edu" />
+        <Kpi label="Emergency runway" value={runwayMonths === Infinity ? '∞' : `${runwayMonths.toFixed(1)}m`} sub={`vs ${fmtINR(monthlyBurn)}/mo burn`} />
       </div>
 
       {/* Runway gauge */}
@@ -139,14 +139,15 @@ export function LiquidityDashboard({ profile, buckets }: Props) {
         </section>
       )}
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {runwayMonths < 3 && <li>● Runway &lt; 3 months — critical. Build to at least 6× monthly burn before adding to long-tenor assets.</li>}
-          {runwayMonths >= 3 && runwayMonths < 6 && <li>● Runway 3–6 months — adequate for a short job-loss / medical event. Target 6–12.</li>}
-          {runwayMonths >= 12 && <li>● Runway ≥ 12 months — strong. Excess liquid above 18m is drag; consider moving to B2/B3.</li>}
-          {longLock / Math.max(1, assetTotal) > 0.6 && <li>● {Math.round((longLock / assetTotal) * 100)}% locked beyond 5 years — review whether near-term goals are funded.</li>}
-          {liquid / Math.max(1, assetTotal) < 0.05 && <li>● Liquid &lt; 5% of gross — even minor shocks force a withdrawal from invested corpus.</li>}
+          {runwayMonths < 3 && <li>● Runway sits below 3 months.</li>}
+          {runwayMonths >= 3 && runwayMonths < 6 && <li>● Runway is 3–6 months — covers a short job-loss / medical event.</li>}
+          {runwayMonths >= 6 && runwayMonths < 12 && <li>● Runway is 6–12 months — comfortable for most non-catastrophic shocks.</li>}
+          {runwayMonths >= 12 && runwayMonths !== Infinity && <li>● Runway is &gt; 12 months — excess liquid above ~18 months becomes return drag.</li>}
+          {longLock / Math.max(1, assetTotal) > 0.6 && <li>● {Math.round((longLock / assetTotal) * 100)}% of gross assets are locked beyond 5 years.</li>}
+          {liquid / Math.max(1, assetTotal) < 0.05 && <li>● Liquid portion is &lt; 5% of gross — small shocks force invested-corpus withdrawals.</li>}
         </ul>
       </section>
 

@@ -95,12 +95,7 @@ export function AssetAllocationDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Kpi label="Equity"      value={fmtINR(totals.equity)}     sub={`${Math.round((totals.equity / Math.max(1, grand)) * 100)}% (target ${Math.round(target.equity * 100)}%)`} />
-        <Kpi label="Debt / FI"   value={fmtINR(totals.debt)}       sub={`${Math.round((totals.debt / Math.max(1, grand)) * 100)}% (target ${Math.round(target.debt * 100)}%)`} />
-        <Kpi label="Gold"        value={fmtINR(totals.gold)}       sub={`${Math.round((totals.gold / Math.max(1, grand)) * 100)}% (target ${Math.round(target.gold * 100)}%)`} />
-        <Kpi label="Real Estate" value={fmtINR(totals.realestate)} sub={`${Math.round((totals.realestate / Math.max(1, grand)) * 100)}% (target ${Math.round(target.realestate * 100)}%)`} />
-      </div>
+      {/* Per-class KPI tiles dropped — donuts + drift bars below show the same info more vividly */}
 
       {/* Side-by-side donuts */}
       <section className="rounded-md border-2 border-slate-200 bg-white p-3">
@@ -144,29 +139,22 @@ export function AssetAllocationDashboard({ profile, buckets }: Props) {
         )}
       </section>
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {totals.equity / Math.max(1, grand) > target.equity + 0.10 && <li>● Equity {Math.round((totals.equity / grand - target.equity) * 100)} pp over target — strong recent run? Lock gains via partial switch to BAF.</li>}
-          {totals.realestate / Math.max(1, grand) > 0.4 && <li>● Real estate {'>'} 40% of net worth — illiquid; rebalancing is slow.</li>}
-          {intlShare < 10 && totals.equity > 0 && <li>● International equity {intlShare.toFixed(0)}% of equity — diversification window: target 15–25% via Nasdaq / MSCI World funds.</li>}
-          {totals.gold > 0 && totals.gold / Math.max(1, grand) > 0.15 && <li>● Gold {Math.round((totals.gold / grand) * 100)}% — above the 5–10% portfolio insurance norm.</li>}
-          {grand === 0 && <li>● No asset inventory yet — fill Step 01 to see real allocation.</li>}
+          {totals.equity / Math.max(1, grand) > target.equity + 0.10 && <li>● Equity is {Math.round((totals.equity / grand - target.equity) * 100)} pp above target allocation.</li>}
+          {totals.realestate / Math.max(1, grand) > 0.4 && <li>● Real estate exceeds 40% of net worth — rebalancing options are slow.</li>}
+          {intlShare < 10 && totals.equity > 0 && <li>● International equity is {intlShare.toFixed(0)}% of equity — below the 15–25% diversification norm.</li>}
+          {totals.gold > 0 && totals.gold / Math.max(1, grand) > 0.15 && <li>● Gold is {Math.round((totals.gold / grand) * 100)}% — above the 5–10% portfolio-insurance norm.</li>}
+          {grand === 0 && <li>● No asset inventory yet.</li>}
         </ul>
+        <div className="text-[10px] text-slate-500 italic mt-2 border-t border-slate-200/60 pt-2">
+          Target allocation is a hand-coded table keyed off Risk Appetite. The orchestration engine (Phase 7) will replace this with a strategy-fitter output.
+        </div>
       </section>
 
       <DownloadRow busy={busy} onExport={handleExport} err={err} profile={profile} buckets={buckets} />
     </section>
-  )
-}
-
-function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="rounded-md border-2 border-slate-200 bg-white px-2.5 py-2">
-      <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-slate-500">{label}</div>
-      <div className="text-base font-extrabold text-slate-900 tabular-nums mt-0.5 leading-tight">{value}</div>
-      {sub && <div className="text-[9px] text-slate-500 mt-0.5">{sub}</div>}
-    </div>
   )
 }
 

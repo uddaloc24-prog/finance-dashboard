@@ -6,6 +6,7 @@ import type { UserProfile, BucketState } from '../../types'
 import type { Goal } from '../../types/v2'
 import { DownloadRow } from './NetWorthDashboard'
 import { totalCorpus } from '../../lib/calculations'
+import { blendedReturn } from '../../lib/blendedReturn'
 import { storage } from '../../lib/storage'
 import { useState } from 'react'
 import type { ExportFormat } from '../../lib/exporters'
@@ -20,8 +21,6 @@ function fmtINR(n: number): string {
   if (abs >= 1e3) return `${sign}₹${(abs / 1e3).toFixed(0)}k`
   return `${sign}₹${Math.round(abs)}`
 }
-
-const NOMINAL_RETURN = 0.10  // assumed portfolio return for SIP calc
 
 /** SIP per month needed to reach `fv` in `months` at monthly rate `r`. */
 function sipRequired(fv: number, months: number, monthlyRate: number): number {
@@ -40,6 +39,8 @@ export function GoalTrackerDashboard({ profile, buckets }: Props) {
   const thisYear = today.getFullYear()
 
   const inflation = (profile.inflationRate ?? 6) / 100
+  // Blended return read from the user's ReturnAssumptions × bucket allocation
+  const NOMINAL_RETURN = blendedReturn(storage.getReturnAssumptions(), profile.bucketAllocation) / 100
   const monthlyRate = NOMINAL_RETURN / 12
 
   const enriched = goals.map((g) => {
@@ -124,16 +125,18 @@ export function GoalTrackerDashboard({ profile, buckets }: Props) {
         </>
       )}
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
           {goals.length > 0 && totalRequiredSip > 0 && (profile.sipAmount ?? 0) < totalRequiredSip && (
             <li>● Current SIP <strong>{fmtINR(profile.sipAmount ?? 0)}</strong>/mo is short of the blended need by <strong>{fmtINR(totalRequiredSip - (profile.sipAmount ?? 0))}</strong>/mo.</li>
           )}
-          {enriched.filter((e) => e.status === 'behind').length > 0 && <li>● Behind-status goals dominate — either delay target year, accept smaller amount, or lift SIPs.</li>}
-          <li>● Assumes blended portfolio return of {(NOMINAL_RETURN * 100).toFixed(0)}% and corpus split equally across goals. Override allocation per goal in a later release.</li>
-          <li>● Add or edit goals via the Goals editor (legacy) or the Goal Discovery flow (Profile tab).</li>
+          {enriched.filter((e) => e.status === 'behind').length > 0 && <li>● Behind-status goals dominate the list.</li>}
+          <li>● Assumed blended return: {(NOMINAL_RETURN * 100).toFixed(1)}%. Corpus is currently split equally across goals (naive baseline — engine will replace).</li>
         </ul>
+        <div className="text-[10px] text-slate-500 italic mt-2 border-t border-slate-200/60 pt-2">
+          Per-goal SIP and allocation will come from the orchestration engine (Phase 5/6). Today's numbers use a naive equal-split.
+        </div>
       </section>
 
       <DownloadRow busy={busy} onExport={handleExport} err={err} profile={profile} buckets={buckets} />

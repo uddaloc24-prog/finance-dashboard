@@ -48,11 +48,6 @@ export function NetWorthDashboard({ profile, buckets }: Props) {
     return { ...g, total }
   })
   const totalAssets = groupTotals.reduce((s, g) => s + g.total, 0)
-  const liquidTotal = ASSET_GROUPS.flatMap((g) => g.keys)
-    .map((k) => readAsset(profile, k))
-    .filter((e): e is AssetEntry => !!e && e.status === 'liquid')
-    .reduce((s, e) => s + e.amount, 0)
-  const investedTotal = totalAssets - liquidTotal
 
   // Liabilities
   const lp = profile.loanProfile
@@ -82,12 +77,11 @@ export function NetWorthDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      {/* Top-line KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Top-line KPIs — Liquid:Invested moved to Liquidity dashboard */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Kpi label="Net Worth"     value={fmtINR(netWorth)}     tone={netWorth >= 0 ? 'emerald' : 'rose'} />
         <Kpi label="Gross Assets"  value={fmtINR(totalAssets)}  tone="navy" />
         <Kpi label="Liabilities"   value={fmtINR(liabilities)}  tone="amber" />
-        <Kpi label="Liquid : Invested" value={`${pct(liquidTotal, totalAssets)} : ${pct(investedTotal, totalAssets)}`} tone="slate" />
       </div>
 
       {/* Asset-class donut */}
@@ -105,19 +99,6 @@ export function NetWorthDashboard({ profile, buckets }: Props) {
               </li>
             ))}
           </ul>
-        </div>
-      </section>
-
-      {/* Liquid vs Invested bar */}
-      <section className="rounded-md border-2 border-slate-200 bg-white p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-2">Liquid vs Invested</h4>
-        <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 border border-slate-200">
-          {liquidTotal > 0 && <div className="bg-emerald-500" style={{ width: `${(liquidTotal / Math.max(1, totalAssets)) * 100}%` }} />}
-          {investedTotal > 0 && <div className="bg-blue-500" style={{ width: `${(investedTotal / Math.max(1, totalAssets)) * 100}%` }} />}
-        </div>
-        <div className="flex justify-between mt-1.5 text-[11px]">
-          <span className="text-emerald-700"><strong>{fmtINR(liquidTotal)}</strong> Liquid · {pct(liquidTotal, totalAssets)}</span>
-          <span className="text-blue-700"><strong>{fmtINR(investedTotal)}</strong> Invested · {pct(investedTotal, totalAssets)}</span>
         </div>
       </section>
 
@@ -151,15 +132,14 @@ export function NetWorthDashboard({ profile, buckets }: Props) {
         </section>
       )}
 
-      {/* Insights */}
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      {/* Observations — lens-specific only; actions live in Plan Executive */}
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {netWorth < 0 && <li>● Net worth is negative — focus on debt payoff before adding to invested assets.</li>}
-          {liquidTotal / Math.max(1, totalAssets) < 0.05 && <li>● Liquid corpus is &lt; 5% of total — consider building emergency / B1 buffer.</li>}
-          {top5Share > 70 && <li>● Top 5 holdings carry {Math.round(top5Share)}% of net worth — concentration risk is elevated.</li>}
-          {liabilities > totalAssets * 0.5 && totalAssets > 0 && <li>● Liabilities exceed 50% of assets — DTI likely above comfortable range.</li>}
-          <li>● Drill into each asset row under Step 01 to update market values.</li>
+          {netWorth < 0 && <li>● Net worth is negative.</li>}
+          {top5Share > 70 && <li>● Top 5 holdings carry {Math.round(top5Share)}% of net worth — concentration is elevated.</li>}
+          {liabilities > totalAssets * 0.5 && totalAssets > 0 && <li>● Liabilities exceed 50% of gross assets.</li>}
+          {netWorth >= 0 && top5Share <= 70 && (liabilities <= totalAssets * 0.5 || totalAssets === 0) && <li>● Balance-sheet structure looks healthy on net worth, concentration, and leverage.</li>}
         </ul>
       </section>
 

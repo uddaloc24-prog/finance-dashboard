@@ -71,23 +71,12 @@ export function EstateDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* Life cover + Outstanding debt tiles dropped — Insurance & Debt dashboards own them.
+          Critical-action MWP banner dropped — Insurance owns the observation; Plan Executive owns the action. */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Kpi label="Bequeathable"  value={fmtINR(bequeathable)} sub="net assets + life cover" tone="emerald" />
-        <Kpi label="Life cover"    value={fmtINR(lifeCover)}    sub={termMwp ? 'MWP ✓' : (termActive ? 'NOT under MWP' : 'no term plan')} tone={termMwp ? 'emerald' : 'rose'} />
-        <Kpi label="Illiquid (RE)" value={fmtINR(realEstate)}   sub="needs nominee + chain" tone="amber" />
-        <Kpi label="Outstanding debt" value={fmtINR(liabilities)} sub="reduces what passes" />
+        <Kpi label="Illiquid (RE)" value={fmtINR(realEstate)}   sub="needs nominee + title chain" tone="amber" />
       </div>
-
-      {/* MWP banner */}
-      {termActive && !termMwp && (
-        <section className="rounded-md border-2 border-rose-300 bg-rose-50 p-3">
-          <div className="text-[10px] font-bold tracking-[2px] uppercase text-rose-800">Critical action</div>
-          <div className="text-[12px] text-slate-800 mt-1 leading-snug">
-            Your <strong>term plan is active but NOT held under the MWP Act, 1874</strong>. On a claim, proceeds form part of your estate and any creditor can attach them.
-            Re-issue the policy (or a new equivalent) MWP-tagged to your spouse / children before any other estate move.
-          </div>
-        </section>
-      )}
 
       {/* Checklist */}
       <section className="rounded-md border-2 border-slate-200 bg-white p-3">
@@ -117,13 +106,13 @@ export function EstateDashboard({ profile, buckets }: Props) {
         </section>
       )}
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Gift-tax / wealth-transfer notes</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Gift-tax / wealth-transfer reference</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          <li>● Gifts to <strong>specified relatives</strong> (spouse, children, siblings, parents) are tax-free regardless of amount under Sec 56.</li>
-          <li>● Gifts to non-relatives over ₹50,000/year are taxable to the recipient at their slab rate.</li>
-          <li>● Clubbing of income applies on gifts to spouse / minor children — the donor's tax slab still owns the income from gifted assets.</li>
-          <li>● HUF route: useful for inherited assets that can grow as a separate PAN once partitioned.</li>
+          <li>● Gifts to specified relatives (spouse, children, siblings, parents) are tax-free regardless of amount under Sec 56.</li>
+          <li>● Gifts to non-relatives over ₹50,000/year are taxable to the recipient at slab rate.</li>
+          <li>● Clubbing applies on gifts to spouse / minor children — donor's slab still owns the income.</li>
+          <li>● HUF route is useful for inherited assets that grow as a separate PAN once partitioned.</li>
         </ul>
       </section>
 

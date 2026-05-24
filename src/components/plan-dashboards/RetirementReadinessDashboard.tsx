@@ -4,6 +4,7 @@
 
 import type { UserProfile, BucketState } from '../../types'
 import { totalCorpus } from '../../lib/calculations'
+import { blendedReturn } from '../../lib/blendedReturn'
 import { DownloadRow } from './NetWorthDashboard'
 import { useState } from 'react'
 import type { ExportFormat } from '../../lib/exporters'
@@ -50,7 +51,9 @@ export function RetirementReadinessDashboard({ profile, buckets }: Props) {
 
   const monthly = profile.monthlyWithdrawal ?? 0
   const inflation = profile.inflationRate ?? 6
-  const nominalReturn = 9.5 // blended assumed portfolio return
+  // Blended nominal return read from user's actual ReturnAssumptions
+  // weighted by their bucket allocation. Stays in sync if either changes.
+  const nominalReturn = blendedReturn(storage.getReturnAssumptions(), profile.bucketAllocation)
 
   const target = requiredCorpus(monthly, retirementHorizon, nominalReturn, inflation)
   const current = totalCorpus(buckets) || profile.corpus || 0
@@ -103,10 +106,9 @@ export function RetirementReadinessDashboard({ profile, buckets }: Props) {
         </div>
       </div>
 
-      {/* Numbers */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Kpi label="Current corpus"        value={fmtINR(current)} />
-        <Kpi label="Projected at retire"   value={fmtINR(projectedAtRetire)} sub={`+${yearsToRetirement}y · ${nominalReturn}% nominal`} />
+      {/* Numbers — "Current corpus" tile moved to Net Worth (canonical) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <Kpi label="Projected at retire"   value={fmtINR(projectedAtRetire)} sub={`+${yearsToRetirement}y · ${nominalReturn.toFixed(1)}% nominal`} />
         <Kpi label="Required corpus"       value={fmtINR(target)} sub={`${retirementHorizon}y horizon · ${inflation}% infl`} />
         <Kpi label={gap > 0 ? 'Gap (short by)' : 'Surplus'} value={fmtINR(Math.abs(gap))} tone={gap > 0 ? 'rose' : 'emerald'} />
       </div>
@@ -150,22 +152,19 @@ export function RetirementReadinessDashboard({ profile, buckets }: Props) {
             <div className="text-[10px] text-slate-500">{retirementHorizon}y in retirement</div>
           </div>
         </div>
-        <div className="text-[11px] text-slate-600 leading-snug pt-1 border-t border-slate-100">
-          If you retired <strong>today</strong> at current burn (₹{Math.round(monthly).toLocaleString('en-IN')}/mo with no returns), your corpus would last{' '}
-          <strong>{runwayYrs === Infinity ? '∞' : runwayYrs.toFixed(1)} years</strong>. With assumed real returns, the math above takes over.
-        </div>
       </section>
 
-      {/* Insights / actions */}
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">What this means</h4>
+      {/* Observations — lens-specific only */}
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {adequacy >= 100 && <li>● You're projected to meet the target. Continue current SIPs / asset allocation; recheck annually.</li>}
-          {adequacy >= 80 && adequacy < 100 && <li>● Within striking distance. Closing the gap usually needs one of: +1–2 yr retirement age, +10% SIP, or modest expense trim.</li>}
-          {adequacy >= 60 && adequacy < 80 && <li>● Stretched. Combine 2 of {'{'}delay retirement, lift SIPs, cut budget, add part-time income{'}'} to close it.</li>}
-          {adequacy < 60 && <li>● Material gap. A serious conversation with a SEBI-registered advisor is warranted — there are usually multiple levers.</li>}
-          {monthly === 0 && <li>● Your withdrawal target is ₹0 — set it under Step 04 Profile & Settings for a real verdict.</li>}
-          <li>● Inputs used: corpus = Step 01 totals, withdrawal = Step 04, inflation = Step 06, horizon = Step 05.</li>
+          {adequacy >= 100 && <li>● Projected corpus meets the inflation-adjusted target.</li>}
+          {adequacy >= 80 && adequacy < 100 && <li>● Within striking distance of the target ({Math.round(adequacy)}%).</li>}
+          {adequacy >= 60 && adequacy < 80 && <li>● Adequacy is stretched ({Math.round(adequacy)}%) — multiple levers needed.</li>}
+          {adequacy < 60 && <li>● Material gap — adequacy {Math.round(adequacy)}%.</li>}
+          {monthly === 0 && <li>● Withdrawal target is ₹0 — set it under Profile & Settings.</li>}
+          <li>● Today's burn-only runway (no returns) ≈ <strong>{runwayYrs === Infinity ? '∞' : `${runwayYrs.toFixed(1)} yrs`}</strong>.</li>
+          <li>● Inputs: corpus = Step 01, withdrawal = Profile, inflation = Step 05, horizon = Step 04, return = blended from Step 04 Profile.</li>
         </ul>
       </section>
 

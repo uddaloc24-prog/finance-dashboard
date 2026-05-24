@@ -70,12 +70,11 @@ export function CashFlowDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      {/* Top tiles */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* "Burn coverage" tile dropped — Liquidity's runway tile is the canonical view */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Kpi label="Inflow / mo"   value={fmtINR(totalInflow)}  tone="emerald" />
         <Kpi label="Outflow / mo"  value={fmtINR(totalOutflow)} tone="rose" />
         <Kpi label="Net surplus"   value={fmtINR(netSurplus)}   tone={netSurplus >= 0 ? 'emerald' : 'rose'} />
-        <Kpi label="Burn coverage" value={withdrawal > 0 ? `${Math.round((passiveFromAssets / withdrawal) * 100)}%` : '—'} sub="passive ÷ withdrawal" tone="navy" />
       </div>
 
       {/* Inflow breakdown */}

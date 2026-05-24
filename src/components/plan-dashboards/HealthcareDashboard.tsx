@@ -18,11 +18,13 @@ function fmtINR(n: number): string {
   return `${sign}₹${Math.round(abs)}`
 }
 
-const HEALTHCARE_INFLATION = 8.5 / 100   // India healthcare CAGR ≈ 8–10%
-
 export function HealthcareDashboard({ profile, buckets }: Props) {
   const [busy, setBusy] = useState<ExportFormat | null>(null)
   const [err, setErr] = useState<string | null>(null)
+
+  // Read from the user's Inflation Assumptions (Step 05) — same value the
+  // engine will consume. Default 8.5% if not set.
+  const HEALTHCARE_INFLATION = (profile.expenses?.healthcareInflation ?? 8.5) / 100
 
   const monthlyHealth = profile.expenses?.healthcare ?? 0
   const annualToday = monthlyHealth * 12
@@ -47,10 +49,10 @@ export function HealthcareDashboard({ profile, buckets }: Props) {
   // LTC reserve — 3y of 2× healthcare spend (intensive / assisted living)
   const ltcReserve = annualToday * 2 * 3
 
-  // Critical illness gap
+  // Critical illness — used by the Reserves checklist below.
+  // (CI gap KPI tile lives on the Insurance dashboard now.)
   const ciCover = profile.insuranceCover?.criticalIllness?.active ? profile.insuranceCover.criticalIllness.cover : 0
   const ciBench = 2_500_000
-  const ciGap = Math.max(0, ciBench - ciCover)
 
   // Parent-care reserve (rough — assume 2 dependents until user is 70)
   const parentYears = Math.max(0, 70 - currentAge)
@@ -65,11 +67,11 @@ export function HealthcareDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      {/* CI gap tile moved to Insurance dashboard (canonical home) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Kpi label="Current health spend" value={fmtINR(annualToday)} sub="/ year" />
         <Kpi label="Lifetime PV"          value={fmtINR(pvLifetimeHealth)} sub={`${yearsLeft}y · ${(HEALTHCARE_INFLATION * 100).toFixed(1)}% infl`} tone="amber" />
         <Kpi label="LTC reserve"          value={fmtINR(ltcReserve)} sub="3y × 2× current" tone="rose" />
-        <Kpi label="CI gap"               value={fmtINR(ciGap)} sub={ciGap > 0 ? `vs ${fmtINR(ciBench)} bench` : 'covered'} tone={ciGap > 0 ? 'rose' : 'emerald'} />
       </div>
 
       {/* Spend curve */}
@@ -89,13 +91,12 @@ export function HealthcareDashboard({ profile, buckets }: Props) {
         <Reserve label="Parent care (₹1.5× spend × years to 70 × 50%)" need={parentReserve} note={parentYears > 0 ? `${parentYears}y horizon at 50% assumption` : 'Already past 70 — typically funded'} />
       </section>
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {monthlyHealth === 0 && <li>● Healthcare spend is ₹0 — likely missing. Add a realistic monthly figure in Step 03 Budget.</li>}
-          {ciGap > 0 && <li>● Add <strong>{fmtINR(ciGap)}</strong> critical-illness rider. A single diagnosis can wipe out 1–2 years of corpus.</li>}
-          {currentAge >= 60 && monthlyHealth < 10000 && <li>● Healthcare spend &lt; ₹10k/mo at 60+ looks understated. Hospital + prescription typically scales fast post-60.</li>}
-          <li>● Health spend is treated as inflation-indexed at {(HEALTHCARE_INFLATION * 100).toFixed(1)}%, higher than general 6%. Allocate B2/B3 with this drag in mind.</li>
+          {monthlyHealth === 0 && <li>● Healthcare spend is ₹0 — likely missing from Step 03 Budget.</li>}
+          {currentAge >= 60 && monthlyHealth > 0 && monthlyHealth < 10000 && <li>● Healthcare spend &lt; ₹10k/mo at 60+ looks understated.</li>}
+          <li>● Health spend inflates at {(HEALTHCARE_INFLATION * 100).toFixed(1)}% — meaningfully above the general rate.</li>
         </ul>
       </section>
 

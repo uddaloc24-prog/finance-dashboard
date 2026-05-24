@@ -98,17 +98,17 @@ export function InsuranceCoverageDashboard({ profile, buckets }: Props) {
         <GapBar label="Critical illness" have={ciCover} need={bench.ci} suggest={ciGap > 0 ? `Add ${fmtINR(ciGap)} as a lump-sum CI rider` : 'Adequate lump-sum cover'} />
       </section>
 
-      {/* Flags */}
-      <section className="rounded-md border-2 border-amber-200 bg-amber-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-amber-800 mb-1.5">Smart insights</h4>
+      {/* Observations — coverage-specific facts; actions live in Plan Executive */}
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          {!ins?.termPlan?.active && age < 70 && <li>● No active term plan — at {age} you should hold ≥{fmtINR(bench.life)} pure-protection cover.</li>}
-          {ins?.termPlan?.active && !termMwp && <li>● Term plan is active but NOT under MWP Act — proceeds may be claimed by creditors. Re-issue MWP-tagged ASAP.</li>}
-          {age >= 60 && !ins?.seniorCitizen?.active && healthCover < bench.health && <li>● 60+ without senior-specific cover — premiums climb yearly; lock in NOW before pre-existing waiting periods stack up.</li>}
-          {ciCover === 0 && <li>● No critical-illness cover — a single diagnosis can wipe out 1–2 years of corpus. Lump-sum CI riders are cheap.</li>}
-          {annualPremium > 0 && profile.expenses && annualPremium / 12 > 0.15 * ((profile.expenses.essential ?? 0) + (profile.expenses.lifestyle ?? 0)) && <li>● Premium burden is &gt; 15% of monthly outflow — audit overlapping ULIPs / endowments.</li>}
-          {ins?.endowment?.active && (ins.endowment.cover / Math.max(1, ins.endowment.premium)) < 20 && <li>● Endowment / money-back policies typically yield 4–6% — consider surrender + reinvest if &gt; 3 years held.</li>}
-          {healthGap === 0 && lifeGap === 0 && ciGap === 0 && <li>● Coverage looks broadly adequate vs the age + city benchmark. Annual review is still worth scheduling.</li>}
+          {!ins?.termPlan?.active && age < 70 && <li>● No active term plan recorded; benchmark for age {age} is ≥{fmtINR(bench.life)}.</li>}
+          {ins?.termPlan?.active && !termMwp && <li>● Term plan is active but <strong>not held under the MWP Act</strong> — proceeds form part of the estate and can be attached by creditors.</li>}
+          {age >= 60 && !ins?.seniorCitizen?.active && healthCover < bench.health && <li>● 60+ without a senior-specific health plan; pre-existing waiting periods restart on new policies.</li>}
+          {ciCover === 0 && <li>● No critical-illness cover recorded — lump-sum CI sits outside hospitalisation reimbursement.</li>}
+          {annualPremium > 0 && profile.expenses && annualPremium / 12 > 0.15 * ((profile.expenses.essential ?? 0) + (profile.expenses.lifestyle ?? 0)) && <li>● Premium burden is &gt; 15% of monthly outflow — likely overlapping bundled policies.</li>}
+          {ins?.endowment?.active && (ins.endowment.cover / Math.max(1, ins.endowment.premium)) < 20 && <li>● Endowment / money-back yield typically 4–6% (per cover-to-premium ratio).</li>}
+          {healthGap === 0 && lifeGap === 0 && ciGap === 0 && <li>● Coverage is at or above benchmark on health, life, and CI.</li>}
         </ul>
       </section>
 

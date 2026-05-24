@@ -19,11 +19,6 @@ function fmtINR(n: number): string {
 }
 
 const HORIZONS = [10, 20, 30]
-const CATEGORY_INFLATION = {
-  general:    6.0,   // CPI-ish
-  healthcare: 8.5,   // hospital + pharma drift
-  education:  10.0,  // school + college fee creep
-}
 
 function realReturn(nominal: number, infl: number): number {
   return ((1 + nominal / 100) / (1 + infl / 100) - 1) * 100
@@ -35,8 +30,13 @@ export function InflationImpactDashboard({ profile, buckets }: Props) {
 
   const baseInfl = profile.inflationRate ?? 6
   const exp = profile.expenses
+  // Read category rates from the user's Step 05 inputs — same source the engine will use
+  const CATEGORY_INFLATION = {
+    general:    exp?.generalInflation    ?? 6.0,
+    healthcare: exp?.healthcareInflation ?? 8.5,
+    education:  exp?.educationInflation  ?? 10.0,
+  }
   const monthlyBurn = exp ? (exp.essential ?? 0) + (exp.lifestyle ?? 0) + (exp.healthcare ?? 0) + (exp.education ?? 0) : 0
-  const annualBurn = monthlyBurn * 12
 
   const todaysCrore = 1_00_00_000  // ₹1 Cr today, for the headline calc
 
@@ -49,10 +49,10 @@ export function InflationImpactDashboard({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Kpi label="Your inflation"   value={`${baseInfl.toFixed(1)}%`} sub="general (Step 06)" />
-        <Kpi label="Annual burn"      value={fmtINR(annualBurn)} sub="current price" />
-        <Kpi label="Burn at +20y"     value={fmtINR(annualBurn * Math.pow(1 + baseInfl / 100, 20))} sub={`@ ${baseInfl}%`} tone="rose" />
+      {/* "Annual burn" tile moved to Cash Flow (canonical) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <Kpi label="Your inflation"   value={`${baseInfl.toFixed(1)}%`} sub="general (Step 05)" />
+        <Kpi label="Burn at +20y"     value={fmtINR(monthlyBurn * 12 * Math.pow(1 + baseInfl / 100, 20))} sub={`@ ${baseInfl}%`} tone="rose" />
         <Kpi label="Real return 10%"  value={`${realReturn(10, baseInfl).toFixed(1)}%`} sub={`nominal − ${baseInfl}% infl`} tone="emerald" />
       </div>
 
@@ -115,13 +115,13 @@ export function InflationImpactDashboard({ profile, buckets }: Props) {
         </div>
       </section>
 
-      <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-1.5">Insights</h4>
+      <section className="rounded-md border-2 border-slate-200 bg-slate-50/40 p-3">
+        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1.5">Observations</h4>
         <ul className="text-[11px] text-slate-700 space-y-1 leading-snug">
-          <li>● Use category-specific inflation for goal sizing: education + healthcare goals should not use the 6% general default.</li>
-          <li>● Real return below 1.5% (typical for FD-only portfolios after tax + inflation) means corpus shrinks in real terms despite "growing" on paper.</li>
-          {baseInfl < 5 && <li>● Your assumed {baseInfl}% inflation is below the historical Indian CPI average (~5.5–6.5%). Consider stress-testing at 7%.</li>}
-          {baseInfl > 7 && <li>● Your assumed {baseInfl}% inflation is conservative-high — corpus targets will be aggressive. Fine for planning, validate quarterly.</li>}
+          <li>● Education and healthcare inflate faster than general CPI — goal sizing should use the per-category rates above.</li>
+          <li>● Real return below ~1.5% means the corpus shrinks in real terms despite nominal growth.</li>
+          {baseInfl < 5 && <li>● Assumed inflation {baseInfl}% is below the historical Indian CPI average (~5.5–6.5%).</li>}
+          {baseInfl > 7 && <li>● Assumed inflation {baseInfl}% is conservative-high — corpus targets will be aggressive.</li>}
         </ul>
       </section>
 
