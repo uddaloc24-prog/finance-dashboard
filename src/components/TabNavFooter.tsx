@@ -10,6 +10,7 @@ const TAB_DESCRIPTIONS: Record<TabId, string> = {
   guide: 'How to use the planner — five steps in plain language',
   plan: 'Enter your corpus, demographics, and expense profile',
   profiles: 'Take the risk quiz, see all 5 profiles side by side',
+  engine: 'Plan + Profile orchestration engine — design memo + (later) live ranked goals',
   strategies: 'Compare 10 retirement strategies against your corpus',
   assets: 'Review and adjust your bucket allocation',
   explorer: 'Browse asset classes per bucket — pick a class then a specific fund/instrument',

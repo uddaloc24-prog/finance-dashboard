@@ -7,23 +7,25 @@
 import { useEffect, useState } from 'react'
 import { MarkdownView } from './MarkdownView'
 
-import planAudit from '../../../tasks/plan-audit-2026-05-24.md?raw'
-import todoMd    from '../../../tasks/todo.md?raw'
-import lessonsMd from '../../../tasks/lessons.md?raw'
+import planAudit  from '../../../tasks/plan-audit-2026-05-24.md?raw'
+import engineMemo from '../../../tasks/engine-design-memo-2026-05-24.md?raw'
+import todoMd     from '../../../tasks/todo.md?raw'
+import lessonsMd  from '../../../tasks/lessons.md?raw'
 
 interface Doc {
   id: string
   title: string
   subtitle: string
-  category: 'Audits' | 'Project'
+  category: 'Audits' | 'Design memos' | 'Project'
   source: string
   filePath: string  // path relative to repo root, for reference
 }
 
 const DOCS: Doc[] = [
-  { id: 'plan-audit-2026-05-24', title: 'Plan Slim-and-Trim Audit',  subtitle: '2026-05-24 · cross-dashboard redundancy review', category: 'Audits',  source: planAudit, filePath: 'tasks/plan-audit-2026-05-24.md' },
-  { id: 'todo',                  title: 'TODO',                       subtitle: 'in-flight task tracker',                       category: 'Project', source: todoMd,    filePath: 'tasks/todo.md' },
-  { id: 'lessons',               title: 'Lessons',                    subtitle: 'durable learnings from past work',             category: 'Project', source: lessonsMd, filePath: 'tasks/lessons.md' },
+  { id: 'plan-audit-2026-05-24',          title: 'Plan Slim-and-Trim Audit',      subtitle: '2026-05-24 · cross-dashboard redundancy review',                category: 'Audits',       source: planAudit,  filePath: 'tasks/plan-audit-2026-05-24.md' },
+  { id: 'engine-design-memo-2026-05-24',  title: 'Phase 5 — Engine Design Memo',  subtitle: '2026-05-24 · Goal Ranking Engine contract + 5 lock decisions',  category: 'Design memos', source: engineMemo, filePath: 'tasks/engine-design-memo-2026-05-24.md' },
+  { id: 'todo',                           title: 'TODO',                          subtitle: 'in-flight task tracker',                                        category: 'Project',      source: todoMd,     filePath: 'tasks/todo.md' },
+  { id: 'lessons',                        title: 'Lessons',                       subtitle: 'durable learnings from past work',                              category: 'Project',      source: lessonsMd,  filePath: 'tasks/lessons.md' },
 ]
 
 interface Props {
@@ -42,7 +44,7 @@ export function AdminPage({ onClose, onDisable }: Props) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const grouped: Record<Doc['category'], Doc[]> = { Audits: [], Project: [] }
+  const grouped: Record<Doc['category'], Doc[]> = { Audits: [], 'Design memos': [], Project: [] }
   DOCS.forEach((d) => grouped[d.category].push(d))
 
   return (

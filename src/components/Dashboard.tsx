@@ -27,6 +27,7 @@ import { InflationImpactDashboard } from './plan-dashboards/InflationImpactDashb
 import { TaxCalendarDashboard } from './plan-dashboards/TaxCalendarDashboard'
 import { EstateDashboard } from './plan-dashboards/EstateDashboard'
 import { PlanExecutiveDashboard } from './plan-dashboards/PlanExecutiveDashboard'
+import { EnginePage } from './EnginePage'
 import { CashflowSummary } from './CashflowSummary'
 import { RetirementWelcome } from './RetirementWelcome'
 import { AssetInventory } from './AssetInventory'
@@ -652,6 +653,12 @@ export function Dashboard({
                 onBucketsUpdate={onBucketsUpdate}
               />
             </Suspense>
+          </div>
+        )}
+
+        {activeTab === 'engine' && (
+          <div role="tabpanel" id="tabpanel-engine" aria-labelledby="tab-engine" className="space-y-3">
+            <EnginePage profile={effectiveProfile} buckets={buckets} />
           </div>
         )}
 
