@@ -25,7 +25,7 @@ const PHASES: Phase[] = [
   { id: 'P5',   title: 'Goal Ranking Engine — shipped · tests pending',             status: 'done' },
   { id: 'P6',   title: 'Strategy Fitter — shipped (corpus alloc · SIP · buckets · actions)', status: 'done' },
   { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation onto engine output', status: 'done' },
-  { id: 'P8',   title: 'Engine Explain dashboard',                                  status: 'planned' },
+  { id: 'P8',   title: 'Engine Explain dashboard — weights · pre-emption · derivation · sensitivity', status: 'done' },
   { id: 'P9',   title: 'Snapshot + report integration',                             status: 'planned' },
 ]
 

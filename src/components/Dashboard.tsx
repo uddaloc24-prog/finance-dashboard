@@ -27,6 +27,7 @@ import { InflationImpactDashboard } from './plan-dashboards/InflationImpactDashb
 import { TaxCalendarDashboard } from './plan-dashboards/TaxCalendarDashboard'
 import { EstateDashboard } from './plan-dashboards/EstateDashboard'
 import { PlanExecutiveDashboard } from './plan-dashboards/PlanExecutiveDashboard'
+import { EngineExplainDashboard } from './plan-dashboards/EngineExplainDashboard'
 import { EnginePage } from './EnginePage'
 import { CashflowSummary } from './CashflowSummary'
 import { RetirementWelcome } from './RetirementWelcome'
@@ -107,7 +108,7 @@ export function Dashboard({
     | 'readiness' | 'insurance' | 'healthcare'
     | 'tax' | 'allocation' | 'goals' | 'inflation'
     | 'calendar' | 'estate'
-    | 'executive'
+    | 'executive' | 'engineExplain'
   const [openPlanDash, setOpenPlanDash] = useState<PlanDash | null>(null)
   const { data: marketData } = useMarketData(profile.refreshInterval)
 
@@ -405,6 +406,16 @@ export function Dashboard({
               onClose={() => setOpenPlanDash(null)}
             >
               <PlanExecutiveDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'engineExplain'}
+              title="Engine Explain"
+              subtitle="Why this rank · weight derivation · pre-emption events · sensitivity"
+              accent="indigo"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <EngineExplainDashboard profile={profile} buckets={buckets} />
             </Modal>
             {/* Legacy wheel render (kept hidden for reference) ─── */}
             {false && (
@@ -743,9 +754,9 @@ type PlanDashKey =
   | 'readiness' | 'insurance' | 'healthcare'
   | 'tax' | 'allocation' | 'goals' | 'inflation'
   | 'calendar' | 'estate'
-  | 'executive'
+  | 'executive' | 'engineExplain'
 
-type PlanLauncherGroup = 'Settings' | 'Financial Position' | 'Risk & Resilience' | 'Planning & Optimisation' | 'Operational'
+type PlanLauncherGroup = 'Settings' | 'Financial Position' | 'Risk & Resilience' | 'Planning & Optimisation' | 'Engine' | 'Operational'
 
 interface PlanLauncherDef {
   key: PlanDashKey
@@ -777,12 +788,14 @@ const PLAN_LAUNCHERS: PlanLauncherDef[] = [
   { key: 'allocation', group: 'Planning & Optimisation', icon: '🥧', primary: 'Asset',      secondary: 'ALLOCATION', sub: 'DRIFT · REBALANCE',    body: 'from-purple-400 via-purple-500 to-purple-700',    bodyHover: 'hover:from-purple-300 hover:via-purple-400 hover:to-purple-600',    lip: 'rgb(88,28,135)',  ring: 'focus:ring-purple-300' },
   { key: 'goals',      group: 'Planning & Optimisation', icon: '🏁', primary: 'Goal',       secondary: 'TRACKER',   sub: 'SIP NEEDED · STATUS',  body: 'from-green-400 via-green-500 to-green-700',       bodyHover: 'hover:from-green-300 hover:via-green-400 hover:to-green-600',       lip: 'rgb(20,83,45)',   ring: 'focus:ring-green-300' },
   { key: 'inflation',  group: 'Planning & Optimisation', icon: '📈', primary: 'Inflation',  secondary: 'IMPACT',    sub: '10/20/30Y EROSION',    body: 'from-pink-400 via-pink-500 to-pink-700',          bodyHover: 'hover:from-pink-300 hover:via-pink-400 hover:to-pink-600',          lip: 'rgb(131,24,67)',  ring: 'focus:ring-pink-300' },
+  // Engine
+  { key: 'engineExplain', group: 'Engine',                icon: '🔬', primary: 'Engine',     secondary: 'EXPLAIN',   sub: 'WHY THIS RANK?',       body: 'from-indigo-400 via-indigo-600 to-indigo-800',    bodyHover: 'hover:from-indigo-300 hover:via-indigo-500 hover:to-indigo-700',    lip: 'rgb(49,46,129)',  ring: 'focus:ring-indigo-300' },
   // Operational
   { key: 'calendar',   group: 'Operational',             icon: '📅', primary: 'Tax & Policy', secondary: 'CALENDAR', sub: 'DATES · RENEWALS',     body: 'from-slate-400 via-slate-500 to-slate-700',       bodyHover: 'hover:from-slate-300 hover:via-slate-400 hover:to-slate-600',       lip: 'rgb(15,23,42)',   ring: 'focus:ring-slate-300' },
   { key: 'estate',     group: 'Operational',             icon: '⚖️', primary: 'Estate',     secondary: 'LEGACY',    sub: 'WILL · NOMINEE · MWP', body: 'from-stone-400 via-stone-500 to-stone-700',       bodyHover: 'hover:from-stone-300 hover:via-stone-400 hover:to-stone-600',       lip: 'rgb(41,37,36)',   ring: 'focus:ring-stone-300' },
 ]
 
-const PLAN_GROUP_ORDER: PlanLauncherGroup[] = ['Settings', 'Financial Position', 'Risk & Resilience', 'Planning & Optimisation', 'Operational']
+const PLAN_GROUP_ORDER: PlanLauncherGroup[] = ['Settings', 'Financial Position', 'Risk & Resilience', 'Planning & Optimisation', 'Engine', 'Operational']
 
 function DashboardsMenu({ openDash, setOpenDash }: { openDash: PlanDashKey | null; setOpenDash: (k: PlanDashKey | null) => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
