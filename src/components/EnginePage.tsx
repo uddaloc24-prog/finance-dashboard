@@ -8,7 +8,8 @@
 import type { UserProfile, BucketState } from '../types'
 import { MarkdownView } from './admin/MarkdownView'
 import { buildOrchestrationInputsFromStorage } from '../lib/orchestration/inputs'
-import type { EngineInput } from '../types/orchestration'
+import { useRankedGoals } from '../hooks/useRankedGoals'
+import type { EngineInput, EngineOutput, RankedGoal, CriterionWeights } from '../types/orchestration'
 
 import engineMemo from '../../tasks/engine-design-memo-2026-05-24.md?raw'
 
@@ -20,13 +21,13 @@ interface Props {
 interface Phase { id: string; title: string; status: 'done' | 'active' | 'planned' }
 
 const PHASES: Phase[] = [
-  { id: 'P1-3', title: 'Cosmetic trim (KPI cuts · insights · constants)',     status: 'done' },
-  { id: 'P4',   title: 'Plumbing — Plan↔Profile bridge · GD→Goals projector', status: 'done' },
-  { id: 'P5',   title: 'Goal Ranking Engine — design memo + scorers + tests', status: 'active' },
-  { id: 'P6',   title: 'Strategy Fitter',                                     status: 'planned' },
-  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation',     status: 'planned' },
-  { id: 'P8',   title: 'Engine Explain dashboard',                            status: 'planned' },
-  { id: 'P9',   title: 'Snapshot + report integration',                       status: 'planned' },
+  { id: 'P1-3', title: 'Cosmetic trim (KPI cuts · insights · constants)',           status: 'done' },
+  { id: 'P4',   title: 'Plumbing — Plan↔Profile bridge · GD→Goals projector',       status: 'done' },
+  { id: 'P5',   title: 'Goal Ranking Engine — engine + scorers shipped · tests pending', status: 'active' },
+  { id: 'P6',   title: 'Strategy Fitter',                                           status: 'planned' },
+  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation',           status: 'planned' },
+  { id: 'P8',   title: 'Engine Explain dashboard',                                  status: 'planned' },
+  { id: 'P9',   title: 'Snapshot + report integration',                             status: 'planned' },
 ]
 
 function fmtINR(n: number): string {
@@ -39,6 +40,7 @@ function fmtINR(n: number): string {
 
 export function EnginePage({ profile, buckets }: Props) {
   const input: EngineInput = buildOrchestrationInputsFromStorage(profile, buckets)
+  const output: EngineOutput = useRankedGoals(profile, buckets)
 
   return (
     <section className="space-y-3">
@@ -79,17 +81,27 @@ export function EnginePage({ profile, buckets }: Props) {
         </ol>
       </section>
 
-      {/* Phase 4 live preview — what the aggregator produces from current state */}
-      <EngineInputPreview input={input} />
+      {/* Phase 5 live ranking — engine output */}
+      <RankedGoalsView output={output} />
 
-      {/* Ranked-goal output placeholder (Phase 5/6) */}
+      {/* Phase 4 input preview (collapsible — engine is the headline now) */}
+      <details className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 overflow-hidden">
+        <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-emerald-800 hover:bg-emerald-100/40 transition-colors">
+          Phase 4 · EngineInput preview (what the engine consumed)
+        </summary>
+        <div className="p-4 pt-2">
+          <EngineInputPreview input={input} />
+        </div>
+      </details>
+
+      {/* Strategy Fitter placeholder (Phase 6) */}
       <section className="rounded-md border-2 border-dashed border-slate-300 bg-slate-50/60 p-4 text-center">
-        <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-500">Ranked-goal output</div>
+        <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-500">Strategy fitter</div>
         <div className="font-serif italic text-base text-slate-700 mt-1">
-          Per-criterion scores · priority weights · strategy fit
+          Bucket allocation · per-goal SIP · action list
         </div>
         <div className="text-[11px] text-slate-500 mt-1.5 max-w-xl mx-auto">
-          Will render here once Phase 5 lands the ranker (and Phase 6 lands the strategy fitter).
+          Phase 6 will consume the ranked output above and emit a concrete investment strategy.
         </div>
       </section>
 
@@ -105,20 +117,142 @@ export function EnginePage({ profile, buckets }: Props) {
   )
 }
 
+// ─── Ranked goals view (Phase 5 — live engine output) ────────────────
+
+function RankedGoalsView({ output }: { output: EngineOutput }) {
+  const { ranked, weightsUsed, trace, emittedAt, inputsHash } = output
+
+  return (
+    <section className="rounded-md border-2 border-indigo-200 bg-indigo-50/30 p-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-800">Phase 5 · live engine</div>
+          <div className="font-serif italic text-lg font-extrabold text-slate-900 leading-tight">Ranked goals</div>
+        </div>
+        <span className="text-[10px] text-slate-500 italic">{ranked.length} total · persona <strong>{trace.personaUsed}</strong> · weights <strong>{trace.weightDerivation}</strong></span>
+      </div>
+
+      {/* Weights bar */}
+      <WeightBar weights={weightsUsed} />
+
+      {/* Ranked-goal cards */}
+      {ranked.length === 0 ? (
+        <div className="rounded border border-dashed border-slate-300 bg-white p-4 mt-3 text-center text-[11px] text-slate-500 italic">
+          No goals to rank yet. Add goals via Goal Discovery (Profile tab) or the legacy Goals editor — they'll appear here ranked automatically.
+        </div>
+      ) : (
+        <ol className="space-y-2 mt-3">
+          {ranked.slice(0, 10).map((r, i) => <RankedGoalCard key={r.goal.id} rank={i + 1} rg={r} trace={trace.goalRationale[r.goal.id] ?? []} />)}
+          {ranked.length > 10 && <li className="text-[10px] text-slate-500 italic text-center pt-1">…and {ranked.length - 10} more (engine ranked all {ranked.length})</li>}
+        </ol>
+      )}
+
+      {/* Footer — emission metadata */}
+      <div className="mt-3 pt-2 border-t border-indigo-200/60 flex items-baseline justify-between flex-wrap gap-2 text-[10px] text-slate-500">
+        <span>Emitted {new Date(emittedAt).toLocaleString('en-IN')}</span>
+        <span className="font-mono">inputsHash: <code className="text-slate-700">{inputsHash}</code></span>
+      </div>
+    </section>
+  )
+}
+
+function WeightBar({ weights }: { weights: CriterionWeights }) {
+  const items: Array<{ k: keyof CriterionWeights; label: string; color: string }> = [
+    { k: 'importance',    label: 'Importance',    color: '#6366f1' },
+    { k: 'urgency',       label: 'Urgency',       color: '#f59e0b' },
+    { k: 'affordability', label: 'Affordability', color: '#10b981' },
+    { k: 'riskFit',       label: 'Risk-fit',      color: '#ec4899' },
+  ]
+  return (
+    <div>
+      <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 mb-1">Criterion weights (in effect)</div>
+      <div className="flex h-2.5 rounded-full overflow-hidden border border-slate-200">
+        {items.map((i) => (
+          <div key={i.k} style={{ background: i.color, width: `${weights[i.k] * 100}%` }} title={`${i.label}: ${(weights[i.k] * 100).toFixed(0)}%`} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1 text-[10px]">
+        {items.map((i) => (
+          <span key={i.k} className="inline-flex items-baseline gap-1">
+            <span className="inline-block w-2 h-2 rounded-sm" style={{ background: i.color }} />
+            <span className="text-slate-700">{i.label}</span>
+            <span className="font-bold text-slate-900 tabular-nums">{(weights[i.k] * 100).toFixed(0)}%</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function RankedGoalCard({ rank, rg, trace }: { rank: number; rg: RankedGoal; trace: string[] }) {
+  const sourceTone = rg.goal.source === 'system' ? 'rose' : rg.goal.source === 'gd-projection' ? 'indigo' : 'slate'
+  const sourceBg = sourceTone === 'rose' ? 'bg-rose-100 text-rose-700' : sourceTone === 'indigo' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'
+  return (
+    <li className="rounded-md border-2 border-slate-200 bg-white p-3">
+      <div className="flex items-start gap-3">
+        {/* Rank badge */}
+        <span className={`shrink-0 w-9 h-9 rounded-md flex items-center justify-center font-serif font-extrabold text-base tabular-nums ${rank === 1 ? 'bg-amber-500 text-white' : rank <= 3 ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}>
+          {rank}
+        </span>
+
+        {/* Main */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap">
+            <div className="min-w-0">
+              <span className="font-serif italic text-sm font-extrabold text-slate-900 leading-tight">{rg.goal.label}</span>
+              <span className={`ml-2 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 ${sourceBg}`}>{rg.goal.source}</span>
+              {rg.goal.priority === 'must-have' && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5 bg-amber-100 text-amber-800">must</span>}
+            </div>
+            <div className="text-right shrink-0">
+              <div className="font-extrabold text-slate-900 tabular-nums text-[14px]">{Math.round(rg.composite)}<span className="text-[9px] text-slate-500 font-normal">/100</span></div>
+              <div className="text-[10px] text-slate-500 tabular-nums">{(rg.priorityWeight * 100).toFixed(1)}% of weight</div>
+            </div>
+          </div>
+
+          <div className="text-[10.5px] text-slate-500 mt-0.5">
+            ₹{rg.goal.amount.toLocaleString('en-IN')} target · {rg.goal.kind} · {rg.goal.inflationCategory} infl · FY {rg.goal.startYear ?? '—'}
+          </div>
+
+          {/* Per-criterion mini bars */}
+          <div className="grid grid-cols-4 gap-2 mt-2">
+            <ScoreBar label="IMP" v={rg.scores.importance}    color="#6366f1" />
+            <ScoreBar label="URG" v={rg.scores.urgency}       color="#f59e0b" />
+            <ScoreBar label="AFF" v={rg.scores.affordability} color="#10b981" />
+            <ScoreBar label="RSK" v={rg.scores.riskFit}       color="#ec4899" />
+          </div>
+
+          {/* Rationale */}
+          {trace.length > 0 && (
+            <ul className="mt-1.5 text-[10px] text-slate-500 leading-snug">
+              {trace.map((b, i) => <li key={i}>• {b}</li>)}
+            </ul>
+          )}
+        </div>
+      </div>
+    </li>
+  )
+}
+
+function ScoreBar({ label, v, color }: { label: string; v: number; color: string }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between text-[9px] mb-0.5">
+        <span className="text-slate-500 font-bold tracking-wider">{label}</span>
+        <span className="text-slate-900 font-bold tabular-nums">{Math.round(v)}</span>
+      </div>
+      <div className="h-1 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
+        <div className="h-full" style={{ width: `${Math.min(100, v)}%`, background: color }} />
+      </div>
+    </div>
+  )
+}
+
 // ─── Engine input preview (Phase 4) ───────────────────────────────────
 
 function EngineInputPreview({ input }: { input: EngineInput }) {
   const { plan, preferences, goals } = input
   return (
-    <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
-      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-        <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Phase 4 · live</div>
-          <div className="font-serif italic text-lg font-extrabold text-slate-900 leading-tight">Aggregated EngineInput</div>
-        </div>
-        <span className="text-[10px] text-slate-500 italic">What the ranker will receive — live from your current Plan + Profile state.</span>
-      </div>
-
+    <div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-2">
         {/* Plan facts */}
         <div className="rounded border border-slate-200 bg-white p-2.5">
@@ -182,9 +316,8 @@ function EngineInputPreview({ input }: { input: EngineInput }) {
         ✓ Aggregator (<code className="font-mono text-emerald-900">src/lib/orchestration/inputs.ts</code>) +
         GD projector (<code className="font-mono text-emerald-900">goalsFromGd.ts</code>) +
         type contract (<code className="font-mono text-emerald-900">src/types/orchestration.ts</code>) are live.
-        Phase 5 will take this exact <code className="font-mono text-emerald-900">EngineInput</code> and emit ranked goals.
       </div>
-    </section>
+    </div>
   )
 }
 

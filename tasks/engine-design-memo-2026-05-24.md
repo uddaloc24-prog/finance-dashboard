@@ -329,7 +329,6 @@ src/hooks/useRankedGoals.ts             — React hook wrapping the engine
 - [ ] Persona weight table (§5) signed off
 - [ ] Open questions (§11) answered
 - [x] **Phase 4 shipped (2026-05-24):** `EngineInput` / `EngineOutput` types in `src/types/orchestration.ts` · aggregator in `src/lib/orchestration/inputs.ts` · GD→RawGoal projector in `src/lib/orchestration/goalsFromGd.ts` · live preview on the Engine tab
-- [ ] Scorers + tests (Phase 5)
-- [ ] Engine + golden-master snapshots (Phase 5)
-- [ ] `useRankedGoals` hook (Phase 5)
+- [x] **Phase 5 engine shipped (2026-05-24):** scorers · persona weight table · mandatory pre-emption · stable-sort tiebreaker · deterministic input hash · `rankGoals()` pure function · `useRankedGoals` hook · live ranked-goal cards in the Engine tab
+- [ ] **Phase 5 tests pending** — unit (4 scorers + preempt) · golden-master snapshots (persona × profile permutations) · determinism (100× identical output) · latency (50 goals × 100 runs, p95 < 50 ms). Vitest not yet installed in the project.
 - [ ] Strategy Fitter (Phase 6) — separate memo

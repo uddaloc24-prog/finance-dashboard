@@ -29,6 +29,7 @@ export interface PlanFacts {
   currentAge: number
   retireAge: number
   lifeExpectancy: number
+  currentYear: number         // calendar year — fed in for engine determinism
 
   // Inflation (Step 05, per-category)
   inflation: {
@@ -80,7 +81,7 @@ export interface RawGoal {
   endYear?: number           // for income-stream goals
   priority: GoalPriority
   inflationCategory: GoalInflationCategory
-  source: 'manual' | 'gd-projection'
+  source: 'manual' | 'gd-projection' | 'system'
 }
 
 // ─── Engine input (composed) ───────────────────────────────────────────

@@ -29,12 +29,13 @@ export interface BuildArgs {
 /** Compose the full EngineInput. Pure function; no storage reads when
  *  every dependency is passed in. */
 export function buildOrchestrationInputs(args: BuildArgs): EngineInput {
+  const now = args.now ?? new Date()
   return {
-    plan: distilPlanFacts(args.profile, args.buckets),
+    plan: distilPlanFacts(args.profile, args.buckets, now),
     preferences: distilPreferences(args.gd ?? null, args.v10 ?? null),
     goals: mergeGoals(
       goalsFromManual(args.manualGoals ?? []),
-      goalsFromGd(args.gd ?? null, args.now ?? new Date()),
+      goalsFromGd(args.gd ?? null, now),
     ),
   }
 }
@@ -54,7 +55,7 @@ export function buildOrchestrationInputsFromStorage(profile: UserProfile, bucket
 
 // ─── Plan distillation ─────────────────────────────────────────────────
 
-function distilPlanFacts(profile: UserProfile, buckets: BucketState): PlanFacts {
+function distilPlanFacts(profile: UserProfile, buckets: BucketState, now: Date): PlanFacts {
   const inv = (profile.assetInventory ?? {}) as Record<string, AssetEntry>
   const assets = Object.values(inv)
   const totalAssets = assets.reduce((s, e) => s + (e?.amount || 0), 0)
@@ -92,6 +93,7 @@ function distilPlanFacts(profile: UserProfile, buckets: BucketState): PlanFacts 
     currentAge:     profile.demographics?.currentAge     ?? 60,
     retireAge:      profile.demographics?.retirementAge  ?? 60,
     lifeExpectancy: profile.demographics?.lifeExpectancy ?? 88,
+    currentYear:    now.getFullYear(),
 
     inflation: {
       general:    exp?.generalInflation    ?? profile.inflationRate ?? 6,
