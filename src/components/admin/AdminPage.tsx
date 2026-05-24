@@ -6,19 +6,25 @@
 
 import { useEffect, useState } from 'react'
 import { MarkdownView } from './MarkdownView'
+import { TestRunnerPanel } from './TestRunnerPanel'
 
 import planAudit  from '../../../tasks/plan-audit-2026-05-24.md?raw'
 import engineMemo from '../../../tasks/engine-design-memo-2026-05-24.md?raw'
 import todoMd     from '../../../tasks/todo.md?raw'
 import lessonsMd  from '../../../tasks/lessons.md?raw'
 
+type DocCategory = 'Audits' | 'Design memos' | 'Project' | 'Tools'
+
 interface Doc {
   id: string
   title: string
   subtitle: string
-  category: 'Audits' | 'Design memos' | 'Project'
-  source: string
-  filePath: string  // path relative to repo root, for reference
+  category: DocCategory
+  /** Custom React panel (e.g. test runner) — when set, `source` and
+   *  `filePath` are optional. Otherwise the doc renders as Markdown. */
+  kind?: 'markdown' | 'panel'
+  source?: string
+  filePath?: string
 }
 
 const DOCS: Doc[] = [
@@ -26,6 +32,7 @@ const DOCS: Doc[] = [
   { id: 'engine-design-memo-2026-05-24',  title: 'Phase 5 — Engine Design Memo',  subtitle: '2026-05-24 · Goal Ranking Engine contract + 5 lock decisions',  category: 'Design memos', source: engineMemo, filePath: 'tasks/engine-design-memo-2026-05-24.md' },
   { id: 'todo',                           title: 'TODO',                          subtitle: 'in-flight task tracker',                                        category: 'Project',      source: todoMd,     filePath: 'tasks/todo.md' },
   { id: 'lessons',                        title: 'Lessons',                       subtitle: 'durable learnings from past work',                              category: 'Project',      source: lessonsMd,  filePath: 'tasks/lessons.md' },
+  { id: 'test-runner',                    title: 'Test runner',                   subtitle: 'vitest commands · copy-to-clipboard · suite stats',             category: 'Tools',        kind: 'panel' },
 ]
 
 interface Props {
@@ -44,7 +51,7 @@ export function AdminPage({ onClose, onDisable }: Props) {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const grouped: Record<Doc['category'], Doc[]> = { Audits: [], 'Design memos': [], Project: [] }
+  const grouped: Record<DocCategory, Doc[]> = { Audits: [], 'Design memos': [], Project: [], Tools: [] }
   DOCS.forEach((d) => grouped[d.category].push(d))
 
   return (
@@ -85,7 +92,7 @@ export function AdminPage({ onClose, onDisable }: Props) {
         <div className="flex-1 flex overflow-hidden">
           {/* Sidebar */}
           <aside className="w-56 sm:w-64 shrink-0 border-r-2 border-slate-200 bg-slate-50/60 overflow-y-auto">
-            {(Object.keys(grouped) as Array<Doc['category']>).map((cat) => (
+            {(Object.keys(grouped) as Array<DocCategory>).map((cat) => (
               grouped[cat].length > 0 && (
                 <div key={cat} className="py-2">
                   <div className="text-[9px] font-bold tracking-[3px] uppercase text-slate-400 px-3 pb-1">{cat}</div>
@@ -105,7 +112,7 @@ export function AdminPage({ onClose, onDisable }: Props) {
                           >
                             <div className={`text-[12.5px] font-extrabold leading-tight ${isActive ? 'text-amber-800' : 'text-slate-800'}`}>{d.title}</div>
                             <div className="text-[10px] text-slate-500 mt-0.5 leading-snug">{d.subtitle}</div>
-                            <div className="text-[9px] font-mono text-slate-400 mt-0.5 truncate">{d.filePath}</div>
+                            {d.filePath && <div className="text-[9px] font-mono text-slate-400 mt-0.5 truncate">{d.filePath}</div>}
                           </button>
                         </li>
                       )
@@ -122,10 +129,18 @@ export function AdminPage({ onClose, onDisable }: Props) {
           {/* Content */}
           <main className="flex-1 overflow-y-auto bg-white">
             <div className="max-w-4xl mx-auto px-5 sm:px-7 py-5 sm:py-7">
-              <MarkdownView source={active.source} />
-              <div className="mt-8 pt-4 border-t border-slate-200 text-[10px] text-slate-500">
-                Source: <code className="font-mono text-slate-700">{active.filePath}</code>
-              </div>
+              {active.kind === 'panel' && active.id === 'test-runner' ? (
+                <TestRunnerPanel />
+              ) : active.source ? (
+                <>
+                  <MarkdownView source={active.source} />
+                  {active.filePath && (
+                    <div className="mt-8 pt-4 border-t border-slate-200 text-[10px] text-slate-500">
+                      Source: <code className="font-mono text-slate-700">{active.filePath}</code>
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
           </main>
         </div>
