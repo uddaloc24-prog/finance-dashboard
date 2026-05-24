@@ -1,11 +1,39 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions } from './types'
 import { storage } from './lib/storage'
 import { allocateBuckets } from './lib/calculations'
 import { Dashboard } from './components/Dashboard'
 import { Shell } from './components/Shell'
 import { WelcomePage } from './components/WelcomePage'
+import { AdminPage } from './components/admin/AdminPage'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION, DEFAULT_DEMOGRAPHICS, DEFAULT_EXPENSES } from './constants'
+
+const ADMIN_FLAG_KEY = 'retirewise.adminEnabled'
+
+/** Admin gate — enabled via:
+ *    • URL ?admin=1   (persists to localStorage)
+ *    • URL #admin     (one-time, no persistence — handy for demos)
+ *  Disabled via URL ?admin=0 or the in-panel "Disable admin" button. */
+function readAdminFlag(): boolean {
+  if (typeof window === 'undefined') return false
+  const url = new URL(window.location.href)
+  const param = url.searchParams.get('admin')
+  if (param === '1') {
+    try { window.localStorage.setItem(ADMIN_FLAG_KEY, '1') } catch { /* ignore */ }
+    // Strip the param so refresh stays clean
+    url.searchParams.delete('admin')
+    window.history.replaceState({}, '', url.toString())
+    return true
+  }
+  if (param === '0') {
+    try { window.localStorage.removeItem(ADMIN_FLAG_KEY) } catch { /* ignore */ }
+    url.searchParams.delete('admin')
+    window.history.replaceState({}, '', url.toString())
+    return false
+  }
+  if (window.location.hash === '#admin') return true
+  try { return window.localStorage.getItem(ADMIN_FLAG_KEY) === '1' } catch { return false }
+}
 
 const V2_FLAG_ENV = (import.meta.env.VITE_V2_ENABLED as string | undefined) === 'true'
 
@@ -157,14 +185,61 @@ function V1App() {
   }
 
   return (
-    <Dashboard
-      profile={profile}
-      buckets={buckets}
-      returnAssumptions={returnAssumptions}
-      onBucketsUpdate={handleBucketsUpdate}
-      onProfileUpdate={handleProfileUpdate}
-      onReturnsUpdate={handleReturnsUpdate}
-      onReset={handleReset}
-    />
+    <>
+      <Dashboard
+        profile={profile}
+        buckets={buckets}
+        returnAssumptions={returnAssumptions}
+        onBucketsUpdate={handleBucketsUpdate}
+        onProfileUpdate={handleProfileUpdate}
+        onReturnsUpdate={handleReturnsUpdate}
+        onReset={handleReset}
+      />
+      <AdminGate />
+    </>
+  )
+}
+
+/** Floating "🔧 Admin" button visible only when admin mode is on; opens
+ *  the AdminPage overlay. Listens for hash/storage changes so toggling
+ *  via URL is reflected immediately without a refresh. */
+function AdminGate() {
+  const [adminOn, setAdminOn] = useState<boolean>(() => readAdminFlag())
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    function refresh() { setAdminOn(readAdminFlag()) }
+    window.addEventListener('hashchange', refresh)
+    window.addEventListener('storage', refresh)
+    return () => {
+      window.removeEventListener('hashchange', refresh)
+      window.removeEventListener('storage', refresh)
+    }
+  }, [])
+
+  function disable() {
+    try { window.localStorage.removeItem(ADMIN_FLAG_KEY) } catch { /* ignore */ }
+    if (window.location.hash === '#admin') {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search)
+    }
+    setAdminOn(false)
+    setOpen(false)
+  }
+
+  if (!adminOn) return null
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Open admin panel (audits, project docs)"
+        className="fixed bottom-4 right-4 z-50 inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-gradient-to-b from-amber-400 via-amber-500 to-amber-700 text-white font-bold text-[12px] tracking-wider uppercase border border-black/20 active:translate-y-[2px] transition-all"
+        style={{ boxShadow: '0 4px 0 0 rgb(120,53,15), 0 8px 14px -4px rgba(15,23,42,0.40)' }}
+      >
+        <span aria-hidden="true">🔧</span> Admin
+      </button>
+      {open && <AdminPage onClose={() => setOpen(false)} onDisable={disable} />}
+    </>
   )
 }
