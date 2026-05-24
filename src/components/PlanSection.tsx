@@ -68,6 +68,8 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
   function handleClose() { isControlled ? onToggle?.() : setInternalOpen(false); setHelpOpen(false) }
 
   // ─── Compact circular badge (used by the Plan-tab wheel) ─────────────
+  // White body, tone-coloured border + text, 3D effect via bottom lip in the
+  // tone's dark shade. Active state subtly tints the body.
   if (compact) {
     const sm = size === 'sm'
     const dimCls = sm
@@ -81,34 +83,33 @@ export function PlanSection({ num, title, subtitle, tone, open: openProp, onTogg
         aria-pressed={external ? active : undefined}
         title={`Step ${parseInt(num, 10)} · ${title}`}
         className={[
-          'group relative rounded-full select-none flex flex-col items-center justify-center gap-0.5 text-white',
+          'group relative rounded-full select-none flex flex-col items-center justify-center gap-0.5',
           dimCls,
-          'transition-all duration-100 border-2',
-          active ? 'border-white ring-4 ring-amber-300' : 'border-white/60',
-          'focus:outline-none focus:ring-4 focus:ring-amber-300',
+          'transition-all duration-100 border-[3px]',
+          t.border,
+          active ? `${t.bg} ring-4 ${t.ring}` : 'bg-white',
+          'focus:outline-none focus:ring-4 ' + t.ring,
           'active:translate-y-[2px]',
-          `bg-gradient-to-b ${t3d.body} ${t3d.bodyHover}`,
         ].join(' ')}
         style={{
           boxShadow: active
-            ? `0 2px 0 0 ${t3d.lip}, 0 4px 10px -3px rgba(15,23,42,0.55), inset 0 2px 4px rgba(0,0,0,0.25), inset 0 -1px 0 rgba(255,255,255,0.30)`
-            : `0 5px 0 0 ${t3d.lip}, 0 10px 18px -6px rgba(15,23,42,0.45), inset 0 2px 0 rgba(255,255,255,0.42), inset 0 -2px 0 rgba(0,0,0,0.22)`,
-          textShadow: '0 1px 1px rgba(0,0,0,0.40)',
+            ? `0 2px 0 0 ${t3d.lip}, inset 0 3px 6px rgba(0,0,0,0.08)`
+            : `0 6px 0 0 ${t3d.lip}, 0 12px 22px -8px rgba(15,23,42,0.35), inset 0 2px 0 rgba(255,255,255,0.95), inset 0 -2px 4px rgba(15,23,42,0.06)`,
           transform: active ? 'translateY(3px)' : undefined,
         }}
       >
         {!sm && (
-          <span className="font-serif italic text-[11px] font-bold tracking-wider opacity-90 leading-none">step</span>
+          <span className={`font-serif italic text-[11px] font-bold tracking-wider leading-none opacity-75 ${t.text}`}>step</span>
         )}
-        <span className={`font-serif font-extrabold tabular-nums leading-none drop-shadow-sm ${sm ? 'text-xl' : 'text-3xl'}`}>{num}</span>
-        {icon && <span className={`leading-none mt-0.5 ${sm ? 'text-base' : 'text-xl'}`} aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{icon}</span>}
+        <span className={`font-serif font-extrabold tabular-nums leading-none ${sm ? 'text-xl' : 'text-3xl'} ${t.text}`}>{num}</span>
+        {icon && <span className={`leading-none mt-0.5 ${sm ? 'text-base' : 'text-xl'}`} aria-hidden="true">{icon}</span>}
         {!sm && (
-          <span className="text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2">
+          <span className={`text-[11px] font-extrabold uppercase tracking-[1.5px] mt-0.5 leading-tight text-center px-2 ${t.text}`}>
             {shortTitle ?? title}
           </span>
         )}
         {sm && (
-          <span className="text-[9px] font-extrabold uppercase tracking-[1px] leading-tight text-center px-1 mt-0.5 max-w-[80px] truncate">
+          <span className={`text-[9px] font-extrabold uppercase tracking-[1px] leading-tight text-center px-1 mt-0.5 max-w-[80px] truncate ${t.text}`}>
             {shortTitle ?? title}
           </span>
         )}

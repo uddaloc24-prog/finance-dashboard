@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense, type ReactNode } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense, type ReactNode } from 'react'
 import type { UserProfile, BucketState, ReturnAssumptions } from '../types'
 import type { TabId } from '../constants'
 import { totalCorpus, b1RunwayMonths } from '../lib/calculations'
@@ -17,6 +17,16 @@ import { NetWorthDashboard } from './plan-dashboards/NetWorthDashboard'
 import { RetirementReadinessDashboard } from './plan-dashboards/RetirementReadinessDashboard'
 import { InsuranceCoverageDashboard } from './plan-dashboards/InsuranceCoverageDashboard'
 import { CashFlowDashboard } from './plan-dashboards/CashFlowDashboard'
+import { LiquidityDashboard } from './plan-dashboards/LiquidityDashboard'
+import { DebtDashboard } from './plan-dashboards/DebtDashboard'
+import { HealthcareDashboard } from './plan-dashboards/HealthcareDashboard'
+import { TaxOptimisationDashboard } from './plan-dashboards/TaxOptimisationDashboard'
+import { AssetAllocationDashboard } from './plan-dashboards/AssetAllocationDashboard'
+import { GoalTrackerDashboard } from './plan-dashboards/GoalTrackerDashboard'
+import { InflationImpactDashboard } from './plan-dashboards/InflationImpactDashboard'
+import { TaxCalendarDashboard } from './plan-dashboards/TaxCalendarDashboard'
+import { EstateDashboard } from './plan-dashboards/EstateDashboard'
+import { PlanExecutiveDashboard } from './plan-dashboards/PlanExecutiveDashboard'
 import { CashflowSummary } from './CashflowSummary'
 import { RetirementWelcome } from './RetirementWelcome'
 import { AssetInventory } from './AssetInventory'
@@ -90,7 +100,13 @@ export function Dashboard({
     return 'plan'
   })
   const [openPlanStep, setOpenPlanStep] = useState<string | null>(null)
-  type PlanDash = 'profile' | 'networth' | 'readiness' | 'insurance' | 'cashflow'
+  type PlanDash =
+    | 'profile'
+    | 'networth' | 'cashflow' | 'liquidity' | 'debt'
+    | 'readiness' | 'insurance' | 'healthcare'
+    | 'tax' | 'allocation' | 'goals' | 'inflation'
+    | 'calendar' | 'estate'
+    | 'executive'
   const [openPlanDash, setOpenPlanDash] = useState<PlanDash | null>(null)
   const { data: marketData } = useMarketData(profile.refreshInterval)
 
@@ -218,25 +234,21 @@ export function Dashboard({
 
         {activeTab === 'plan' && (
           <div role="tabpanel" id="tabpanel-plan" aria-labelledby="tab-plan" className="space-y-3">
-            <PlanIntro />
+            <PlanIntro right={<DashboardsMenu openDash={openPlanDash} setOpenDash={setOpenPlanDash} />} />
 
-            {/* Plan-tab launcher rail (left) + wheel/side-panel area (right) */}
-            <div className="grid grid-cols-1 md:grid-cols-[180px_minmax(0,1fr)] gap-3 items-start">
-              <PlanLauncherRail openDash={openPlanDash} setOpenDash={setOpenPlanDash} />
-              <div className="min-w-0">
-                <PlanLayout
-                  openStep={openPlanStep}
-                  setOpenStep={setOpenPlanStep}
-                  profile={profile}
-                  buckets={buckets}
-                  onProfileUpdate={onProfileUpdate}
-                  onBucketsUpdate={onBucketsUpdate}
-                />
-                <div className="mt-3">
-                  <CashflowSummary profile={profile} buckets={buckets} />
-                </div>
-              </div>
-            </div>
+            {/* Wheel + side-panel area (full width); the "Dashboards" 3D
+                button now lives in the right side of the PlanIntro card,
+                and the wheel's central star opens the Executive Dashboard. */}
+            <PlanLayout
+              openStep={openPlanStep}
+              setOpenStep={setOpenPlanStep}
+              profile={profile}
+              buckets={buckets}
+              onProfileUpdate={onProfileUpdate}
+              onBucketsUpdate={onBucketsUpdate}
+              onOpenExecutive={() => setOpenPlanDash('executive')}
+            />
+            <CashflowSummary profile={profile} buckets={buckets} />
 
             {/* Plan-tab dashboard modals */}
             <Modal
@@ -292,6 +304,106 @@ export function Dashboard({
               onClose={() => setOpenPlanDash(null)}
             >
               <CashFlowDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'liquidity'}
+              title="Liquidity & Emergency"
+              subtitle="Runway · accessibility by tenor · lockup ladder"
+              accent="emerald"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <LiquidityDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'debt'}
+              title="Debt & Liability"
+              subtitle="DTI · loan inventory · payoff strategies"
+              accent="rose"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <DebtDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'healthcare'}
+              title="Healthcare & Longevity"
+              subtitle="Spend curve · LTC reserve · CI gap · parent-care"
+              accent="emerald"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <HealthcareDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'tax'}
+              title="Tax Optimisation"
+              subtitle="Slab · 80C / 80D / NPS headroom · LTCG harvest · sequencing"
+              accent="amber"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <TaxOptimisationDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'allocation'}
+              title="Asset Allocation"
+              subtitle="Equity / Debt / Gold / RE / Cash vs target · drift · rebalance"
+              accent="indigo"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <AssetAllocationDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'goals'}
+              title="Goal Tracker"
+              subtitle="Per-goal progress · SIP gap · milestone calendar"
+              accent="emerald"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <GoalTrackerDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'inflation'}
+              title="Inflation Impact"
+              subtitle="10/20/30y erosion · real-return calc · category drag"
+              accent="rose"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <InflationImpactDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'calendar'}
+              title="Tax & Policy Calendar"
+              subtitle="Advance tax · ITR · rate revisions · renewals"
+              accent="slate"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <TaxCalendarDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'estate'}
+              title="Estate & Legacy"
+              subtitle="Bequeathable · MWP · nominee · succession checklist"
+              accent="slate"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <EstateDashboard profile={profile} buckets={buckets} />
+            </Modal>
+            <Modal
+              open={openPlanDash === 'executive'}
+              title="Plan Executive Dashboard"
+              subtitle="Plan Health Score · 8-axis compass · step pulse · priorities · direction"
+              accent="amber"
+              size="3xl"
+              onClose={() => setOpenPlanDash(null)}
+            >
+              <PlanExecutiveDashboard profile={profile} buckets={buckets} />
             </Modal>
             {/* Legacy wheel render (kept hidden for reference) ─── */}
             {false && (
@@ -616,12 +728,21 @@ export function Dashboard({
   )
 }
 
-// ── PlanLauncherRail — left column of 5 chunky 3D dashboard launchers ─
+// ── DashboardsMenu — single 3D "Dashboards" button + dropdown list ────
 
-type PlanDashKey = 'profile' | 'networth' | 'readiness' | 'insurance' | 'cashflow'
+type PlanDashKey =
+  | 'profile'
+  | 'networth' | 'cashflow' | 'liquidity' | 'debt'
+  | 'readiness' | 'insurance' | 'healthcare'
+  | 'tax' | 'allocation' | 'goals' | 'inflation'
+  | 'calendar' | 'estate'
+  | 'executive'
+
+type PlanLauncherGroup = 'Settings' | 'Financial Position' | 'Risk & Resilience' | 'Planning & Optimisation' | 'Operational'
 
 interface PlanLauncherDef {
   key: PlanDashKey
+  group: PlanLauncherGroup
   icon: string
   primary: string
   secondary: string
@@ -633,54 +754,148 @@ interface PlanLauncherDef {
 }
 
 const PLAN_LAUNCHERS: PlanLauncherDef[] = [
-  { key: 'profile',   icon: '⚙️', primary: 'Profile',     secondary: 'SETTINGS', sub: 'CORPUS · TAX · SIP', body: 'from-blue-400 via-blue-500 to-blue-700',         bodyHover: 'hover:from-blue-300 hover:via-blue-400 hover:to-blue-600',         lip: 'rgb(30,58,138)',  ring: 'focus:ring-blue-300' },
-  { key: 'networth',  icon: '💼', primary: 'Net Worth',   secondary: 'BALANCE',  sub: 'ASSETS · LIABILITIES', body: 'from-emerald-400 via-emerald-500 to-emerald-700',  bodyHover: 'hover:from-emerald-300 hover:via-emerald-400 hover:to-emerald-600', lip: 'rgb(6,78,59)',    ring: 'focus:ring-emerald-300' },
-  { key: 'readiness', icon: '🎯', primary: 'Retirement',  secondary: 'READINESS', sub: 'CAN I RETIRE?',      body: 'from-indigo-400 via-indigo-600 to-violet-700',      bodyHover: 'hover:from-indigo-300 hover:via-indigo-500 hover:to-violet-600',     lip: 'rgb(49,46,129)',  ring: 'focus:ring-indigo-300' },
-  { key: 'insurance', icon: '🛡️', primary: 'Insurance',   secondary: 'GAPS',     sub: 'HEALTH · LIFE · CI', body: 'from-amber-400 via-amber-500 to-amber-700',         bodyHover: 'hover:from-amber-300 hover:via-amber-400 hover:to-amber-600',       lip: 'rgb(120,53,15)',  ring: 'focus:ring-amber-300' },
-  { key: 'cashflow',  icon: '💸', primary: 'Cash Flow',   secondary: 'DEEP',     sub: 'INFLOW · OUTFLOW',   body: 'from-rose-400 via-rose-500 to-rose-700',            bodyHover: 'hover:from-rose-300 hover:via-rose-400 hover:to-rose-600',          lip: 'rgb(136,19,55)',  ring: 'focus:ring-rose-300' },
+  // Settings
+  { key: 'profile',    group: 'Settings',                icon: '⚙️', primary: 'Profile',    secondary: 'SETTINGS',  sub: 'CORPUS · TAX · SIP',   body: 'from-blue-400 via-blue-500 to-blue-700',         bodyHover: 'hover:from-blue-300 hover:via-blue-400 hover:to-blue-600',         lip: 'rgb(30,58,138)',  ring: 'focus:ring-blue-300' },
+  // Financial Position
+  { key: 'networth',   group: 'Financial Position',      icon: '💼', primary: 'Net Worth',  secondary: 'BALANCE',   sub: 'ASSETS · LIABILITIES', body: 'from-emerald-400 via-emerald-500 to-emerald-700', bodyHover: 'hover:from-emerald-300 hover:via-emerald-400 hover:to-emerald-600', lip: 'rgb(6,78,59)',    ring: 'focus:ring-emerald-300' },
+  { key: 'cashflow',   group: 'Financial Position',      icon: '💸', primary: 'Cash Flow',  secondary: 'DEEP',      sub: 'INFLOW · OUTFLOW',     body: 'from-rose-400 via-rose-500 to-rose-700',          bodyHover: 'hover:from-rose-300 hover:via-rose-400 hover:to-rose-600',          lip: 'rgb(136,19,55)',  ring: 'focus:ring-rose-300' },
+  { key: 'liquidity',  group: 'Financial Position',      icon: '💧', primary: 'Liquidity',  secondary: 'EMERGENCY', sub: 'RUNWAY · LOCKUP',      body: 'from-cyan-400 via-cyan-500 to-cyan-700',          bodyHover: 'hover:from-cyan-300 hover:via-cyan-400 hover:to-cyan-600',          lip: 'rgb(22,78,99)',   ring: 'focus:ring-cyan-300' },
+  { key: 'debt',       group: 'Financial Position',      icon: '📉', primary: 'Debt',       secondary: 'LIABILITY', sub: 'DTI · PAYOFF · MAX',   body: 'from-orange-400 via-orange-500 to-orange-700',    bodyHover: 'hover:from-orange-300 hover:via-orange-400 hover:to-orange-600',    lip: 'rgb(124,45,18)',  ring: 'focus:ring-orange-300' },
+  // Risk & Resilience
+  { key: 'readiness',  group: 'Risk & Resilience',       icon: '🎯', primary: 'Retirement', secondary: 'READINESS', sub: 'CAN I RETIRE?',         body: 'from-indigo-400 via-indigo-600 to-violet-700',    bodyHover: 'hover:from-indigo-300 hover:via-indigo-500 hover:to-violet-600',    lip: 'rgb(49,46,129)',  ring: 'focus:ring-indigo-300' },
+  { key: 'insurance',  group: 'Risk & Resilience',       icon: '🛡️', primary: 'Insurance',  secondary: 'GAPS',      sub: 'HEALTH · LIFE · CI',   body: 'from-amber-400 via-amber-500 to-amber-700',       bodyHover: 'hover:from-amber-300 hover:via-amber-400 hover:to-amber-600',       lip: 'rgb(120,53,15)',  ring: 'focus:ring-amber-300' },
+  { key: 'healthcare', group: 'Risk & Resilience',       icon: '🏥', primary: 'Healthcare', secondary: 'LONGEVITY', sub: 'CURVE · LTC · CI',     body: 'from-teal-400 via-teal-500 to-teal-700',          bodyHover: 'hover:from-teal-300 hover:via-teal-400 hover:to-teal-600',          lip: 'rgb(19,78,74)',   ring: 'focus:ring-teal-300' },
+  // Planning & Optimisation
+  { key: 'tax',        group: 'Planning & Optimisation', icon: '🧮', primary: 'Tax',        secondary: 'OPTIMISE',  sub: '80C · LTCG · SLAB',    body: 'from-yellow-400 via-yellow-500 to-yellow-700',    bodyHover: 'hover:from-yellow-300 hover:via-yellow-400 hover:to-yellow-600',    lip: 'rgb(113,63,18)',  ring: 'focus:ring-yellow-300' },
+  { key: 'allocation', group: 'Planning & Optimisation', icon: '🥧', primary: 'Asset',      secondary: 'ALLOCATION', sub: 'DRIFT · REBALANCE',    body: 'from-purple-400 via-purple-500 to-purple-700',    bodyHover: 'hover:from-purple-300 hover:via-purple-400 hover:to-purple-600',    lip: 'rgb(88,28,135)',  ring: 'focus:ring-purple-300' },
+  { key: 'goals',      group: 'Planning & Optimisation', icon: '🏁', primary: 'Goal',       secondary: 'TRACKER',   sub: 'SIP NEEDED · STATUS',  body: 'from-green-400 via-green-500 to-green-700',       bodyHover: 'hover:from-green-300 hover:via-green-400 hover:to-green-600',       lip: 'rgb(20,83,45)',   ring: 'focus:ring-green-300' },
+  { key: 'inflation',  group: 'Planning & Optimisation', icon: '📈', primary: 'Inflation',  secondary: 'IMPACT',    sub: '10/20/30Y EROSION',    body: 'from-pink-400 via-pink-500 to-pink-700',          bodyHover: 'hover:from-pink-300 hover:via-pink-400 hover:to-pink-600',          lip: 'rgb(131,24,67)',  ring: 'focus:ring-pink-300' },
+  // Operational
+  { key: 'calendar',   group: 'Operational',             icon: '📅', primary: 'Tax & Policy', secondary: 'CALENDAR', sub: 'DATES · RENEWALS',     body: 'from-slate-400 via-slate-500 to-slate-700',       bodyHover: 'hover:from-slate-300 hover:via-slate-400 hover:to-slate-600',       lip: 'rgb(15,23,42)',   ring: 'focus:ring-slate-300' },
+  { key: 'estate',     group: 'Operational',             icon: '⚖️', primary: 'Estate',     secondary: 'LEGACY',    sub: 'WILL · NOMINEE · MWP', body: 'from-stone-400 via-stone-500 to-stone-700',       bodyHover: 'hover:from-stone-300 hover:via-stone-400 hover:to-stone-600',       lip: 'rgb(41,37,36)',   ring: 'focus:ring-stone-300' },
 ]
 
-function PlanLauncherRail({ openDash, setOpenDash }: { openDash: PlanDashKey | null; setOpenDash: (k: PlanDashKey | null) => void }) {
+const PLAN_GROUP_ORDER: PlanLauncherGroup[] = ['Settings', 'Financial Position', 'Risk & Resilience', 'Planning & Optimisation', 'Operational']
+
+function DashboardsMenu({ openDash, setOpenDash }: { openDash: PlanDashKey | null; setOpenDash: (k: PlanDashKey | null) => void }) {
+  const [menuOpen, setMenuOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function onPointer(e: MouseEvent) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setMenuOpen(false)
+    }
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') setMenuOpen(false) }
+    document.addEventListener('mousedown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
+
+  function pick(key: PlanDashKey) {
+    setOpenDash(key)
+    setMenuOpen(false)
+  }
+
+  const active = openDash !== null
+  const activeLabel = PLAN_LAUNCHERS.find((l) => l.key === openDash)
+
   return (
-    <aside className="flex flex-col gap-2 md:sticky md:top-2 md:self-start">
-      <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-600 px-1 mb-1">Dashboards</div>
-      {PLAN_LAUNCHERS.map((l) => {
-        const active = openDash === l.key
-        return (
-          <button
-            key={l.key}
-            type="button"
-            onClick={() => setOpenDash(active ? null : l.key)}
-            aria-pressed={active}
-            title={`Open ${l.primary} ${l.secondary} dashboard`}
-            className={[
-              'group relative w-full rounded-lg overflow-hidden select-none flex flex-col',
-              'transition-all duration-100',
-              `bg-gradient-to-b ${l.body} ${l.bodyHover} text-white border border-black/20`,
-              'focus:outline-none focus:ring-2 ' + l.ring,
-              active ? 'translate-y-[2px]' : 'active:translate-y-[2px]',
-            ].join(' ')}
-            style={{
-              boxShadow: active
-                ? `0 1px 0 0 ${l.lip}, inset 0 2px 4px rgba(0,0,0,0.25)`
-                : `0 4px 0 0 ${l.lip}, 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(0,0,0,0.20)`,
-            }}
-          >
-            <div className="flex items-center justify-between gap-2 px-3 pt-2.5">
-              <span className="text-xl leading-none" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>{l.icon}</span>
-              <span className="text-[10px] leading-none font-bold opacity-90" aria-hidden="true">↗</span>
-            </div>
-            <div className="px-3 pt-1.5 pb-2.5" style={{ textShadow: '0 1px 1px rgba(0,0,0,0.45), 0 -1px 0 rgba(255,255,255,0.10)' }}>
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <span className="font-serif italic text-base font-extrabold leading-none tracking-tight">{l.primary}</span>
-                <span className="font-sans text-[10px] font-extrabold uppercase tracking-[2px] leading-none">{l.secondary}</span>
-              </div>
-              <div className="font-mono text-[9px] uppercase tracking-[2.5px] opacity-85 mt-1">{l.sub}</div>
-            </div>
-          </button>
-        )
-      })}
-    </aside>
+    <div ref={wrapRef} className="relative inline-block">
+      <button
+        type="button"
+        onClick={() => setMenuOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        title="Open the Dashboards menu"
+        className={[
+          'group relative inline-flex items-center gap-2.5 rounded-lg overflow-hidden select-none',
+          'transition-all duration-100 px-4 py-2.5',
+          'bg-gradient-to-b from-violet-400 via-violet-600 to-violet-800 hover:from-violet-300 hover:via-violet-500 hover:to-violet-700',
+          'text-white border border-black/20 focus:outline-none focus:ring-2 focus:ring-violet-300',
+          menuOpen ? 'translate-y-[2px]' : 'active:translate-y-[2px]',
+        ].join(' ')}
+        style={{
+          boxShadow: menuOpen
+            ? `0 1px 0 0 rgb(76,29,149), inset 0 2px 4px rgba(0,0,0,0.30)`
+            : `0 5px 0 0 rgb(76,29,149), 0 10px 18px -4px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.22)`,
+          textShadow: '0 1px 1px rgba(0,0,0,0.45)',
+        }}
+      >
+        <span className="text-xl leading-none" aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>⊞</span>
+        <span className="flex items-baseline gap-1.5">
+          <span className="font-serif italic text-base font-extrabold leading-none tracking-tight">Dashboards</span>
+          <span className="font-sans text-[10px] font-extrabold uppercase tracking-[3px] leading-none opacity-95">MENU</span>
+        </span>
+        <span className="text-xs leading-none font-bold opacity-95 ml-1" aria-hidden="true">{menuOpen ? '▴' : '▾'}</span>
+        {active && !menuOpen && (
+          <span className="ml-1.5 text-[9px] font-bold uppercase tracking-widest bg-white/20 rounded px-1.5 py-0.5">{activeLabel?.primary} open</span>
+        )}
+      </button>
+
+      {menuOpen && (
+        <div
+          role="menu"
+          className="absolute z-50 mt-2 left-0 w-[300px] sm:w-[340px] rounded-lg border-2 border-slate-200 bg-white"
+          style={{ boxShadow: '0 18px 38px -8px rgba(15,23,42,0.35), 0 6px 14px -4px rgba(15,23,42,0.25)' }}
+        >
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-500 px-3 pt-2.5 pb-2 border-b border-slate-100">
+            Choose a dashboard
+          </div>
+          <div className="max-h-[70vh] overflow-y-auto py-1">
+            {PLAN_GROUP_ORDER.map((group) => {
+              const items = PLAN_LAUNCHERS.filter((l) => l.group === group)
+              if (items.length === 0) return null
+              return (
+                <div key={group} className="mb-1 last:mb-0">
+                  <div className="text-[9px] font-bold tracking-[3px] uppercase text-slate-400 px-3 pt-2 pb-1">
+                    {group}
+                  </div>
+                  <ul>
+                    {items.map((l) => {
+                      const isActive = openDash === l.key
+                      return (
+                        <li key={l.key}>
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => pick(l.key)}
+                            aria-current={isActive ? 'true' : undefined}
+                            className={[
+                              'w-full grid grid-cols-[36px_1fr_auto] gap-2.5 items-center text-left px-3 py-2',
+                              'border-l-[3px] transition-colors',
+                              isActive ? 'bg-violet-50 border-violet-500' : 'border-transparent hover:bg-slate-50 hover:border-slate-300',
+                            ].join(' ')}
+                          >
+                            <span
+                              className={`inline-flex items-center justify-center w-9 h-9 rounded-md text-lg bg-gradient-to-b ${l.body} text-white`}
+                              aria-hidden="true"
+                              style={{ boxShadow: `0 2px 0 0 ${l.lip}, inset 0 1px 0 rgba(255,255,255,0.4)` }}
+                            >
+                              {l.icon}
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block font-serif italic text-sm font-extrabold text-slate-900 leading-tight">
+                                {l.primary} <span className="font-sans not-italic text-[9px] font-extrabold uppercase tracking-[2px] text-slate-500">{l.secondary}</span>
+                              </span>
+                              <span className="block text-[10px] uppercase tracking-[2px] text-slate-500 mt-0.5">{l.sub}</span>
+                            </span>
+                            <span className="text-slate-400 text-xs" aria-hidden="true">{isActive ? '●' : '↗'}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -710,7 +925,7 @@ interface PlanLayoutProps {
   onBucketsUpdate: (b: BucketState) => void
 }
 
-function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, onBucketsUpdate }: PlanLayoutProps) {
+function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, onBucketsUpdate, onOpenExecutive }: PlanLayoutProps & { onOpenExecutive?: () => void }) {
   // Six wheel steps; Profile & Settings (04) is intentionally NOT in the
   // wheel — it renders as a standalone full-width card below the wheel,
   // just above the Cashflow Summary.
@@ -718,9 +933,9 @@ function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, 
     { num: '01', tone: 'navy',  shortTitle: 'Wealth',       title: 'Wealth Snapshot',         subtitle: '8 groups · 34 asset classes · Liquid drives calcs · Invested → passive income', icon: '💼', status: <AssetInventoryStatus profile={profile} />, helpExamples: <HelpList items={HELP_WEALTH} />,        editor: <AssetInventory profile={profile} buckets={buckets} onProfileUpdate={onProfileUpdate} onBucketsUpdate={onBucketsUpdate} chrome="bare" /> },
     { num: '02', tone: 'rose',  shortTitle: 'Loans',        title: 'Loans & Liabilities',     subtitle: '4 groups · 13 loan types · MaxGain support · Avalanche / Snowball / MaxGain strategy', icon: '💳', status: <LoansStatus profile={profile} />,           helpExamples: <HelpList items={HELP_LOANS} />,         editor: <LoansLiabilities profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
     { num: '03', tone: 'green', shortTitle: 'Budget',       title: 'Monthly Budget',          subtitle: 'Detailed breakdown — drives the monthly withdrawal', icon: '📊', status: <ExpensesStatus profile={profile} />,             helpExamples: <HelpList items={HELP_BUDGET} />,        editor: <ExpenseEditor profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
-    { num: '05', tone: 'amber', shortTitle: 'Demographics', title: 'Demographics & Longevity', subtitle: 'Current age, retirement age, life expectancy', icon: '👥', status: <DemographicsStatus profile={profile} />,        helpExamples: <HelpList items={HELP_DEMOGRAPHICS} />,  editor: <DemographicsForm profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
-    { num: '06', tone: 'rose',  shortTitle: 'Inflation',    title: 'Inflation Assumptions',   subtitle: 'Split rates for general, healthcare, education', icon: '📈', status: <InflationStatus profile={profile} />,             helpExamples: <HelpList items={HELP_INFLATION} />,     editor: <InflationAssumptions profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
-    { num: '07', tone: 'rose',  shortTitle: 'Insurance',    title: 'Insurance Cover',         subtitle: '3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term', icon: '🛡️', status: <InsuranceStatus profile={profile} />,           helpExamples: <HelpList items={HELP_INSURANCE} />,     editor: <InsuranceCover profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '04', tone: 'amber', shortTitle: 'Demographics', title: 'Demographics & Longevity', subtitle: 'Current age, retirement age, life expectancy', icon: '👥', status: <DemographicsStatus profile={profile} />,        helpExamples: <HelpList items={HELP_DEMOGRAPHICS} />,  editor: <DemographicsForm profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '05', tone: 'rose',  shortTitle: 'Inflation',    title: 'Inflation Assumptions',   subtitle: 'Split rates for general, healthcare, education', icon: '📈', status: <InflationStatus profile={profile} />,             helpExamples: <HelpList items={HELP_INFLATION} />,     editor: <InflationAssumptions profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
+    { num: '06', tone: 'rose',  shortTitle: 'Insurance',    title: 'Insurance Cover',         subtitle: '3 groups · 14 policy types · health · life · risk cover · MWP Act flag for term', icon: '🛡️', status: <InsuranceStatus profile={profile} />,           helpExamples: <HelpList items={HELP_INSURANCE} />,     editor: <InsuranceCover profile={profile} onProfileUpdate={onProfileUpdate} chrome="bare" /> },
   ]
   const active = steps.find((s) => s.num === openStep) ?? null
   const TONE_TO_ACCENT = { navy: 'navy', rose: 'rose', green: 'emerald', amber: 'amber' } as const
@@ -735,7 +950,7 @@ function PlanLayout({ openStep, setOpenStep, profile, buckets, onProfileUpdate, 
     >
       {/* Wheel column — auto-shrinks badges + radius when active */}
       <div className={active ? 'xl:max-w-[360px] mx-auto w-full' : ''}>
-        <PlanWheel compact={!!active}>
+        <PlanWheel compact={!!active} onCenterClick={onOpenExecutive}>
           {steps.map((s, i) => (
             <WheelStep key={s.num} idx={i} radius={active ? 120 : 230}>
               <PlanSection
@@ -784,7 +999,7 @@ function angleToXY(idx: number, total: number, radius: number): { x: number; y: 
   return { x: Math.cos(angle) * radius, y: Math.sin(angle) * radius }
 }
 
-function PlanWheel({ children, compact }: { children: ReactNode; compact?: boolean }) {
+function PlanWheel({ children, compact, onCenterClick }: { children: ReactNode; compact?: boolean; onCenterClick?: () => void }) {
   const maxW = compact ? 360 : 680
   return (
     <>
@@ -792,29 +1007,95 @@ function PlanWheel({ children, compact }: { children: ReactNode; compact?: boole
       <div className="hidden md:block relative w-full aspect-square mx-auto my-2" style={{ maxWidth: `${maxW}px` }}>
         {/* Decorative outer ring */}
         <div className="absolute inset-[14%] rounded-full border-2 border-dashed border-slate-200" aria-hidden="true" />
-        {/* Center wordmark — shrinks in compact mode */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none select-none">
-          {compact ? (
-            <>
-              <span className="font-serif italic text-base font-extralight text-slate-700">your plan</span>
-              <span className="font-serif text-xl font-extrabold tracking-tight text-slate-900">7 steps</span>
-            </>
-          ) : (
-            <>
-              <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Step 1 · Plan</span>
-              <span className="font-serif italic text-2xl sm:text-3xl font-extralight text-slate-800 mt-1">your plan</span>
-              <span className="font-serif text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 mt-1">7 steps</span>
-              <span className="text-[10px] text-slate-500 italic mt-1">click any badge to open</span>
-            </>
-          )}
-        </div>
+        {/* Center 3D star — opens Executive Dashboard */}
+        <ExecutiveStar compact={compact} onClick={onCenterClick} />
         {children}
       </div>
-      {/* Mobile: 2-col grid fallback */}
-      <div className="md:hidden grid grid-cols-2 gap-3 justify-items-center">
-        {children}
+      {/* Mobile: 2-col grid fallback + a button to open Executive */}
+      <div className="md:hidden space-y-3">
+        <div className="grid grid-cols-2 gap-3 justify-items-center">
+          {children}
+        </div>
+        <button
+          type="button"
+          onClick={onCenterClick}
+          className="w-full rounded-lg bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 text-white px-4 py-3 font-serif italic text-base font-extrabold tracking-tight border border-black/20 active:translate-y-[2px]"
+          style={{ boxShadow: '0 5px 0 0 rgb(120,53,15), inset 0 1px 0 rgba(255,255,255,0.45)' }}
+        >
+          ★ Executive Dashboard
+        </button>
       </div>
     </>
+  )
+}
+
+// ── ExecutiveStar — 6-rayed 3D star inscribed at the wheel centre. Each
+// ray points outward toward one of the six step badges. Clicking it opens
+// the Executive Dashboard modal.
+function ExecutiveStar({ compact, onClick }: { compact?: boolean; onClick?: () => void }) {
+  const cx = 100, cy = 100
+  const baseR = compact ? 18 : 26
+  const tipR  = compact ? 60 : 80
+  const baseHalf = compact ? 8 : 12
+  // 6 rays at the same angles as the wheel positions (12, 2, 4, 6, 8, 10 o'clock)
+  const angles = [0, 1, 2, 3, 4, 5].map((i) => (i / 6) * 2 * Math.PI - Math.PI / 2)
+  const rays = angles.map((a) => {
+    const tipX = cx + tipR * Math.cos(a)
+    const tipY = cy + tipR * Math.sin(a)
+    const px = -Math.sin(a) * baseHalf
+    const py = Math.cos(a) * baseHalf
+    const base1X = cx + baseR * Math.cos(a) + px
+    const base1Y = cy + baseR * Math.sin(a) + py
+    const base2X = cx + baseR * Math.cos(a) - px
+    const base2Y = cy + baseR * Math.sin(a) - py
+    return `M ${tipX.toFixed(2)} ${tipY.toFixed(2)} L ${base1X.toFixed(2)} ${base1Y.toFixed(2)} L ${base2X.toFixed(2)} ${base2Y.toFixed(2)} Z`
+  }).join(' ')
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Open Executive Dashboard"
+      title="Executive Dashboard"
+      className="absolute inset-0 flex items-center justify-center bg-transparent border-0 select-none focus:outline-none active:translate-y-[1px] group"
+    >
+      <svg viewBox="0 0 200 200" className={compact ? 'w-[60%] h-[60%]' : 'w-[55%] h-[55%]'} aria-hidden="true">
+        <defs>
+          <radialGradient id="rg-star" cx="50%" cy="40%" r="65%">
+            <stop offset="0%"  stopColor="#fef3c7" />
+            <stop offset="50%" stopColor="#f59e0b" />
+            <stop offset="100%" stopColor="#92400e" />
+          </radialGradient>
+          <radialGradient id="rg-core" cx="50%" cy="35%" r="65%">
+            <stop offset="0%"  stopColor="#fde68a" />
+            <stop offset="60%" stopColor="#d97706" />
+            <stop offset="100%" stopColor="#78350f" />
+          </radialGradient>
+          <filter id="starShadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="3" stdDeviation="3" floodOpacity="0.35" />
+          </filter>
+        </defs>
+        {/* 6 outward rays */}
+        <g filter="url(#starShadow)">
+          <path d={rays} fill="url(#rg-star)" stroke="#78350f" strokeWidth={1.2} strokeLinejoin="round" />
+          {/* Inner hex/core for 3D body */}
+          <circle cx={cx} cy={cy} r={baseR} fill="url(#rg-core)" stroke="#78350f" strokeWidth={1.5} />
+          {/* Specular highlight */}
+          <ellipse cx={cx - baseR * 0.3} cy={cy - baseR * 0.4} rx={baseR * 0.45} ry={baseR * 0.22} fill="rgba(255,255,255,0.55)" />
+        </g>
+        {/* Label inside the core (only when not compact) */}
+        {!compact && (
+          <g>
+            <text x={cx} y={cy - 2} textAnchor="middle" style={{ fontSize: 7, fontWeight: 900, fill: 'white', letterSpacing: 1.2 }}>EXECUTIVE</text>
+            <text x={cx} y={cy + 7} textAnchor="middle" style={{ fontSize: 7, fontWeight: 900, fill: 'white', letterSpacing: 1.2 }}>DASHBOARD</text>
+          </g>
+        )}
+      </svg>
+      {/* Caption sits below the star inside the wheel */}
+      <span className="absolute left-1/2 -translate-x-1/2 pointer-events-none font-serif italic text-amber-700 font-extrabold whitespace-nowrap"
+            style={{ bottom: compact ? '18%' : '14%', fontSize: compact ? 10 : 12, textShadow: '0 1px 0 rgba(255,255,255,0.85)' }}>
+        Executive Dashboard
+      </span>
+    </button>
   )
 }
 
@@ -919,19 +1200,24 @@ function HelpList({ items }: { items: HelpItem[] }) {
   )
 }
 
-function PlanIntro() {
+function PlanIntro({ right }: { right?: ReactNode }) {
   return (
     <div className="bg-white rounded-lg border-2 border-slate-200 px-4 py-3 sm:px-5 sm:py-4">
-      <div className="flex items-baseline gap-3 mb-1">
-        <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700 tabular-nums">Step 1 · Plan</span>
-        <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-3 mb-1">
+            <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700 tabular-nums">Step 1 · Plan</span>
+            <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
+          </div>
+          <h2 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 leading-tight">
+            Set up <em className="not-italic font-extrabold text-blue-700">your plan</em>.
+          </h2>
+          <p className="text-[11px] sm:text-xs text-slate-600 mt-1.5 leading-snug max-w-2xl">
+            Six numbered subsections in a circular wheel. Click any badge to open its editor on the right. Inputs save automatically as you type — every chart and recommendation downstream flows from these numbers. The star at the centre opens your <strong>Executive Dashboard</strong>.
+          </p>
+        </div>
+        {right && <div className="shrink-0">{right}</div>}
       </div>
-      <h2 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 leading-tight">
-        Set up <em className="not-italic font-extrabold text-blue-700">your plan</em>.
-      </h2>
-      <p className="text-[11px] sm:text-xs text-slate-600 mt-1.5 leading-snug max-w-2xl">
-        Four numbered subsections. Tap any header to expand or collapse. Inputs save automatically as you type — every chart and recommendation downstream flows from these numbers.
-      </p>
     </div>
   )
 }

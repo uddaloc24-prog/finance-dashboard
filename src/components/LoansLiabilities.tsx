@@ -224,20 +224,24 @@ function rankLoans(lp: LoanProfile, strategy: RepaymentStrategy): Ranked[] {
 
 // ── Visual primitives ────────────────────────────────────────────────
 
+// Tight horizontal layout that fits inside the side-panel column (~640-
+// 800 px). Kicks in at md: so the side panel renders a single row even
+// before lg: viewport widths. Numeric columns are narrower; the label
+// column flexes.
 const ROW_GRID =
-  'grid items-center gap-3 sm:gap-4 ' +
+  'grid items-center gap-2 ' +
   'grid-cols-[1fr] ' +
-  'lg:grid-cols-[minmax(0,1.6fr)_110px_150px_100px_140px_auto]'
+  'md:grid-cols-[minmax(140px,1.3fr)_88px_125px_72px_115px_minmax(96px,auto)]'
 
 function ColumnHeaders() {
   return (
-    <div className={`${ROW_GRID} px-5 py-2.5 bg-gradient-to-b from-slate-100 to-slate-50 border-b-2 border-slate-200 hidden lg:grid`}>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600">Loan</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-center">Active</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">Outstanding</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">Rate %</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600 text-right">EMI / mo</span>
-      <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-slate-600">Flags</span>
+    <div className={`${ROW_GRID} px-3 py-2 bg-gradient-to-b from-slate-100 to-slate-50 border-b-2 border-slate-200 hidden md:grid`}>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600">Loan</span>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 text-center">Active</span>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 text-right">Outstanding</span>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 text-right">Rate%</span>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600 text-right">EMI/mo</span>
+      <span className="text-[10px] font-bold tracking-[2px] uppercase text-slate-600">Flag</span>
     </div>
   )
 }
@@ -274,8 +278,8 @@ function NumberInput({
   }
 
   return (
-    <div className="flex items-center gap-1.5 bg-white border-2 border-slate-200 rounded-md px-2.5 py-2 hover:border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-colors">
-      {prefix && <span className="text-sm font-bold text-slate-500 shrink-0">{prefix}</span>}
+    <div className="flex items-center gap-1 bg-white border-2 border-slate-200 rounded-md px-1.5 py-1.5 hover:border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-colors">
+      {prefix && <span className="text-[11px] font-bold text-slate-500 shrink-0">{prefix}</span>}
       <input
         type="text"
         inputMode="decimal"
@@ -285,9 +289,9 @@ function NumberInput({
         onBlur={commit}
         onKeyDown={(e) => e.key === 'Enter' && commit()}
         aria-label={ariaLabel}
-        className={`flex-1 min-w-0 bg-transparent text-sm font-bold ${textColor} outline-none tabular-nums text-right`}
+        className={`flex-1 min-w-0 bg-transparent text-[13px] font-bold ${textColor} outline-none tabular-nums text-right`}
       />
-      {suffix && <span className="text-[10px] text-slate-500 font-semibold shrink-0">{suffix}</span>}
+      {suffix && <span className="text-[9px] text-slate-500 font-semibold shrink-0">{suffix}</span>}
     </div>
   )
 }
@@ -304,10 +308,10 @@ function LoanRow({
 }) {
   const months = entry.active ? monthsToClose(entry.outstanding, entry.interestRate, entry.emi) : null
   return (
-    <div className={`${ROW_GRID} px-5 py-3.5 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0 even:bg-slate-50/30`}>
+    <div className={`${ROW_GRID} px-3 py-2.5 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-b-0 even:bg-slate-50/30`}>
       <div className="min-w-0">
-        <div className="flex items-baseline gap-2 flex-wrap">
-          <span className="text-sm font-bold text-slate-900">{sub.label}</span>
+        <div className="flex items-baseline gap-1.5 flex-wrap">
+          <span className="text-[13px] font-bold text-slate-900 leading-tight">{sub.label}</span>
           {entry.maxGain && entry.active && sub.maxGainFlag && (
             <span className="shrink-0 text-[9px] font-bold uppercase tracking-[1.5px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-1.5 py-0.5">
               🔄 MaxGain
@@ -320,7 +324,7 @@ function LoanRow({
           )}
         </div>
         {sub.hint && (
-          <div className="text-[11px] text-slate-500 leading-snug mt-0.5">{sub.hint}</div>
+          <div className="text-[10.5px] text-slate-500 leading-snug mt-0.5 line-clamp-2">{sub.hint}</div>
         )}
       </div>
 
@@ -331,7 +335,7 @@ function LoanRow({
           onClick={() => onChange({ ...entry, active: true })}
           aria-pressed={entry.active}
           className={[
-            'flex-1 px-2 py-1.5 text-xs font-bold rounded transition-colors',
+            'flex-1 px-1 py-1 text-[11px] font-bold rounded transition-colors',
             entry.active ? 'bg-rose-600 text-white shadow-sm'
                          : 'text-slate-600 hover:text-slate-900 hover:bg-white',
           ].join(' ')}
@@ -343,7 +347,7 @@ function LoanRow({
           onClick={() => onChange({ ...entry, active: false })}
           aria-pressed={!entry.active}
           className={[
-            'flex-1 px-2 py-1.5 text-xs font-bold rounded transition-colors',
+            'flex-1 px-1 py-1 text-[11px] font-bold rounded transition-colors',
             !entry.active ? 'bg-slate-500 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900 hover:bg-white',
           ].join(' ')}
@@ -384,14 +388,14 @@ function LoanRow({
       />
 
       {/* Flags */}
-      <div className="flex flex-wrap gap-1.5 lg:flex-nowrap lg:justify-end">
+      <div className="flex gap-1 md:justify-end">
         {sub.maxGainFlag && (
           <button
             type="button"
             onClick={() => onChange({ ...entry, maxGain: !entry.maxGain })}
             disabled={!entry.active}
             className={[
-              'px-2.5 py-1.5 text-[10px] font-bold rounded-md border-2 transition-colors whitespace-nowrap',
+              'px-1.5 py-1 text-[10px] font-bold rounded-md border-2 transition-colors whitespace-nowrap',
               entry.maxGain
                 ? 'bg-emerald-600 text-white border-emerald-700 shadow-sm'
                 : 'border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100',
@@ -399,10 +403,10 @@ function LoanRow({
             ].join(' ')}
             title="SBI MaxGain / overdraft variant — surplus parked reduces effective interest"
           >
-            {entry.maxGain ? '🔄 MaxGain ✓' : '🔄 MaxGain'}
+            {entry.maxGain ? 'MG ✓' : 'MG'}
           </button>
         )}
-        {!sub.maxGainFlag && <span className="text-[10px] text-slate-400 italic hidden lg:block">—</span>}
+        {!sub.maxGainFlag && <span className="text-[10px] text-slate-400 italic hidden md:block">—</span>}
       </div>
     </div>
   )
