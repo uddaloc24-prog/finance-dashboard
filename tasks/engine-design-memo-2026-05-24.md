@@ -13,9 +13,12 @@ Given the user's **Plan facts** (corpus, debts, budget, demographics, inflation,
 
 ---
 
-## 2. Decisions to lock before code (5)
+## 2. Decisions locked (5)
 
-### 2.1 MCDA variant
+> ✅ **All five confirmed by product owner on 2026-05-24.**
+> The recommended option in each subsection below is now the locked v1 contract. Changing any of these post-lock requires an updated memo + golden-master snapshot refresh.
+
+### 2.1 MCDA variant   ✅ LOCKED — Weighted Sum (v1)
 **Recommendation:** **weighted sum** for v1.
 
 | Variant | Pros | Cons | Pick? |
@@ -25,9 +28,9 @@ Given the user's **Plan facts** (corpus, debts, budget, demographics, inflation,
 | TOPSIS | Better trade-off handling (closeness to ideal) | Requires "ideal" and "anti-ideal" reference vectors that we don't yet have data for | v3 if portfolio data matures |
 | Multi-objective optimisation (Pareto) | Mathematically rigorous | No single ranking — needs disambiguation layer | overkill |
 
-**Decision required:** confirm v1 = weighted sum.
+~~**Decision required:** confirm v1 = weighted sum.~~  →  **Confirmed 2026-05-24.**
 
-### 2.2 Where do criterion weights come from?
+### 2.2 Where do criterion weights come from?   ✅ LOCKED — Persona-keyed defaults, user-overridable
 **Recommendation:** **persona-keyed default weight vectors** (P1–P9), tunable by a single "what matters most" 5-point slider per criterion. See §5 for the proposed default table.
 
 Alternatives considered:
@@ -35,18 +38,18 @@ Alternatives considered:
 - Pure AHP-from-quiz: too much UI friction for first run.
 - ML-learned weights: needs labelled data we don't have.
 
-**Decision required:** confirm persona-keyed defaults + user-overridable.
+~~**Decision required:** confirm persona-keyed defaults + user-overridable.~~  →  **Confirmed 2026-05-24.**
 
-### 2.3 Spousal alignment — is Nash bargaining worth it?
+### 2.3 Spousal alignment — is Nash bargaining worth it?   ✅ LOCKED — Skip in v1, single decision-maker
 **Recommendation:** **skip in v1.** Treat user as single decision-maker. Capture spousal disagreement as a per-goal `disputed: boolean` flag for the Strategy Fitter to surface separately; do not yet resolve mathematically.
 
 Reasoning: Nash bargaining is conceptually clean but needs a separately-completed spouse Profile to be meaningful. Most users won't have that on day-1. Adding a half-baked spousal mode signals false precision.
 
 **Add later if:** > 30% of active users have spouse profiles. Track this metric.
 
-**Decision required:** confirm "single decision-maker in v1".
+~~**Decision required:** confirm "single decision-maker in v1".~~  →  **Confirmed 2026-05-24.** v1 ships single decision-maker; `disputed: boolean` flag stays in the output schema but is always `false` in v1.
 
-### 2.4 Determinism contract
+### 2.4 Determinism contract   ✅ LOCKED — Pure function, byte-for-byte identical output
 **Recommendation:** **pure function · same inputs → identical output, byte-for-byte.**
 
 - No `Date.now()`, no `Math.random()`, no `Intl` locale-dependent string formatting.
@@ -54,14 +57,14 @@ Reasoning: Nash bargaining is conceptually clean but needs a separately-complete
 - All sorts use stable tiebreakers (id then name).
 - Output object is JSON-serialisable for snapshot persistence (F9).
 
-**Decision required:** confirm determinism as a hard contract (enforced by snapshot tests).
+~~**Decision required:** confirm determinism as a hard contract (enforced by snapshot tests).~~  →  **Confirmed 2026-05-24.** Determinism is enforced by `determinism.test.ts` running the engine 100× over the same input and asserting identical output JSON + identical `inputsHash`.
 
-### 2.5 Re-rank latency budget
+### 2.5 Re-rank latency budget   ✅ LOCKED — 50 ms engine p95, 100 ms including React render
 **Recommendation:** **50 ms p95** for the engine itself; **100 ms p95** including React re-render.
 
 At < 50 goals + 8 criteria + weighted sum + greedy allocation, this is trivially achievable. Setting it as a contract now means we'll notice if someone later adds a quadratic step.
 
-**Decision required:** confirm 50 ms / 100 ms budgets, enforce via test.
+~~**Decision required:** confirm 50 ms / 100 ms budgets, enforce via test.~~  →  **Confirmed 2026-05-24.** Budget enforced by `latency.test.ts` (50 goals × 100 runs, p95 < 50 ms).
 
 ---
 
@@ -322,10 +325,10 @@ src/hooks/useRankedGoals.ts             — React hook wrapping the engine
 ## Status
 
 - [x] Memo drafted (2026-05-24)
-- [ ] Decisions §2.1–§2.5 confirmed
+- [x] **Decisions §2.1–§2.5 confirmed (2026-05-24)** — weighted sum · persona-keyed weights · single decision-maker · pure-function determinism · 50 ms p95 latency
 - [ ] Persona weight table (§5) signed off
 - [ ] Open questions (§11) answered
-- [ ] `EngineInput` / `EngineOutput` types committed (`src/types/orchestration.ts`)
+- [ ] `EngineInput` / `EngineOutput` types committed (`src/types/orchestration.ts`) → **Phase 4 / Phase 5 START NOW UNBLOCKED**
 - [ ] Scorers + tests
 - [ ] Engine + golden-master snapshots
 - [ ] `useRankedGoals` hook
