@@ -1,6 +1,8 @@
 import type { ExportContext } from './index'
+import { resolveOrchestration } from './index'
 import { buildAnalytics, fmtINR, fmtPct, fileSlugFor, dateStamp, downloadBlob } from './analytics'
 import { v10MarkdownBlock } from './v10Report'
+import { buildOrchestrationReport, orchestrationToMarkdown } from '../orchestration/formatForReport'
 
 export async function exportMarkdown(ctx: ExportContext): Promise<void> {
   const a = buildAnalytics(ctx)
@@ -177,6 +179,13 @@ export async function exportMarkdown(ctx: ExportContext): Promise<void> {
   // 9. v10 behavioural assessment (optional, only if data present)
   const v10Md = v10MarkdownBlock()
   if (v10Md) w(v10Md)
+
+  // 9.5 Orchestration engine — ranked goals + fitted strategy (Phase 9)
+  const snap = resolveOrchestration(ctx)
+  if (snap) {
+    const reportData = buildOrchestrationReport(snap.ranked, snap.fit)
+    orchestrationToMarkdown(reportData).forEach(w)
+  }
 
   // 10. Disclaimers
   w('## 10. Methodology and Disclaimers')

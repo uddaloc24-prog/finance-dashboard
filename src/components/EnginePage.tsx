@@ -26,7 +26,7 @@ const PHASES: Phase[] = [
   { id: 'P6',   title: 'Strategy Fitter — shipped (corpus alloc · SIP · buckets · actions)', status: 'done' },
   { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation onto engine output', status: 'done' },
   { id: 'P8',   title: 'Engine Explain dashboard — weights · pre-emption · derivation · sensitivity', status: 'done' },
-  { id: 'P9',   title: 'Snapshot + report integration',                             status: 'planned' },
+  { id: 'P9',   title: 'Snapshot + report integration — engine output in PDF · DOCX · PPTX · MD · CSV', status: 'done' },
 ]
 
 function fmtINR(n: number): string {

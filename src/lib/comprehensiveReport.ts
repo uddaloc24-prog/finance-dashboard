@@ -17,6 +17,8 @@ import { profileById } from './data/riskProfiles'
 import { getV10ReportSections } from './exporters/v10Report'
 import { storage } from './storage'
 import { computePostTax, classifyInstrument, type TaxSlab, type TaxRegime } from './calculations/taxEngine'
+import { resolveOrchestration } from './exporters/index'
+import { buildOrchestrationReport, fmtINRshort } from './orchestration/formatForReport'
 
 const fmtINR = (n: number) => {
   if (!Number.isFinite(n) || n === 0) return '₹0'
@@ -161,6 +163,8 @@ export async function exportComprehensiveReport(ctx: ExportContext): Promise<voi
   doc.addPage(); renderTaxAnalysis(doc, report)
   doc.addPage(); renderProjectionTable(doc, report)
   doc.addPage(); renderActions(doc, report)
+  // Engine — only adds a page if a snapshot exists
+  renderOrchestrationIfPresent(doc, report, ctx)
   doc.addPage(); renderDisclaimers(doc, report)
   // Only adds a page if v10/GD data exists
   renderV10BehaviouralIfPresent(doc, report)
@@ -759,6 +763,80 @@ function renderV10BehaviouralIfPresent(doc: import('jspdf').jsPDF, r: Report) {
     }
     y += 4
   }
+}
+
+/** Orchestration page — shown only when an engine snapshot is in storage.
+ *  Compact single-page summary; the full tables are in the MD/CSV exports. */
+function renderOrchestrationIfPresent(doc: import('jspdf').jsPDF, r: Report, ctx: ExportContext) {
+  const snap = resolveOrchestration(ctx)
+  if (!snap) return
+  const data = buildOrchestrationReport(snap.ranked, snap.fit)
+
+  doc.addPage()
+  drawPageBorder(doc)
+  recordSection(doc, r.toc, 1, '9.5', 'Orchestration Engine')
+  pageTitle(doc, '9.5', 'Orchestration — Ranked Goals & Fitted Strategy')
+
+  let y = 42
+
+  // Header line
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SLATE)
+  doc.text(`Persona ${data.header.personaUsed} · weight derivation ${data.header.weightDerivation} · ${data.header.totalGoals} goals · ${data.header.rankedAt}`, TEXT_X, y)
+  y += 7
+
+  // Weights
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY)
+  doc.text('Criterion weights', TEXT_X, y); y += 6
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...SLATE)
+  data.weights.forEach((w) => { doc.text(`${w.criterion}: ${w.percent}%`, TEXT_X + 2, y); y += 5 })
+  y += 3
+
+  // Totals
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY)
+  doc.text('Strategy totals', TEXT_X, y); y += 6
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(...SLATE)
+  const totalRows: Array<[string, string]> = [
+    ['Corpus used',          `${fmtINRshort(data.totals.corpusUsed)} of ${fmtINRshort(data.totals.corpus)}`],
+    ['Corpus free',          fmtINRshort(data.totals.corpusFree)],
+    ['SIP used / capacity',  `${fmtINRshort(data.totals.sipUsed)}/mo of ${fmtINRshort(data.totals.sipCapacity)}/mo`],
+    ['SIP shortfall',        data.totals.sipShortfall > 0 ? `${fmtINRshort(data.totals.sipShortfall)}/mo` : '—'],
+    ['Goals funded / partial / unfunded', `${data.totals.goalsFunded} / ${data.totals.goalsPartial} / ${data.totals.goalsUnfunded}`],
+  ]
+  totalRows.forEach(([k, v]) => { doc.text(`${k}: ${v}`, TEXT_X + 2, y); y += 5 })
+  y += 3
+
+  // Top ranked goals (up to 8)
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY)
+  doc.text('Top ranked goals', TEXT_X, y); y += 6
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SLATE)
+  data.rankedGoals.slice(0, 8).forEach((g) => {
+    if (y > 265) return
+    const line = `#${g.rank}  ${g.label}  [${g.status}]  comp ${g.composite.toFixed(0)}  corpus ${fmtINRshort(g.corpusAllocated)}  SIP ${fmtINRshort(g.monthlySipAffordable)}/mo`
+    const wrapped = doc.splitTextToSize(line, 162)
+    doc.text(wrapped, TEXT_X + 2, y)
+    y += wrapped.length * 4.4 + 1
+  })
+  y += 3
+
+  // Actions (up to 5)
+  if (data.actions.length > 0 && y < 240) {
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(...NAVY)
+    doc.text('Recommended actions', TEXT_X, y); y += 6
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(...SLATE)
+    data.actions.slice(0, 5).forEach((a) => {
+      if (y > 270) return
+      const head = `${a.priority}. ${a.title}  (${a.category})`
+      doc.setFont('helvetica', 'bold')
+      const wHead = doc.splitTextToSize(head, 162); doc.text(wHead, TEXT_X + 2, y); y += wHead.length * 4.4
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(...GRAY)
+      const wDet = doc.splitTextToSize(a.detail, 160); doc.text(wDet, TEXT_X + 4, y); y += wDet.length * 4.2 + 1
+      doc.setTextColor(...SLATE)
+    })
+  }
+
+  // Footer hash
+  doc.setFont('helvetica', 'italic'); doc.setFontSize(7); doc.setTextColor(...GRAY)
+  doc.text(`Engine hash ${data.header.inputsHash} · Fit hash ${data.header.fitHash}`, TEXT_X, 278)
 }
 
 function renderDisclaimers(doc: import('jspdf').jsPDF, r: Report) {

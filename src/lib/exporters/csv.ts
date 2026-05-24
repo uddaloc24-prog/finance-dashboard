@@ -4,8 +4,10 @@
 // imported and the user manually splits sheets if needed.
 
 import type { ExportContext } from './index'
+import { resolveOrchestration } from './index'
 import { buildAnalytics, fileSlugFor, dateStamp, downloadBlob } from './analytics'
 import { v10CsvBlock } from './v10Report'
+import { buildOrchestrationReport, orchestrationToCsvRows } from '../orchestration/formatForReport'
 
 function csvEscape(v: unknown): string {
   if (v == null) return ''
@@ -121,6 +123,15 @@ export async function exportCsv(ctx: ExportContext): Promise<void> {
   const v10Csv = v10CsvBlock()
   if (v10Csv) {
     w(v10Csv)
+    w()
+  }
+
+  // Orchestration engine — ranked goals + fitter (Phase 9)
+  const snap = resolveOrchestration(ctx)
+  if (snap) {
+    const data = buildOrchestrationReport(snap.ranked, snap.fit)
+    w(row('=== ENGINE — RANKED GOALS & FITTER ==='))
+    orchestrationToCsvRows(data).forEach((cells) => w(row(...cells)))
     w()
   }
 

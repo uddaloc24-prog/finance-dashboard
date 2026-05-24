@@ -7,6 +7,8 @@ import { buildAnalytics, fmtINR, fmtPct, fileSlugFor, dateStamp, downloadBlob } 
 export async function exportDocx(ctx: ExportContext): Promise<void> {
   const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, BorderStyle, ShadingType } = await import('docx')
   const { getV10ReportSections } = await import('./v10Report')
+  const { resolveOrchestration } = await import('./index')
+  const { buildOrchestrationReport, fmtINRshort } = await import('../orchestration/formatForReport')
   const a = buildAnalytics(ctx)
   const id = ctx.identity
   const userName = id?.fullName?.trim() || 'Personal'
@@ -246,8 +248,52 @@ export async function exportDocx(ctx: ExportContext): Promise<void> {
     }
   }
 
+  // ── Orchestration Engine (only if snapshot present) ────────
+  const snap = resolveOrchestration(ctx)
+  let nextSection = v10Sections.length > 0 ? 10 : 9
+  if (snap) {
+    const data = buildOrchestrationReport(snap.ranked, snap.fit)
+    children.push(heading1(String(nextSection), 'Orchestration Engine — Ranked Goals & Strategy'))
+    nextSection += 1
+    children.push(para(`Persona ${data.header.personaUsed} · weight derivation ${data.header.weightDerivation} · ${data.header.totalGoals} goals · ${data.header.rankedAt}`, { size: 18, color: SLATE }))
+
+    // Weights
+    children.push(para('Criterion weights', { bold: true, size: 22, color: NAVY }))
+    children.push(table(['Criterion', 'Weight'], data.weights.map((w) => [w.criterion, `${w.percent}%`])))
+
+    // Totals
+    children.push(para('Strategy totals', { bold: true, size: 22, color: NAVY }))
+    children.push(table(['Metric', 'Value'], [
+      ['Corpus used',          `${fmtINRshort(data.totals.corpusUsed)} of ${fmtINRshort(data.totals.corpus)}`],
+      ['Corpus free',          fmtINRshort(data.totals.corpusFree)],
+      ['SIP used / capacity',  `${fmtINRshort(data.totals.sipUsed)}/mo of ${fmtINRshort(data.totals.sipCapacity)}/mo`],
+      ['SIP shortfall',        data.totals.sipShortfall > 0 ? `${fmtINRshort(data.totals.sipShortfall)}/mo` : '—'],
+      ['Goals funded / partial / unfunded', `${data.totals.goalsFunded} / ${data.totals.goalsPartial} / ${data.totals.goalsUnfunded}`],
+    ]))
+
+    // Ranked goals table (top 10)
+    children.push(para('Ranked goals', { bold: true, size: 22, color: NAVY }))
+    children.push(table(
+      ['#', 'Goal', 'Source', 'Status', 'Composite', 'Corpus', 'SIP afford', 'Shortfall'],
+      data.rankedGoals.slice(0, 10).map((g) => [
+        String(g.rank), g.label, g.source, g.status, g.composite.toFixed(1),
+        fmtINRshort(g.corpusAllocated), `${fmtINRshort(g.monthlySipAffordable)}/mo`,
+        g.shortfall > 0 ? fmtINRshort(g.shortfall) : '—',
+      ]),
+    ))
+
+    // Actions
+    if (data.actions.length > 0) {
+      children.push(para('Recommended actions', { bold: true, size: 22, color: NAVY }))
+      for (const a of data.actions) {
+        children.push(para(`${a.priority}. ${a.title} (${a.category})`, { bold: true, size: 20 }))
+        children.push(para(a.detail, { align: 'justify', size: 18, color: SLATE }))
+      }
+    }
+  }
+
   // ── Methodology ────────────────────────────────────────────
-  children.push(heading1(v10Sections.length > 0 ? '10' : '9', 'Methodology and Disclaimers'))
+  children.push(heading1(String(nextSection), 'Methodology and Disclaimers'))
   const disclaimers: Array<[string, string]> = [
     ['Methodology', 'The four-bucket refill-linked strategy implements the academic Indian retirement income framework. Withdrawals draw from B1 cash first, then B3 stability, then B4 growth (skipped in losing years). B2 is a 5-year fixed-deposit ladder, held to maturity and renewed, never drawn or refilled.'],
     ['Tax engine', 'FY 2024-25 rules: equity LTCG 12.5% above ₹1,25,000 annual exemption; debt MF gains taxed at slab (post-Apr 2023); FD/SCSS/PMVVY interest at slab; 80TTB ₹50k exemption for seniors; PPF tax-free.'],

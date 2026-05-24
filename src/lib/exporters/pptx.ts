@@ -208,6 +208,61 @@ export async function exportPptx(ctx: ExportContext): Promise<void> {
     }
   }
 
+  // ── Slide 8b — Orchestration Engine (optional) ──────────
+  const { resolveOrchestration } = await import('./index')
+  const { buildOrchestrationReport, fmtINRshort } = await import('../orchestration/formatForReport')
+  const snap = resolveOrchestration(ctx)
+  if (snap) {
+    const data = buildOrchestrationReport(snap.ranked, snap.fit)
+    const eng = pptx.addSlide()
+    eng.background = { color: 'FFFFFF' }
+    eng.addText('Orchestration Engine — Ranked Goals & Strategy', {
+      x: 0.6, y: 0.5, w: 12, h: 0.7, fontSize: 26, bold: false, color: NAVY, fontFace: 'Cambria',
+    })
+    eng.addText(`Persona ${data.header.personaUsed} · ${data.header.weightDerivation} · ${data.header.totalGoals} goals · ${data.header.rankedAt}`, {
+      x: 0.6, y: 1.15, w: 12, h: 0.3, fontSize: 11, italic: true, color: '475569', fontFace: 'Calibri',
+    })
+
+    // Totals strip
+    eng.addText(`Corpus used: ${fmtINRshort(data.totals.corpusUsed)} of ${fmtINRshort(data.totals.corpus)}  ·  SIP used: ${fmtINRshort(data.totals.sipUsed)}/mo of ${fmtINRshort(data.totals.sipCapacity)}/mo  ·  Goals funded ${data.totals.goalsFunded} · partial ${data.totals.goalsPartial} · unfunded ${data.totals.goalsUnfunded}`, {
+      x: 0.6, y: 1.55, w: 12, h: 0.4, fontSize: 12, bold: true, color: NAVY, fontFace: 'Calibri',
+    })
+
+    // Top 8 ranked goals as a small table
+    const tableRows: Array<Array<{ text: string; options?: object }>> = [[
+      { text: '#',          options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+      { text: 'Goal',       options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+      { text: 'Status',     options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+      { text: 'Composite',  options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+      { text: 'Corpus',     options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+      { text: 'SIP afford', options: { bold: true, color: 'FFFFFF', fill: NAVY } },
+    ]]
+    data.rankedGoals.slice(0, 8).forEach((g) => {
+      tableRows.push([
+        { text: String(g.rank) },
+        { text: g.label },
+        { text: g.status },
+        { text: g.composite.toFixed(1) },
+        { text: fmtINRshort(g.corpusAllocated) },
+        { text: `${fmtINRshort(g.monthlySipAffordable)}/mo` },
+      ])
+    })
+    eng.addTable(tableRows, {
+      x: 0.6, y: 2.1, w: 12, fontSize: 10, fontFace: 'Calibri', color: '1B2951',
+      border: { type: 'solid', pt: 0.5, color: 'CBD5E1' },
+    })
+
+    // Actions strip at the bottom
+    if (data.actions.length > 0) {
+      const top = data.actions.slice(0, 3)
+        .map((a) => `${a.priority}. ${a.title}`)
+        .join('   ·   ')
+      eng.addText(`Top actions:  ${top}`, {
+        x: 0.6, y: 6.5, w: 12, h: 0.5, fontSize: 11, color: '475569', fontFace: 'Calibri',
+      })
+    }
+  }
+
   // ── Slide 8 — Closing ───────────────────────────────────
   const close = pptx.addSlide()
   close.background = { color: NAVY }

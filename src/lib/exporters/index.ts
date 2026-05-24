@@ -6,6 +6,8 @@
 
 import type { UserProfile, BucketState, ReturnAssumptions } from '../../types'
 import type { UserIdentity } from '../../types/identity'
+import type { OrchestrationSnapshot } from '../orchestration/snapshot'
+import { readSnapshot } from '../orchestration/snapshot'
 
 export type ExportFormat = 'pdf' | 'docx' | 'pptx' | 'md' | 'csv'
 
@@ -14,6 +16,14 @@ export interface ExportContext {
   profile: UserProfile
   buckets: BucketState
   returnAssumptions: ReturnAssumptions
+  /** Engine + fitter snapshot. If omitted, exporters auto-load the
+   *  latest from localStorage. May be null on a cold start. */
+  orchestration?: OrchestrationSnapshot | null
+}
+
+/** Resolve the orchestration snapshot for an export: explicit > storage > null. */
+export function resolveOrchestration(ctx: ExportContext): OrchestrationSnapshot | null {
+  return ctx.orchestration !== undefined ? ctx.orchestration : readSnapshot()
 }
 
 export interface FormatMeta {
