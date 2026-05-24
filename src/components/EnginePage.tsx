@@ -23,8 +23,8 @@ const PHASES: Phase[] = [
   { id: 'P1-3', title: 'Cosmetic trim (KPI cuts · insights · constants)',           status: 'done' },
   { id: 'P4',   title: 'Plumbing — Plan↔Profile bridge · GD→Goals projector',       status: 'done' },
   { id: 'P5',   title: 'Goal Ranking Engine — shipped · tests pending',             status: 'done' },
-  { id: 'P6',   title: 'Strategy Fitter — shipped (corpus alloc · SIP · buckets · actions)', status: 'active' },
-  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation onto engine output', status: 'planned' },
+  { id: 'P6',   title: 'Strategy Fitter — shipped (corpus alloc · SIP · buckets · actions)', status: 'done' },
+  { id: 'P7',   title: 'Rewire GoalTracker / PlanExec / AssetAllocation onto engine output', status: 'done' },
   { id: 'P8',   title: 'Engine Explain dashboard',                                  status: 'planned' },
   { id: 'P9',   title: 'Snapshot + report integration',                             status: 'planned' },
 ]

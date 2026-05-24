@@ -12,8 +12,10 @@
 // this is purely a synthesis of Plan inputs.
 
 import type { UserProfile, BucketState, AssetEntry, LoanEntry, InsuranceEntry } from '../../types'
+import type { FitAction } from '../../types/orchestration'
 import { totalCorpus } from '../../lib/calculations'
 import { blendedReturn } from '../../lib/blendedReturn'
+import { useFittedStrategy } from '../../hooks/useFittedStrategy'
 import { DownloadRow } from './NetWorthDashboard'
 import { useState } from 'react'
 import type { ExportFormat } from '../../lib/exporters'
@@ -113,50 +115,27 @@ function computeSubScores(profile: UserProfile, buckets: BucketState): SubScore[
   ]
 }
 
-// ─── Action priorities ────────────────────────────────────────────────
+// ─── Action mapping ───────────────────────────────────────────────────
+//
+// The orchestration engine's Strategy Fitter (Phase 6) is now the
+// single source for actions. This dashboard maps each FitAction into
+// the impact × effort framing the cockpit uses.
 
 interface Action { priority: number; impact: 'high' | 'medium' | 'low'; effort: 'small' | 'medium' | 'large'; title: string; rationale: string }
 
-function deriveActions(scores: SubScore[], profile: UserProfile, _buckets: BucketState): Action[] {
-  void _buckets
-  const ins = profile.insuranceCover
-  const lp = profile.loanProfile
-  const age = profile.demographics?.currentAge ?? 60
-
-  const out: Action[] = []
-  const byKey = Object.fromEntries(scores.map((s) => [s.key, s.score]))
-
-  if (byKey.protection < 70 && ins?.termPlan?.active === false && age < 70) {
-    out.push({ priority: 1, impact: 'high', effort: 'medium', title: 'Buy a term plan under MWP Act', rationale: 'No active term plan. At your age, ₹80L-1.25Cr pure-protection is non-negotiable.' })
-  }
-  if (ins?.termPlan?.active && !ins.termPlan.mwp) {
-    out.push({ priority: 1, impact: 'high', effort: 'small', title: 'Re-issue term plan under MWP', rationale: 'Current term plan is NOT under MWP; proceeds can be attached by creditors.' })
-  }
-  if (byKey.liquidity < 50) {
-    out.push({ priority: 2, impact: 'high', effort: 'small', title: 'Build 6-month emergency fund', rationale: 'Liquid corpus < 6× monthly burn. Park top-up in liquid MF or sweep FD.' })
-  }
-  if (byKey.debt < 50 && lp) {
-    const loans = (Object.entries(lp).filter(([k]) => k !== 'strategy') as Array<[string, LoanEntry]>).filter(([, l]) => l?.active)
-    const highRate = loans.find(([, l]) => (l.interestRate || 0) >= 15)
-    if (highRate) out.push({ priority: 2, impact: 'high', effort: 'medium', title: `Clear ${highRate[0]} (${(highRate[1].interestRate || 0).toFixed(1)}%)`, rationale: 'Rate exceeds expected portfolio return; payoff is the highest risk-free yield available.' })
-  }
-  if (byKey.retirement < 70) {
-    out.push({ priority: 3, impact: 'high', effort: 'large', title: 'Close retirement adequacy gap', rationale: 'Projected corpus < required. Combine: +1-2y retirement age, +10% SIP, or budget trim.' })
-  }
-  if (byKey.diversification < 60) {
-    out.push({ priority: 3, impact: 'medium', effort: 'medium', title: 'Diversify top-heavy holdings', rationale: 'Top 3 holdings carry > 50% of corpus. Trim winners, redeploy across asset classes.' })
-  }
-  if (byKey.tax < 70) {
-    out.push({ priority: 4, impact: 'medium', effort: 'small', title: 'Use unused tax buckets', rationale: 'Missing one of {80C, NPS 80CCD(1B), 80D} — up to ₹15-30k tax saved annually.' })
-  }
-  if (ins?.criticalIllness?.active !== true) {
-    out.push({ priority: 4, impact: 'medium', effort: 'small', title: 'Add critical-illness rider', rationale: 'CI lump-sum riders cost ~₹3-6k/yr at age 55 and prevent corpus drawdown on diagnosis.' })
-  }
-  if (byKey.cashflow < 50) {
-    out.push({ priority: 2, impact: 'high', effort: 'medium', title: 'Plug monthly cash-flow deficit', rationale: 'Outflow exceeds inflow + passive income; persistent gap depletes corpus faster than projected.' })
-  }
-
-  return out.sort((a, b) => a.priority - b.priority).slice(0, 5)
+function actionsFromFit(fitActions: FitAction[]): Action[] {
+  return fitActions.slice(0, 5).map((a, i) => ({
+    priority: i + 1,
+    impact:  a.category === 'reserve' || a.category === 'flag' ? 'high'
+           : a.category === 'sip'                                ? 'high'
+           : a.category === 'rebalance' || a.category === 'allocate' ? 'medium'
+           : 'low',
+    effort: a.category === 'reserve' || a.category === 'sip' ? 'medium'
+          : a.category === 'rebalance'                        ? 'small'
+          : 'medium',
+    title: a.title,
+    rationale: a.detail,
+  }))
 }
 
 // ─── Component ────────────────────────────────────────────────────────
@@ -173,7 +152,9 @@ export function PlanExecutiveDashboard({ profile, buckets }: Props) {
     overall >= 50 ? { label: 'STRETCHED',  tone: '#f59e0b', sub: 'Material gaps — execute the action list this quarter.' } :
                     { label: 'AT RISK',    tone: '#dc2626', sub: 'Foundation gaps — protection + cash flow first, then optimise.' }
 
-  const actions = deriveActions(scores, profile, buckets)
+  // Engine-driven actions (Phase 7 wiring)
+  const { fit } = useFittedStrategy(profile, buckets)
+  const actions = actionsFromFit(fit.actions)
   const strategic = buildStrategicPlays(scores, profile)
   const longArc = buildLongArc(profile)
 
@@ -220,9 +201,12 @@ export function PlanExecutiveDashboard({ profile, buckets }: Props) {
         </div>
       </section>
 
-      {/* ── 4. ACTION PRIORITIES — ranked list with impact/effort tags ── */}
+      {/* ── 4. ACTION PRIORITIES — engine-driven (Phase 7) ── */}
       <section className="rounded-md border-2 border-amber-200 bg-amber-50/40 p-3">
-        <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-amber-800 mb-2">Top action priorities</h4>
+        <div className="flex items-baseline justify-between mb-2">
+          <h4 className="text-[10px] font-bold tracking-[2px] uppercase text-amber-800">Top action priorities</h4>
+          <span className="text-[9px] font-bold tracking-[2px] uppercase bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5">engine-driven</span>
+        </div>
         {actions.length === 0 ? (
           <div className="text-[12px] text-slate-700 italic">No high-priority actions identified — plan looks solid. Continue annual reviews.</div>
         ) : (

@@ -3,6 +3,8 @@
 // actions, and concentration flags.
 
 import type { UserProfile, BucketState, AssetEntry } from '../../types'
+import type { BucketTargets } from '../../types/orchestration'
+import { useFittedStrategy } from '../../hooks/useFittedStrategy'
 import { DownloadRow } from './NetWorthDashboard'
 import { useState } from 'react'
 import type { ExportFormat } from '../../lib/exporters'
@@ -45,13 +47,26 @@ const CLASS_COLOR: Record<ClassKey, string> = {
   equity: '#f59e0b', debt: '#3b82f6', gold: '#eab308', realestate: '#f43f5e', cash: '#10b981',
 }
 
-/** Crude target picker from riskAppetite 1–5. */
-function targetFor(riskAppetite: number): Record<ClassKey, number> {
-  if (riskAppetite <= 1) return { equity: 0.10, debt: 0.65, gold: 0.10, realestate: 0.10, cash: 0.05 }
-  if (riskAppetite === 2) return { equity: 0.25, debt: 0.55, gold: 0.10, realestate: 0.07, cash: 0.03 }
-  if (riskAppetite === 3) return { equity: 0.40, debt: 0.40, gold: 0.10, realestate: 0.07, cash: 0.03 }
-  if (riskAppetite === 4) return { equity: 0.55, debt: 0.25, gold: 0.10, realestate: 0.07, cash: 0.03 }
-  return                  { equity: 0.65, debt: 0.20, gold: 0.05, realestate: 0.07, cash: 0.03 }
+/** Engine-driven target — maps the Strategy Fitter's 4-bucket targets
+ *  into the 5 asset classes shown here. Gold + Real Estate aren't yet
+ *  in the engine's allocation model, so they get a small fixed slice
+ *  (7% RE / 8% gold) and the remaining 85% goes to the engine split:
+ *      B1 → cash
+ *      B2 → debt
+ *      B3 → 50% debt + 50% equity (hybrid)
+ *      B4 → equity
+ *  Falls back to a balanced 40/40/10/5/5 if the engine couldn't allocate
+ *  any corpus (zero-goal cold start). */
+function targetFromBuckets(buckets: BucketTargets, corpusUsed: number): Record<ClassKey, number> {
+  if (corpusUsed <= 0) {
+    return { equity: 0.40, debt: 0.40, gold: 0.08, realestate: 0.07, cash: 0.05 }
+  }
+  // Reserve 8% gold + 7% RE off the top → 85% split via engine buckets
+  const RE = 0.07, GOLD = 0.08, engineShare = 1 - RE - GOLD
+  const equityPct = (buckets.b3Pct * 0.5 + buckets.b4Pct) * engineShare
+  const debtPct   = (buckets.b2Pct + buckets.b3Pct * 0.5) * engineShare
+  const cashPct   = buckets.b1Pct * engineShare
+  return { equity: equityPct, debt: debtPct, gold: GOLD, realestate: RE, cash: cashPct }
 }
 
 export function AssetAllocationDashboard({ profile, buckets }: Props) {
@@ -67,7 +82,9 @@ export function AssetAllocationDashboard({ profile, buckets }: Props) {
   })
   const grand = (['equity', 'debt', 'gold', 'realestate', 'cash'] as ClassKey[]).reduce((s, k) => s + totals[k], 0)
 
-  const target = targetFor(profile.riskAppetite ?? 3)
+  // Engine-driven target (Phase 7) — derived from Strategy Fitter buckets
+  const { fit } = useFittedStrategy(profile, buckets)
+  const target = targetFromBuckets(fit.bucketTargets, fit.totals.corpusUsed)
   const rows = (['equity', 'debt', 'gold', 'realestate', 'cash'] as ClassKey[]).map((k) => {
     const have = grand > 0 ? totals[k] / grand : 0
     const want = target[k]
@@ -103,7 +120,9 @@ export function AssetAllocationDashboard({ profile, buckets }: Props) {
           <Donut title="CURRENT" rows={rows.map((r) => ({ label: CLASS_LABEL[r.key], v: r.have, color: CLASS_COLOR[r.key] }))} />
           <Donut title="TARGET"  rows={rows.map((r) => ({ label: CLASS_LABEL[r.key], v: r.want, color: CLASS_COLOR[r.key] }))} />
         </div>
-        <div className="text-[10px] text-slate-500 italic text-center mt-2">Target based on Risk Appetite {profile.riskAppetite ?? 3} / 5 (set in Step 04).</div>
+        <div className="text-[10px] text-emerald-700 italic text-center mt-2">
+          ✓ Target derived from the engine's per-goal Strategy Fitter (Phase 6) — see Engine tab for details.
+        </div>
       </section>
 
       {/* Drift bars */}
@@ -148,8 +167,8 @@ export function AssetAllocationDashboard({ profile, buckets }: Props) {
           {totals.gold > 0 && totals.gold / Math.max(1, grand) > 0.15 && <li>● Gold is {Math.round((totals.gold / grand) * 100)}% — above the 5–10% portfolio-insurance norm.</li>}
           {grand === 0 && <li>● No asset inventory yet.</li>}
         </ul>
-        <div className="text-[10px] text-slate-500 italic mt-2 border-t border-slate-200/60 pt-2">
-          Target allocation is a hand-coded table keyed off Risk Appetite. The orchestration engine (Phase 7) will replace this with a strategy-fitter output.
+        <div className="text-[10px] text-emerald-700 italic mt-2 border-t border-slate-200/60 pt-2">
+          ✓ Engine-driven (Phase 7) — target shifts as you change goals / horizons / risk / inflation. Gold + Real Estate keep a small fixed slice; the rest comes from the Strategy Fitter's 4-bucket allocation.
         </div>
       </section>
 
