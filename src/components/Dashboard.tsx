@@ -30,7 +30,7 @@ import { PlanExecutiveDashboard } from './plan-dashboards/PlanExecutiveDashboard
 import { EngineExplainDashboard } from './plan-dashboards/EngineExplainDashboard'
 import { EnginePage } from './EnginePage'
 import { CashflowSummary } from './CashflowSummary'
-import { RetirementWelcome } from './RetirementWelcome'
+import { WelcomeMerged } from './WelcomeMerged'
 import { AssetInventory } from './AssetInventory'
 import { InsuranceCover } from './InsuranceCover'
 import { LoansLiabilities } from './LoansLiabilities'
@@ -216,8 +216,10 @@ export function Dashboard({
 
         {activeTab === 'welcome' && (
           <div role="tabpanel" id="tabpanel-welcome" aria-labelledby="tab-welcome" className="space-y-3">
-            <RetirementWelcome onStart={() => {
+            <WelcomeMerged onStart={() => {
               storage.setWelcomeSeen(true)
+              storage.setHasLaunched(true)
+              storage.setLastWelcomed(new Date().toISOString())
               setActiveTab('plan')
             }} />
           </div>

@@ -7,14 +7,18 @@ import { type ReactNode } from 'react'
 
 interface Props {
   onStart?: () => void
+  /** When true, the NamaskarHero (big saffron / Om / lotus block) is
+   *  suppressed. WelcomeMerged passes this so the editorial sections
+   *  appear under its own cleaner hero. */
+  hideHero?: boolean
 }
 
-export function RetirementWelcome({ onStart }: Props) {
+export function RetirementWelcome({ onStart, hideHero }: Props) {
   return (
     <article className="bg-gradient-to-b from-amber-50/40 via-white to-emerald-50/30">
-      <NamaskarHero onStart={onStart} />
+      {!hideHero && <NamaskarHero onStart={onStart} />}
 
-      <Divider />
+      {!hideHero && <Divider />}
 
       {/* The reality check — 4 stat cards */}
       <Section eyebrow="The reality check" title={<>India's <em className="not-italic font-extrabold text-amber-700">retirement gap</em></>}>
