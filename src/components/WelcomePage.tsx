@@ -69,7 +69,7 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
         </header>
 
         {/* ── Three circular clusters — Mission · Challenge · Answer ──── */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-10 justify-items-center">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-8 justify-items-center">
           <CircleCluster
             theme="navy"
             hubLabel="The Offer"
@@ -101,6 +101,36 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
             ]}
           />
         </div>
+
+        {/* ── The Setup — Claude.ai Project install (4 steps) ────────── */}
+        <section className="mb-10">
+          <div className="flex items-baseline gap-3 mb-2">
+            <span className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-700 tabular-nums">★</span>
+            <span className="h-px flex-1 bg-gradient-to-r from-indigo-500/60 to-transparent" aria-hidden="true" />
+            <span className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-700">The Setup</span>
+          </div>
+          <h2 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 leading-tight">
+            Or run it as a <em className="not-italic font-extrabold text-indigo-700">Claude.ai Project</em> — same logic, chat-driven, ~5 minutes to install.
+          </h2>
+          <p className="text-[12px] text-slate-600 mt-1.5 max-w-2xl leading-snug">
+            The four-bucket engine is also packaged as a Claude.ai Project. Walk through the same 7 sections in plain English, get the same verdict — no web app needed.
+          </p>
+
+          {/* 4-step strip */}
+          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1fr_24px_1fr_24px_1fr_24px_1fr] gap-y-4 items-start">
+            <SetupStep num="1" title="Create a Project"      body="claude.ai → Projects → New Project. Name it &ldquo;Retirement Planner&rdquo;." />
+            <StepArrow />
+            <SetupStep num="2" title="Add Custom Instructions" body="Paste system-prompt.md (everything below the --- line)." />
+            <StepArrow />
+            <SetupStep num="3" title="Upload Knowledge files"  body="5 .md files: plan-structure · cashflow · engine rules · schema · verdict." />
+            <StepArrow />
+            <SetupStep num="4" title="Start a chat"            body="&ldquo;Help me plan my retirement.&rdquo; Claude walks you through all 7 sections." />
+          </div>
+
+          <p className="text-[10px] text-slate-500 italic mt-4">
+            Source: <code className="font-mono text-slate-700">Claude/Projects/Financial Planning/README.md</code> § "Setting up the Claude.ai Project".
+          </p>
+        </section>
 
         {/* ── Identity form (compact) ─────────────────────────── */}
         <section className="mb-6">
@@ -221,6 +251,36 @@ function CircleCluster({ theme, hubLabel, hubTag, satellites }: {
           </div>
         )
       })}
+    </div>
+  )
+}
+
+// ── Setup-strip primitives (indigo tone — separate from the 3 clusters) ──
+
+function SetupStep({ num, title, body }: { num: string; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center text-center px-2">
+      <div
+        className="relative w-[88px] h-[88px] rounded-full bg-white border-[3px] border-indigo-500 flex items-center justify-center select-none mb-2"
+        style={{
+          boxShadow: '0 5px 0 0 rgb(49,46,129), 0 10px 16px -4px rgba(15,23,42,0.30), inset 0 2px 0 rgba(255,255,255,0.95)',
+        }}
+      >
+        <span className="font-serif italic text-3xl font-extrabold tabular-nums text-indigo-700 leading-none">{num}</span>
+      </div>
+      <div className="font-serif italic text-[14px] font-extrabold text-slate-900 leading-tight">{title}</div>
+      <p
+        className="text-[11px] text-slate-600 leading-snug mt-1 max-w-[180px]"
+        dangerouslySetInnerHTML={{ __html: body }}
+      />
+    </div>
+  )
+}
+
+function StepArrow() {
+  return (
+    <div className="hidden lg:flex items-center justify-center pt-10">
+      <span className="text-indigo-400 text-xl font-bold select-none" aria-hidden="true">→</span>
     </div>
   )
 }
