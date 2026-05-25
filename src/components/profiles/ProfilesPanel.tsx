@@ -46,7 +46,18 @@ export function ProfilesPanel({ userProfile, buckets, returnAssumptions = DEFAUL
   function toggleOpen(kind: AssessmentKind) {
     setOpenAssessment((cur) => (cur === kind ? null : kind))
   }
-  function closeAll() { setOpenAssessment(null) }
+  /** Close any open quiz/form/dashboard AND re-hydrate the three storage-
+   *  backed pieces of state. Quiz forms auto-save every keystroke to
+   *  localStorage, but the parent React state (which is what each modal
+   *  receives via `initialState` on next open) was initialised once at
+   *  panel mount. Without this refresh, exiting a quiz mid-way and
+   *  reopening it would show the older snapshot.                       */
+  function closeAll() {
+    setOpenAssessment(null)
+    setQuizState(storage.getQuizState())
+    setV10State(storage.getV10QuizState())
+    setGdState(storage.getGoalDiscovery())
+  }
   const [profilerResult, setProfilerResult] = useState<RiskResult | null>(null)
 
   const matchedProfile = chosenId ? profileById(chosenId) : null
