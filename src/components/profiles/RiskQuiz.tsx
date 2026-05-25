@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { QuizState, RiskProfileId } from '../../types/profiles'
 import { QUIZ_QUESTIONS } from '../../lib/data/quiz'
 import { profileFromScore, RISK_PROFILES } from '../../lib/data/riskProfiles'
@@ -39,6 +39,20 @@ interface Props {
 export function RiskQuiz({ initialState, onComplete, onSkipToProfile }: Props) {
   const [answers, setAnswers] = useState<Record<string, number>>(initialState?.answers ?? {})
   const [step, setStep] = useState(initialState?.completed ? QUIZ_QUESTIONS.length : 0)
+
+  // Auto-save every answer mid-quiz so a refresh / tab-close doesn't lose
+  // progress. Final `completed: true` write still happens in onComplete.
+  useEffect(() => {
+    if (Object.keys(answers).length === 0) return
+    const total = Object.values(answers).reduce((a, b) => a + b, 0)
+    const partial: QuizState = {
+      answers,
+      totalScore: total,
+      profileId: profileFromScore(total).id,
+      completed: initialState?.completed === true && step >= QUIZ_QUESTIONS.length,
+    }
+    storage.setQuizState(partial)
+  }, [answers, step, initialState?.completed])
 
   const isReview = initialState?.completed === true && step >= QUIZ_QUESTIONS.length
 
