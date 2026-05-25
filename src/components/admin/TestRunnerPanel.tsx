@@ -20,10 +20,11 @@ const SUITE: TestFile[] = [
   { name: 'determinism.test.ts',    count:  7, what: '100× identical hash + JSON for 5 input scenarios' },
   { name: 'latency.test.ts',        count:  2, what: '50 goals × 100 runs — engine p95 < 50ms, +fitter < 75ms' },
   { name: 'goalsFromGd.test.ts',    count: 43, what: 'Parsers (amount / horizon / kind / category / priority) + projector' },
+  { name: 'persistence.test.tsx',   count:  6, what: 'Quiz auto-save + ProfilesPanel re-hydration on modal close (RTL + jsdom)' },
 ]
 
 const TOTAL = SUITE.reduce((s, f) => s + f.count, 0)
-const LAST_VERIFIED = '2026-05-24'
+const LAST_VERIFIED = '2026-05-25'
 
 export function TestRunnerPanel() {
   return (

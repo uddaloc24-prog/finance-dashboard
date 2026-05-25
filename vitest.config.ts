@@ -7,15 +7,16 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
-    environment: 'node',
-    include: ['src/**/__tests__/**/*.test.ts'],
+    environment: 'node',           // default; component tests opt-in to jsdom via file-level annotation
+    include: ['src/**/__tests__/**/*.test.{ts,tsx}'],
+    setupFiles: ['src/test-setup.ts'],
     testTimeout: 10_000,           // generous default; latency suite overrides
     reporters: ['default'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
       include: ['src/lib/orchestration/**/*.ts'],
-      exclude: ['**/__tests__/**', '**/*.test.ts'],
+      exclude: ['**/__tests__/**', '**/*.test.{ts,tsx}'],
     },
   },
 })
