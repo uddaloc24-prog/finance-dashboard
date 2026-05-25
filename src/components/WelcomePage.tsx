@@ -68,66 +68,38 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
           </div>
         </header>
 
-        {/* ── 3×3 grid of compact section cards ─────────────────── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-
-          {/* Row 1 — the offer */}
-          <Cell num="01" eyebrow="Mission" tone="navy">
-            <CellTitle>Plan with confidence.</CellTitle>
-            <CellBody>A guided four-bucket withdrawal model — defensible, not a guess.</CellBody>
-          </Cell>
-
-          <Cell num="02" eyebrow="At a glance" tone="navy">
-            <div className="grid grid-cols-2 gap-1.5">
-              <Mini value="10" label="Strategies" />
-              <Mini value="5"  label="Profiles" />
-              <Mini value="200" label="MC paths" />
-              <Mini value="24-25" label="Tax FY" />
-            </div>
-          </Cell>
-
-          <Cell num="03" eyebrow="Time" tone="navy">
-            <div className="text-3xl font-extrabold text-blue-700 leading-none mt-1">5 min</div>
-            <CellBody className="mt-2">From corpus inputs to a downloadable take-home PDF.</CellBody>
-          </Cell>
-
-          {/* Row 2 — the challenge */}
-          <Cell num="04" eyebrow="The challenge" tone="amber">
-            <CellTitle>Inflation.</CellTitle>
-            <CellBody>General 6.5% · healthcare 10% · education 12% — eats real purchasing power.</CellBody>
-          </Cell>
-
-          <Cell num="05" eyebrow="The challenge" tone="amber">
-            <CellTitle>Indian tax.</CellTitle>
-            <CellBody>Debt MFs at slab; equity LTCG only above ₹1.25L. The vehicle matters.</CellBody>
-          </Cell>
-
-          <Cell num="06" eyebrow="The challenge" tone="amber">
-            <CellTitle>Sequence risk.</CellTitle>
-            <CellBody>A year-5 crash permanently impairs even a "well-funded" plan.</CellBody>
-          </Cell>
-
-          {/* Row 3 — the answer */}
-          <Cell num="07" eyebrow="The answer" tone="green">
-            <CellTitle>Four buckets.</CellTitle>
-            <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-100 my-2">
-              <span className="bg-blue-500"   style={{ width: '10%' }} />
-              <span className="bg-teal-500"   style={{ width: '20%' }} />
-              <span className="bg-violet-500" style={{ width: '25%' }} />
-              <span className="bg-orange-500" style={{ width: '45%' }} />
-            </div>
-            <div className="text-[10px] text-slate-600 tabular-nums">B1 10 · B2 20 · B3 25 · B4 45</div>
-          </Cell>
-
-          <Cell num="08" eyebrow="The answer" tone="green">
-            <CellTitle>Guardrails.</CellTitle>
-            <CellBody>Skip equity sales in losing years · freeze inflation below 85% · cut 10% below 70%.</CellBody>
-          </Cell>
-
-          <Cell num="09" eyebrow="The answer" tone="green">
-            <CellTitle>Your verdict.</CellTitle>
-            <CellBody>Personalised PDF with TOC, page borders, and your name on every page.</CellBody>
-          </Cell>
+        {/* ── Three circular clusters — Mission · Challenge · Answer ──── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-10 justify-items-center">
+          <CircleCluster
+            theme="navy"
+            hubLabel="The Offer"
+            hubTag="01·02·03"
+            satellites={[
+              { num: '01', title: 'Plan with confidence', tag: 'Mission',     body: 'A guided four-bucket withdrawal model — defensible, not a guess.' },
+              { num: '02', title: '10 strategies · 5 profiles', tag: 'At a glance', body: '200 Monte Carlo paths · FY 24-25 Indian tax engine.' },
+              { num: '03', title: '5 min',                tag: 'Time',        body: 'From corpus inputs to a downloadable take-home PDF.' },
+            ]}
+          />
+          <CircleCluster
+            theme="amber"
+            hubLabel="The Challenge"
+            hubTag="04·05·06"
+            satellites={[
+              { num: '04', title: 'Inflation',     tag: 'Erosion',     body: 'General 6.5% · healthcare 10% · education 12% — eats real purchasing power.' },
+              { num: '05', title: 'Indian tax',    tag: 'Vehicle drag', body: 'Debt MFs at slab; equity LTCG only above ₹1.25L. The vehicle matters.' },
+              { num: '06', title: 'Sequence risk', tag: 'Timing',      body: 'A year-5 crash permanently impairs even a "well-funded" plan.' },
+            ]}
+          />
+          <CircleCluster
+            theme="green"
+            hubLabel="The Answer"
+            hubTag="07·08·09"
+            satellites={[
+              { num: '07', title: 'Four buckets', tag: 'B1·B2·B3·B4', body: '10 / 20 / 25 / 45 split — staged liquidity, debt, hybrid, growth.' },
+              { num: '08', title: 'Guardrails',   tag: 'Safety net',  body: 'Skip equity sales in down years · freeze inflation below 85% · cut 10% below 70%.' },
+              { num: '09', title: 'Your verdict', tag: 'PDF report',  body: 'Personalised PDF with TOC, page borders, and your name on every page.' },
+            ]}
+          />
         </div>
 
         {/* ── Identity form (compact) ─────────────────────────── */}
@@ -160,53 +132,111 @@ export function WelcomePage({ onStart, isReturning, daysSince }: Props) {
   )
 }
 
-// ── Cell primitives ───────────────────────────────────────────────────
+// ── Circular cluster primitives ───────────────────────────────────────
 
 type Tone = 'navy' | 'amber' | 'green'
 
-const TONES: Record<Tone, { eyebrow: string; accent: string; border: string; borderHover: string; ring: string; barTop: string }> = {
-  navy:  { eyebrow: 'text-blue-700',    accent: 'bg-blue-500',    border: 'border-blue-400',    borderHover: 'hover:border-blue-600',    ring: 'ring-blue-100',    barTop: 'bg-blue-600' },
-  amber: { eyebrow: 'text-amber-700',   accent: 'bg-amber-500',   border: 'border-amber-400',   borderHover: 'hover:border-amber-600',   ring: 'ring-amber-100',   barTop: 'bg-amber-500' },
-  green: { eyebrow: 'text-emerald-700', accent: 'bg-emerald-500', border: 'border-emerald-400', borderHover: 'hover:border-emerald-600', ring: 'ring-emerald-100', barTop: 'bg-emerald-600' },
+interface ToneSpec {
+  hubBody: string         // tailwind gradient classes for the central hub
+  hubLip: string          // box-shadow rgb() for the hub's bottom lip
+  satBorder: string       // satellite border colour (Tailwind)
+  satLip: string          // satellite bottom-lip rgb()
+  satText: string         // satellite text colour (Tailwind)
+  satTagBg: string        // satellite tag chip background
+  dashedRing: string      // decorative connector ring colour
 }
 
-function Cell({ num, eyebrow, tone, children }: { num: string; eyebrow: string; tone: Tone; children: ReactNode }) {
-  const t = TONES[tone]
+const TONES_3D: Record<Tone, ToneSpec> = {
+  navy: {
+    hubBody: 'from-blue-400 via-blue-600 to-blue-800',
+    hubLip:  'rgb(30,58,138)',
+    satBorder: 'border-blue-500',
+    satLip:    'rgb(30,58,138)',
+    satText:   'text-blue-700',
+    satTagBg:  'bg-blue-50 text-blue-700',
+    dashedRing: 'border-blue-200',
+  },
+  amber: {
+    hubBody: 'from-amber-400 via-amber-500 to-amber-700',
+    hubLip:  'rgb(120,53,15)',
+    satBorder: 'border-amber-500',
+    satLip:    'rgb(120,53,15)',
+    satText:   'text-amber-700',
+    satTagBg:  'bg-amber-50 text-amber-700',
+    dashedRing: 'border-amber-200',
+  },
+  green: {
+    hubBody: 'from-emerald-400 via-emerald-500 to-emerald-700',
+    hubLip:  'rgb(6,78,59)',
+    satBorder: 'border-emerald-500',
+    satLip:    'rgb(6,78,59)',
+    satText:   'text-emerald-700',
+    satTagBg:  'bg-emerald-50 text-emerald-700',
+    dashedRing: 'border-emerald-200',
+  },
+}
+
+interface Satellite { num: string; title: string; tag: string; body: string }
+
+/** A circular cluster — central 3D hub orbited by three satellite circles. */
+function CircleCluster({ theme, hubLabel, hubTag, satellites }: {
+  theme: Tone
+  hubLabel: string
+  hubTag: string
+  satellites: [Satellite, Satellite, Satellite]
+}) {
+  const t = TONES_3D[theme]
+  // Satellites at 12, 4, 8 o'clock — clean triangle around the hub.
+  const angles = [-90, 30, 150]
+  const radius = 122       // px from center to satellite center
   return (
-    <div className={`relative bg-white rounded-lg border-[3px] ${t.border} ${t.borderHover} ring-1 ring-inset ${t.ring} p-3.5 hover:shadow-md transition-all min-h-[150px] flex flex-col overflow-hidden`}>
-      {/* Thick tone-colored top accent bar */}
-      <div className={`absolute top-0 left-0 right-0 h-1 ${t.barTop}`} aria-hidden="true" />
-      <div className="flex items-baseline gap-2 mb-2 pt-1">
-        <span className={`text-[10px] font-bold tracking-[2px] tabular-nums ${t.eyebrow}`}>{num}</span>
-        <span className={`w-1 h-1 rounded-full ${t.accent}`} aria-hidden="true" />
-        <span className={`text-[10px] font-bold uppercase tracking-[2px] ${t.eyebrow}`}>{eyebrow}</span>
+    <div className="relative w-[320px] h-[320px] sm:w-[340px] sm:h-[340px]">
+      {/* Decorative connector ring */}
+      <div className={`absolute inset-[24%] rounded-full border-2 border-dashed ${t.dashedRing}`} aria-hidden="true" />
+
+      {/* Central 3D hub */}
+      <div
+        className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[108px] h-[108px] rounded-full flex flex-col items-center justify-center text-center bg-gradient-to-b ${t.hubBody} text-white border border-black/15 select-none`}
+        style={{
+          boxShadow: `0 5px 0 0 ${t.hubLip}, 0 10px 18px -4px rgba(15,23,42,0.40), inset 0 2px 0 rgba(255,255,255,0.45), inset 0 -2px 0 rgba(0,0,0,0.22)`,
+          textShadow: '0 1px 1px rgba(0,0,0,0.45)',
+        }}
+      >
+        <span className="text-[9px] font-bold tracking-[2.5px] uppercase opacity-90">{hubTag}</span>
+        <span className="font-serif italic text-base font-extrabold leading-tight mt-0.5 px-2">{hubLabel}</span>
       </div>
-      <div className="flex-1 flex flex-col">{children}</div>
+
+      {/* Three satellites */}
+      {satellites.map((s, i) => {
+        const a = angles[i] * Math.PI / 180
+        const x = Math.cos(a) * radius
+        const y = Math.sin(a) * radius
+        return (
+          <div
+            key={s.num}
+            className="absolute"
+            style={{ left: '50%', top: '50%', transform: `translate(calc(${x}px - 50%), calc(${y}px - 50%))` }}
+          >
+            <CircleNode tone={t} sat={s} />
+          </div>
+        )
+      })}
     </div>
   )
 }
 
-function CellTitle({ children }: { children: ReactNode }) {
+function CircleNode({ tone, sat }: { tone: ToneSpec; sat: Satellite }) {
   return (
-    <div className="text-lg font-extrabold tracking-tight text-slate-900 leading-tight">
-      {children}
-    </div>
-  )
-}
-
-function CellBody({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <p className={`text-[11px] text-slate-600 leading-snug mt-1 ${className}`}>
-      {children}
-    </p>
-  )
-}
-
-function Mini({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="bg-slate-50 border border-slate-200 rounded px-1.5 py-1 text-center">
-      <div className="text-base font-extrabold text-blue-700 tabular-nums leading-none">{value}</div>
-      <div className="text-[8px] text-slate-500 uppercase tracking-wide mt-0.5 font-semibold">{label}</div>
+    <div
+      className={`relative w-[120px] h-[120px] rounded-full bg-white border-[3px] ${tone.satBorder} flex flex-col items-center justify-center text-center px-3 select-none`}
+      title={sat.body}
+      style={{
+        boxShadow: `0 5px 0 0 ${tone.satLip}, 0 10px 16px -4px rgba(15,23,42,0.28), inset 0 2px 0 rgba(255,255,255,0.92), inset 0 -2px 4px rgba(15,23,42,0.05)`,
+      }}
+    >
+      <div className={`text-[9px] font-bold tracking-[2px] tabular-nums opacity-80 ${tone.satText}`}>{sat.num}</div>
+      <div className={`font-serif italic text-[13px] font-extrabold leading-tight ${tone.satText}`}>{sat.title}</div>
+      <div className={`mt-1 inline-block text-[8px] font-bold uppercase tracking-[1.5px] rounded px-1.5 py-0.5 ${tone.satTagBg}`}>{sat.tag}</div>
     </div>
   )
 }
