@@ -81,6 +81,9 @@ export function WelcomeMerged({ onStart }: Props) {
       {/* Anchor mini-nav — scroll target shortcuts */}
       <AnchorNav />
 
+      {/* ── 0. Welcome banner — Namaste · the big why · three traditions ── */}
+      <NamasteBanner />
+
       {/* ── 1. Hero ────────────────────────────────────────────────── */}
       <header id="sec-mission" className="text-center mb-8 sm:mb-10 pt-2 scroll-mt-20">
         <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700 mb-2.5">
@@ -167,6 +170,130 @@ export function WelcomeMerged({ onStart }: Props) {
         <UploadSection />
       </Modal>
     </div>
+  )
+}
+
+// ── Namaste welcome banner — Indian-style figure + 3-tradition wisdom ──
+//
+// Calibrated for "eye-soothing, crisp, elegant": ivory background,
+// hairline amber border, a single 🙏 with a soft gold halo, Devanagari
+// नमस्ते in serif. Three wisdom cards (India · West · World) speak to
+// the "big why" of retirement planning from different traditions.
+
+function NamasteBanner() {
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50/70 via-white to-amber-50/40 px-6 py-10 sm:px-10 sm:py-14 mb-8 shadow-sm">
+      {/* Decorative corner mandala-line ornaments — pure SVG, no images */}
+      <CornerOrnament className="absolute top-3 left-3 opacity-30" />
+      <CornerOrnament className="absolute top-3 right-3 opacity-30 -scale-x-100" />
+      <CornerOrnament className="absolute bottom-3 left-3 opacity-30 -scale-y-100" />
+      <CornerOrnament className="absolute bottom-3 right-3 opacity-30 -scale-x-100 -scale-y-100" />
+
+      <div className="relative max-w-3xl mx-auto text-center">
+        {/* Eyebrow — three scripts, three traditions */}
+        <div className="text-[10px] font-bold tracking-[5px] uppercase text-amber-700 mb-3">
+          Welcome · नमस्ते · 千里之行 · Initium
+        </div>
+
+        {/* Namaste figure — 🙏 within a soft gold halo */}
+        <div className="relative inline-flex items-center justify-center mb-1">
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 m-auto w-32 h-32 sm:w-40 sm:h-40 rounded-full opacity-60 blur-2xl"
+            style={{ background: 'radial-gradient(closest-side, rgba(251,191,36,0.55), rgba(251,191,36,0))' }}
+          />
+          <span
+            role="img"
+            aria-label="Namaste — folded hands greeting"
+            className="relative text-6xl sm:text-7xl leading-none"
+            style={{ filter: 'drop-shadow(0 2px 4px rgba(180,83,9,0.35))' }}
+          >
+            🙏
+          </span>
+        </div>
+
+        {/* Devanagari greeting */}
+        <h2 className="font-serif text-4xl sm:text-5xl font-extralight tracking-tight text-amber-800 leading-none mt-2 mb-1">
+          नमस्ते
+        </h2>
+
+        {/* The big why — single tight line */}
+        <h3 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 mt-5 leading-tight">
+          Plan the <em className="not-italic font-extrabold text-amber-700">years</em>.
+          <span className="mx-2 text-slate-300">·</span>
+          Live the <em className="not-italic font-extrabold text-emerald-700">days</em>.
+        </h3>
+        <p className="text-[13px] sm:text-sm text-slate-600 mt-3 max-w-xl mx-auto leading-relaxed">
+          The second half of life deserves the same care as the first. Three traditions, one quiet answer — applied steadily, it compounds.
+        </p>
+
+        {/* Tricolor divider — saffron · ivory · jade */}
+        <div className="flex items-center justify-center gap-2 mt-6 mb-6" aria-hidden="true">
+          <span className="h-px w-12 bg-amber-500/70" />
+          <span className="text-amber-700 text-xs leading-none">◆</span>
+          <span className="h-px w-12 bg-amber-500/30" />
+          <span className="text-amber-700 text-xs leading-none">◆</span>
+          <span className="h-px w-12 bg-emerald-600/70" />
+        </div>
+
+        {/* Three wisdom cards — India · West · World */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-left mt-2">
+          <WisdomCard
+            origin="India"
+            originColor="bg-amber-100 text-amber-800 border-amber-300"
+            verse="कर्मण्येवाधिकारस्ते मा फलेषु कदाचन"
+            translation="“Set thy heart upon thy work — but never on its reward.”"
+            attribution="Bhagavad Gītā 2.47"
+          />
+          <WisdomCard
+            origin="West"
+            originColor="bg-blue-100 text-blue-800 border-blue-300"
+            translation="“It is not that we have a short time to live — but that we waste much of it.”"
+            attribution="Seneca · Letters from a Stoic"
+          />
+          <WisdomCard
+            origin="World"
+            originColor="bg-emerald-100 text-emerald-800 border-emerald-300"
+            verse="千里之行，始於足下"
+            translation="“A journey of a thousand miles begins with a single step.”"
+            attribution="Lao Tzu · Tao Te Ching"
+          />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function WisdomCard({ origin, originColor, verse, translation, attribution }: {
+  origin: string; originColor: string; verse?: string; translation: string; attribution: string
+}) {
+  return (
+    <figure className="rounded-lg bg-white border border-slate-200 px-4 py-3.5 shadow-sm">
+      <figcaption className={`inline-block text-[9px] font-bold tracking-[2.5px] uppercase rounded-full border px-2 py-0.5 mb-2 ${originColor}`}>
+        {origin}
+      </figcaption>
+      {verse && (
+        <p className="font-serif italic text-[13px] text-slate-700 leading-snug mb-1.5">{verse}</p>
+      )}
+      <blockquote className="font-serif text-[12.5px] text-slate-800 leading-snug">{translation}</blockquote>
+      <p className="text-[10px] text-slate-500 italic mt-2 tracking-wide">— {attribution}</p>
+    </figure>
+  )
+}
+
+function CornerOrnament({ className }: { className?: string }) {
+  return (
+    <svg className={className} width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+      {/* Stylised mandala-corner — concentric quarter-arcs in amber */}
+      <g fill="none" stroke="#d97706" strokeWidth="0.8" strokeLinecap="round">
+        <path d="M2 54 A 52 52 0 0 1 54 2" />
+        <path d="M2 48 A 46 46 0 0 1 48 2" />
+        <path d="M2 36 A 34 34 0 0 1 36 2" />
+        <circle cx="10" cy="10" r="2" />
+        <circle cx="22" cy="6"  r="1.2" />
+        <circle cx="6"  cy="22" r="1.2" />
+      </g>
+    </svg>
   )
 }
 
