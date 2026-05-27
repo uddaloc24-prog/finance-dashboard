@@ -85,7 +85,7 @@ export function WelcomeMerged({ onStart }: Props) {
         <CornerOrnament className="absolute bottom-1.5 right-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-x-100 -scale-y-100" />
 
       {/* ── 1. Hero (now first — moved above Namaste banner) ─────── */}
-      <header className="text-center mb-6 sm:mb-8 pt-2">
+      <header className="text-center mb-6 sm:mb-8 px-4 py-6 sm:px-6 sm:py-8 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
         <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700 mb-2.5">
           Indian Retirement Planner · Version 2.0
         </div>
@@ -106,7 +106,7 @@ export function WelcomeMerged({ onStart }: Props) {
       <NamasteBanner />
 
       {/* ── 3. Three circular clusters ─────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center px-4 py-6 sm:px-6 sm:py-6 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
         <CircleCluster
           theme="navy" hubLabel="The Offer" hubTag="01·02·03"
           satellites={[
@@ -140,7 +140,7 @@ export function WelcomeMerged({ onStart }: Props) {
       </div>
 
       {/* ── 5. Merged Profile block — About-you toolbar + full Setup ── */}
-      <section className="mb-4">
+      <section className="mb-4 px-4 py-4 sm:px-5 sm:py-5 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
         <IdentityForm identity={identity} onChange={setIdentity} />
 
         {/* Full profile setup — collapsed by default to keep the CTA reachable */}
