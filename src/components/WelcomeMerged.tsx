@@ -16,7 +16,7 @@ import { Button } from './ui/Button'
 import { Modal } from './ui/Modal'
 import { UploadSection } from './UploadSection'
 import { SetupReplica } from './SetupReplica'
-import { RetirementWelcome } from './RetirementWelcome'
+import { PlaybookFlipBook } from './PlaybookFlipBook'
 
 interface Props {
   /** Fires when "Start planning →" is clicked. The parent (Dashboard)
@@ -68,15 +68,15 @@ export function WelcomeMerged({ onStart }: Props) {
       {/* ── WELCOME watermark — huge serif text behind everything ─── */}
       <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none z-0" aria-hidden="true">
         <span
-          className="font-serif font-extrabold text-amber-700/[0.06] select-none whitespace-nowrap leading-none tracking-[0.05em]"
-          style={{ fontSize: 'clamp(120px, 22vw, 360px)', transform: 'rotate(-12deg)' }}
+          className="font-serif font-extrabold text-amber-700/[0.13] select-none whitespace-nowrap leading-none tracking-[0.05em]"
+          style={{ fontSize: 'clamp(140px, 26vw, 420px)', transform: 'rotate(-12deg)' }}
         >
           WELCOME
         </span>
       </div>
 
       {/* ── Bordered inner frame with 4 corner ornaments ─────────── */}
-      <div className="relative z-10 rounded-3xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/85 backdrop-blur-[2px] shadow-xl p-4 sm:p-6 lg:p-7">
+      <div className="relative z-10 rounded-3xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/55 shadow-xl p-4 sm:p-6 lg:p-7">
 
         {/* Corner mandala ornaments — frame the whole page */}
         <CornerOrnament className="absolute top-1.5 left-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60" />
@@ -87,6 +87,12 @@ export function WelcomeMerged({ onStart }: Props) {
       {/* ── 1+2. MERGED: Hero prelude + Namaste banner in a single card ── */}
       <NamasteBanner />
 
+
+      {/* ── 2.5. Action strip — Playbook + Upload, right-aligned, above clusters ─── */}
+      <div className="flex justify-end items-center gap-2 mb-3">
+        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
+        <UploadPlanButton onClick={() => setUploadOpen(true)} />
+      </div>
 
       {/* ── 3. Three circular clusters ─────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center px-4 py-6 sm:px-6 sm:py-6 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
@@ -114,12 +120,6 @@ export function WelcomeMerged({ onStart }: Props) {
             { num: '09', title: 'Your verdict', tag: 'PDF report',  body: 'Personalised PDF with TOC, page borders, and your name on every page.' },
           ]}
         />
-      </div>
-
-      {/* ── 4. Right-aligned action strip — small Playbook + Upload ─── */}
-      <div className="flex justify-end items-center gap-2 mb-5">
-        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
-        <UploadPlanButton onClick={() => setUploadOpen(true)} />
       </div>
 
       {/* ── 5. Merged Profile block — About-you toolbar + full Setup ── */}
@@ -169,16 +169,16 @@ export function WelcomeMerged({ onStart }: Props) {
         <UploadSection />
       </Modal>
 
-      {/* Playbook modal — Reality · Phases · Wisdom · Mistakes · Action · Reflect */}
+      {/* Playbook modal — interactive page-flipping book */}
       <Modal
         open={playbookOpen}
         title="The Indian Retirement Playbook"
-        subtitle="Reality · Phases · Wisdom · Mistakes · Action · Reflect"
+        subtitle="Reality · Phases · Wisdom · Mistakes · Action · Reflect — turn the pages"
         accent="amber"
-        size="4xl"
+        size="5xl"
         onClose={() => setPlaybookOpen(false)}
       >
-        <RetirementWelcome hideHero={true} />
+        <PlaybookFlipBook />
       </Modal>
     </div>
   )
