@@ -63,19 +63,29 @@ export function WelcomeMerged({ onStart }: Props) {
   }
 
   return (
-    <div className="relative bg-gradient-to-br from-slate-50 via-white to-blue-50 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2">
+    <div className="relative -mx-3 sm:-mx-4 px-3 sm:px-4 py-3 bg-gradient-to-br from-slate-50 via-white to-blue-50">
 
-      {/* Top-right 3D action buttons — Playbook (modal) + Upload (modal) */}
-      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-2">
-        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
-        <UploadPlanButton onClick={() => setUploadOpen(true)} />
+      {/* ── WELCOME watermark — huge serif text behind everything ─── */}
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden pointer-events-none z-0" aria-hidden="true">
+        <span
+          className="font-serif font-extrabold text-amber-700/[0.06] select-none whitespace-nowrap leading-none tracking-[0.05em]"
+          style={{ fontSize: 'clamp(120px, 22vw, 360px)', transform: 'rotate(-12deg)' }}
+        >
+          WELCOME
+        </span>
       </div>
 
-      {/* ── 0. Welcome banner — Namaste · the big why · two traditions ─ */}
-      <NamasteBanner />
+      {/* ── Bordered inner frame with 4 corner ornaments ─────────── */}
+      <div className="relative z-10 rounded-3xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/85 backdrop-blur-[2px] shadow-xl p-4 sm:p-6 lg:p-7">
 
-      {/* ── 1. Hero ────────────────────────────────────────────────── */}
-      <header id="sec-mission" className="text-center mb-8 sm:mb-10 pt-2 scroll-mt-20">
+        {/* Corner mandala ornaments — frame the whole page */}
+        <CornerOrnament className="absolute top-1.5 left-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60" />
+        <CornerOrnament className="absolute top-1.5 right-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-x-100" />
+        <CornerOrnament className="absolute bottom-1.5 left-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-y-100" />
+        <CornerOrnament className="absolute bottom-1.5 right-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-x-100 -scale-y-100" />
+
+      {/* ── 1. Hero (now first — moved above Namaste banner) ─────── */}
+      <header className="text-center mb-6 sm:mb-8 pt-2">
         <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700 mb-2.5">
           Indian Retirement Planner · Version 2.0
         </div>
@@ -92,8 +102,11 @@ export function WelcomeMerged({ onStart }: Props) {
         </div>
       </header>
 
-      {/* ── 2. Three circular clusters ─────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-8 justify-items-center">
+      {/* ── 2. Namaste banner (moved below Hero) ─────────────────── */}
+      <NamasteBanner />
+
+      {/* ── 3. Three circular clusters ─────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center">
         <CircleCluster
           theme="navy" hubLabel="The Offer" hubTag="01·02·03"
           satellites={[
@@ -120,7 +133,13 @@ export function WelcomeMerged({ onStart }: Props) {
         />
       </div>
 
-      {/* ── 3. Merged Profile block — About-you toolbar + full Setup ── */}
+      {/* ── 4. Right-aligned action strip — small Playbook + Upload ─── */}
+      <div className="flex justify-end items-center gap-2 mb-5">
+        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
+        <UploadPlanButton onClick={() => setUploadOpen(true)} />
+      </div>
+
+      {/* ── 5. Merged Profile block — About-you toolbar + full Setup ── */}
       <section className="mb-4">
         <IdentityForm identity={identity} onChange={setIdentity} />
 
@@ -143,8 +162,8 @@ export function WelcomeMerged({ onStart }: Props) {
         )}
       </section>
 
-      {/* ── 4. CTA — always reachable just below the toolbar ────── */}
-      <div className="text-center mb-10">
+      {/* ── 6. CTA — always reachable just below the toolbar ────── */}
+      <div className="text-center mb-6">
         <Button onClick={start} className="!px-7 !py-3 !text-sm">
           Start planning →
         </Button>
@@ -152,6 +171,8 @@ export function WelcomeMerged({ onStart }: Props) {
           Free · No signup · Everything stays in your browser · Name defaults to "Anonymous" if blank
         </p>
       </div>
+
+      </div>{/* /bordered inner frame */}
 
       {/* Upload-plan modal */}
       <Modal
@@ -330,15 +351,14 @@ function PlaybookButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       title="Open the Indian Retirement Playbook — reality · phases · wisdom · mistakes · action · reflect"
-      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 hover:from-amber-200 hover:via-amber-400 hover:to-amber-600 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[1.5px] text-white bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 hover:from-amber-200 hover:via-amber-400 hover:to-amber-600 border border-black/15 select-none active:translate-y-[1px] transition-all"
       style={{
-        boxShadow: '0 4px 0 0 rgb(120,53,15), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.20)',
+        boxShadow: '0 2px 0 0 rgb(120,53,15), 0 4px 8px -3px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.55)',
         textShadow: '0 1px 1px rgba(0,0,0,0.40)',
       }}
     >
-      <span aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>🪔</span>
-      <span className="hidden sm:inline">Playbook</span>
-      <span className="sm:hidden">Read</span>
+      <span aria-hidden="true" className="text-[11px] leading-none">🪔</span>
+      <span>Playbook</span>
     </button>
   )
 }
@@ -351,15 +371,14 @@ function UploadPlanButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       title="Upload an existing plan (.pdf · .docx · .json)"
-      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-b from-indigo-400 via-indigo-600 to-indigo-800 hover:from-indigo-300 hover:via-indigo-500 hover:to-indigo-700 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[1.5px] text-white bg-gradient-to-b from-indigo-400 via-indigo-600 to-indigo-800 hover:from-indigo-300 hover:via-indigo-500 hover:to-indigo-700 border border-black/15 select-none active:translate-y-[1px] transition-all"
       style={{
-        boxShadow: '0 4px 0 0 rgb(49,46,129), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.20)',
+        boxShadow: '0 2px 0 0 rgb(49,46,129), 0 4px 8px -3px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.45)',
         textShadow: '0 1px 1px rgba(0,0,0,0.40)',
       }}
     >
-      <span aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>📂</span>
-      <span className="hidden sm:inline">Upload Plan</span>
-      <span className="sm:hidden">Upload</span>
+      <span aria-hidden="true" className="text-[11px] leading-none">📂</span>
+      <span>Upload</span>
     </button>
   )
 }
