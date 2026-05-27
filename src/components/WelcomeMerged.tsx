@@ -180,97 +180,100 @@ export function WelcomeMerged({ onStart }: Props) {
 // नमस्ते in serif. Three wisdom cards (India · West · World) speak to
 // the "big why" of retirement planning from different traditions.
 
+// Diptych-style banner: two folded panels joined by a temple divider.
+//  ┌──── medallion ────┐ │◇│ ┌──── content ────┐
+//  Eye-shaped left bay holds the Namaste figure; right bay carries the
+//  headline plus a tight 2-card wisdom row. Total height ~55% smaller
+//  than the centred stack.
+
 function NamasteBanner() {
   return (
     <section
-      className="relative overflow-hidden rounded-2xl border-2 border-amber-400 ring-1 ring-inset ring-amber-100 bg-gradient-to-br from-amber-100 via-amber-50/80 to-emerald-50/60 px-6 py-12 sm:px-10 sm:py-16 mb-8 shadow-xl"
+      className="relative overflow-hidden rounded-3xl border-2 border-amber-400 ring-1 ring-inset ring-amber-100 mb-8 shadow-xl"
       style={{
         backgroundImage:
-          // Layer 1: subtle paisley-like dot grid (amber)
           'radial-gradient(circle at 20px 20px, rgba(217,119,6,0.10) 1.5px, transparent 2px),' +
-          // Layer 2: warm radial spotlight under the centre
-          'radial-gradient(ellipse 60% 45% at 50% 28%, rgba(251,191,36,0.30), transparent 70%),' +
-          // Layer 3: base gradient
-          'linear-gradient(135deg, rgb(254,243,199) 0%, rgb(255,251,235) 50%, rgb(236,253,245) 100%)',
+          'radial-gradient(ellipse 35% 80% at 18% 50%, rgba(251,191,36,0.32), transparent 70%),' +
+          'linear-gradient(115deg, rgb(254,243,199) 0%, rgb(255,251,235) 45%, rgb(236,253,245) 100%)',
         backgroundSize: '40px 40px, 100% 100%, 100% 100%',
       }}
     >
-      {/* Decorative corner mandala-line ornaments — pure SVG, stronger contrast */}
-      <CornerOrnament className="absolute top-3 left-3 opacity-70" />
-      <CornerOrnament className="absolute top-3 right-3 opacity-70 -scale-x-100" />
-      <CornerOrnament className="absolute bottom-3 left-3 opacity-70 -scale-y-100" />
-      <CornerOrnament className="absolute bottom-3 right-3 opacity-70 -scale-x-100 -scale-y-100" />
+      {/* Corner mandala ornaments — slightly smaller, still strong contrast */}
+      <CornerOrnament className="absolute top-2 left-2 opacity-70 w-12 h-12 sm:w-14 sm:h-14" />
+      <CornerOrnament className="absolute top-2 right-2 opacity-70 -scale-x-100 w-12 h-12 sm:w-14 sm:h-14" />
+      <CornerOrnament className="absolute bottom-2 left-2 opacity-70 -scale-y-100 w-12 h-12 sm:w-14 sm:h-14" />
+      <CornerOrnament className="absolute bottom-2 right-2 opacity-70 -scale-x-100 -scale-y-100 w-12 h-12 sm:w-14 sm:h-14" />
 
-      <div className="relative max-w-3xl mx-auto text-center">
-        {/* Eyebrow — two scripts, two languages */}
-        <div className="text-[11px] font-bold tracking-[5px] uppercase text-amber-800 mb-4">
-          Welcome <span className="mx-2 text-amber-600">·</span> <span className="font-serif normal-case font-extralight text-amber-900 text-base tracking-normal">नमस्ते</span>
+      <div className="relative grid grid-cols-1 md:grid-cols-[220px_1px_1fr] lg:grid-cols-[240px_1px_1fr] gap-0 px-5 py-5 sm:px-7 sm:py-6">
+
+        {/* ── Left panel — medallion ───────────────────────────── */}
+        <div className="flex flex-col items-center justify-center text-center px-1 py-2 md:py-1">
+          <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-800 mb-2">
+            Welcome <span className="mx-1 text-amber-600">·</span> <span className="font-serif normal-case font-extralight text-amber-900 text-sm tracking-normal">नमस्ते</span>
+          </div>
+
+          {/* Namaste figure — compact medallion */}
+          <div className="relative inline-flex items-center justify-center my-1">
+            <span aria-hidden="true" className="absolute inset-0 m-auto w-24 h-24 rounded-full border-2 border-amber-300/80" />
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 m-auto w-20 h-20 rounded-full opacity-90 blur-xl"
+              style={{ background: 'radial-gradient(closest-side, rgba(245,158,11,0.70), rgba(245,158,11,0))' }}
+            />
+            <span
+              role="img"
+              aria-label="Namaste — folded hands greeting"
+              className="relative text-5xl leading-none"
+              style={{ filter: 'drop-shadow(0 2px 4px rgba(146,64,14,0.45))' }}
+            >
+              🙏
+            </span>
+          </div>
+
+          <h2
+            className="font-serif text-3xl sm:text-4xl font-extralight tracking-tight text-amber-900 leading-none mt-2"
+            style={{ textShadow: '0 1px 0 rgba(255,255,255,0.7)' }}
+          >
+            नमस्ते
+          </h2>
         </div>
 
-        {/* Namaste figure — 🙏 within a rich gold halo + concentric ring */}
-        <div className="relative inline-flex items-center justify-center mb-1">
-          {/* Outer ring — gold throne arc */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 m-auto w-36 h-36 sm:w-44 sm:h-44 rounded-full border-2 border-amber-300/70"
-          />
-          {/* Halo */}
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 m-auto w-32 h-32 sm:w-40 sm:h-40 rounded-full opacity-80 blur-2xl"
-            style={{ background: 'radial-gradient(closest-side, rgba(245,158,11,0.65), rgba(245,158,11,0))' }}
-          />
-          {/* Figure */}
-          <span
-            role="img"
-            aria-label="Namaste — folded hands greeting"
-            className="relative text-6xl sm:text-7xl leading-none"
-            style={{ filter: 'drop-shadow(0 3px 6px rgba(146,64,14,0.45))' }}
-          >
-            🙏
+        {/* ── Vertical divider — temple gateway with diamond ornament ─── */}
+        <div className="hidden md:flex flex-col items-center justify-center relative" aria-hidden="true">
+          <span className="absolute top-2 bottom-2 left-1/2 -translate-x-1/2 w-px bg-gradient-to-b from-amber-300/0 via-amber-500/70 to-amber-300/0" />
+          <span className="relative bg-white border-2 border-amber-500 rounded-full w-5 h-5 rotate-45 flex items-center justify-center shadow-sm">
+            <span className="block w-1.5 h-1.5 bg-amber-600 rotate-45" />
           </span>
         </div>
 
-        {/* Devanagari greeting */}
-        <h2 className="font-serif text-4xl sm:text-5xl font-extralight tracking-tight text-amber-900 leading-none mt-3 mb-1" style={{ textShadow: '0 1px 0 rgba(255,255,255,0.6)' }}>
-          नमस्ते
-        </h2>
+        {/* ── Right panel — headline + 2 wisdom cards ─────────────── */}
+        <div className="md:pl-4 lg:pl-6 pt-3 md:pt-0 flex flex-col justify-center">
+          {/* The big why */}
+          <h3 className="font-serif text-lg sm:text-xl lg:text-[1.4rem] font-extralight tracking-tight text-slate-900 leading-tight">
+            Plan the <em className="not-italic font-extrabold text-amber-700">years</em>.
+            <span className="mx-1.5 text-slate-400">·</span>
+            Live the <em className="not-italic font-extrabold text-emerald-700">days</em>.
+          </h3>
+          <h3 className="font-serif text-base sm:text-lg font-bold italic tracking-tight text-slate-900 leading-tight mt-1">
+            Live without <em className="not-italic font-extrabold text-rose-700">fear</em> — head held <em className="not-italic font-extrabold text-blue-700">high</em>.
+          </h3>
 
-        {/* The big why — two lines, the second is the punch */}
-        <h3 className="font-serif text-xl sm:text-2xl font-extralight tracking-tight text-slate-900 mt-6 leading-tight">
-          Plan the <em className="not-italic font-extrabold text-amber-700">years</em>.
-          <span className="mx-2 text-slate-400">·</span>
-          Live the <em className="not-italic font-extrabold text-emerald-700">days</em>.
-        </h3>
-        <h3 className="font-serif text-lg sm:text-xl font-bold italic tracking-tight text-slate-900 mt-1.5 leading-tight">
-          Live without <em className="not-italic font-extrabold text-rose-700">fear</em> — head held <em className="not-italic font-extrabold text-blue-700">high</em>.
-        </h3>
-        <p className="text-[13px] sm:text-sm text-slate-700 mt-4 max-w-xl mx-auto leading-relaxed font-medium">
-          The second half of life deserves the same care as the first. Two traditions, one quiet answer — applied steadily, it compounds.
-        </p>
-
-        {/* Tricolor divider — saffron · gold · jade */}
-        <div className="flex items-center justify-center gap-2 mt-6 mb-6" aria-hidden="true">
-          <span className="h-[1.5px] w-14 bg-amber-600/80" />
-          <span className="text-amber-700 text-sm leading-none">◆</span>
-          <span className="h-[1.5px] w-14 bg-emerald-700/80" />
-        </div>
-
-        {/* Two wisdom cards — India · West, punchier */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left mt-2">
-          <WisdomCard
-            origin="India"
-            originColor="bg-amber-200 text-amber-900 border-amber-500"
-            verse="उत्तिष्ठत · जाग्रत · प्राप्य वरान्निबोधत"
-            translation="“Arise! Awake! And stop not until the goal is reached.”"
-            attribution="Katha Upaniṣad · echoed by Vivekananda"
-          />
-          <WisdomCard
-            origin="West"
-            originColor="bg-blue-200 text-blue-900 border-blue-500"
-            translation="“The only thing we have to fear — is fear itself.”"
-            attribution="Franklin D. Roosevelt · Inaugural Address, 1933"
-          />
+          {/* Two wisdom cards — side by side, compact */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-3.5">
+            <WisdomCard
+              origin="India"
+              originColor="bg-amber-200 text-amber-900 border-amber-500"
+              verse="उत्तिष्ठत · जाग्रत · प्राप्य वरान्निबोधत"
+              translation="“Arise! Awake! And stop not until the goal is reached.”"
+              attribution="Kaṭha Upaniṣad · Vivekananda"
+            />
+            <WisdomCard
+              origin="West"
+              originColor="bg-blue-200 text-blue-900 border-blue-500"
+              translation="“The only thing we have to fear — is fear itself.”"
+              attribution="F. D. Roosevelt · 1933"
+            />
+          </div>
         </div>
       </div>
     </section>
@@ -281,23 +284,22 @@ function WisdomCard({ origin, originColor, verse, translation, attribution }: {
   origin: string; originColor: string; verse?: string; translation: string; attribution: string
 }) {
   return (
-    <figure className="rounded-xl bg-white border-2 border-slate-300 px-5 py-4 shadow-md hover:shadow-lg transition-shadow">
-      <figcaption className={`inline-block text-[10px] font-extrabold tracking-[2.5px] uppercase rounded-full border-2 px-2.5 py-0.5 mb-2.5 ${originColor}`}>
+    <figure className="rounded-lg bg-white/95 border-2 border-slate-300 px-3 py-2.5 shadow-sm">
+      <figcaption className={`inline-block text-[9px] font-extrabold tracking-[2px] uppercase rounded-full border px-1.5 py-0.5 mb-1.5 ${originColor}`}>
         {origin}
       </figcaption>
       {verse && (
-        <p className="font-serif italic text-[14px] text-amber-900 leading-snug mb-2 font-semibold">{verse}</p>
+        <p className="font-serif italic text-[12px] text-amber-900 leading-snug mb-1 font-semibold">{verse}</p>
       )}
-      <blockquote className="font-serif text-[14px] text-slate-900 leading-snug font-semibold">{translation}</blockquote>
-      <p className="text-[10.5px] text-slate-600 italic mt-2.5 tracking-wide font-medium">— {attribution}</p>
+      <blockquote className="font-serif text-[12.5px] text-slate-900 leading-snug font-semibold">{translation}</blockquote>
+      <p className="text-[9.5px] text-slate-600 italic mt-1.5 tracking-wide font-medium">— {attribution}</p>
     </figure>
   )
 }
 
 function CornerOrnament({ className }: { className?: string }) {
   return (
-    <svg className={className} width="64" height="64" viewBox="0 0 64 64" aria-hidden="true">
-      {/* Stylised mandala-corner — concentric quarter-arcs + lotus dots, stronger contrast */}
+    <svg className={className} viewBox="0 0 64 64" aria-hidden="true">
       <g fill="none" stroke="#b45309" strokeWidth="1.2" strokeLinecap="round">
         <path d="M2 62 A 60 60 0 0 1 62 2" />
         <path d="M2 54 A 52 52 0 0 1 54 2" />
@@ -308,8 +310,6 @@ function CornerOrnament({ className }: { className?: string }) {
         <circle cx="10" cy="10" r="2.5" />
         <circle cx="22" cy="6"  r="1.5" />
         <circle cx="6"  cy="22" r="1.5" />
-        <circle cx="32" cy="4"  r="1" />
-        <circle cx="4"  cy="32" r="1" />
       </g>
     </svg>
   )
