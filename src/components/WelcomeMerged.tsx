@@ -248,14 +248,14 @@ function NamasteBanner() {
 
         {/* ── Right panel — headline + 2 wisdom cards ─────────────── */}
         <div className="md:pl-4 lg:pl-6 pt-3 md:pt-0 flex flex-col justify-center">
-          {/* The big why */}
-          <h3 className="font-serif text-lg sm:text-xl lg:text-[1.4rem] font-extralight tracking-tight text-slate-900 leading-tight">
+          {/* The big why — centred · highlightable but not big · italic-smaller second line */}
+          <h3 className="text-center font-serif text-base sm:text-[15px] lg:text-base font-semibold tracking-wide text-slate-900 leading-tight">
             Plan the <em className="not-italic font-extrabold text-amber-700">years</em>.
             <span className="mx-1.5 text-slate-400">·</span>
             Live the <em className="not-italic font-extrabold text-emerald-700">days</em>.
           </h3>
-          <h3 className="font-serif text-base sm:text-lg font-bold italic tracking-tight text-slate-900 leading-tight mt-1">
-            Live without <em className="not-italic font-extrabold text-rose-700">fear</em> — head held <em className="not-italic font-extrabold text-blue-700">high</em>.
+          <h3 className="text-center font-serif italic text-[12.5px] sm:text-[13px] font-medium tracking-tight text-slate-700 leading-snug mt-1">
+            Live without <em className="font-extrabold text-rose-700 not-italic">fear</em> — head held <em className="font-extrabold text-blue-700 not-italic">high</em>.
           </h3>
 
           {/* Two wisdom cards — side by side, compact */}
@@ -263,15 +263,15 @@ function NamasteBanner() {
             <WisdomCard
               origin="India"
               originColor="bg-amber-200 text-amber-900 border-amber-500"
-              verse="उत्तिष्ठत · जाग्रत · प्राप्य वरान्निबोधत"
-              translation="“Arise! Awake! And stop not until the goal is reached.”"
-              attribution="Kaṭha Upaniṣad · Vivekananda"
+              verse="उद्योगिनं पुरुषसिंहमुपैति लक्ष्मीः"
+              translation="“Fortune favours the diligent — never the timid who blame fate.”"
+              attribution="Chāṇakya · Hitopadeśa"
             />
             <WisdomCard
               origin="West"
               originColor="bg-blue-200 text-blue-900 border-blue-500"
-              translation="“The only thing we have to fear — is fear itself.”"
-              attribution="F. D. Roosevelt · 1933"
+              translation="“Do not save what is left after spending — spend what is left after saving.”"
+              attribution="Warren Buffett"
             />
           </div>
         </div>
