@@ -84,26 +84,9 @@ export function WelcomeMerged({ onStart }: Props) {
         <CornerOrnament className="absolute bottom-1.5 left-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-y-100" />
         <CornerOrnament className="absolute bottom-1.5 right-1.5 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-x-100 -scale-y-100" />
 
-      {/* ── 1. Hero (now first — moved above Namaste banner) ─────── */}
-      <header className="text-center mb-6 sm:mb-8 px-4 py-6 sm:px-6 sm:py-8 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
-        <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700 mb-2.5">
-          Indian Retirement Planner · Version 2.0
-        </div>
-        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extralight tracking-tight text-slate-900 leading-[1.05]">
-          Plan your retirement <em className="font-extrabold not-italic text-blue-700">with confidence.</em>
-        </h1>
-        <p className="mt-3 text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-          Four-bucket strategy · ten frameworks compared · Indian tax engine · Monte Carlo stress-tested.
-        </p>
-        <div className="mt-5 flex items-center justify-center gap-3">
-          <span className="h-px w-12 bg-amber-500/60" aria-hidden="true" />
-          <span className="text-amber-700 text-[10px]">◆</span>
-          <span className="h-px w-12 bg-amber-500/60" aria-hidden="true" />
-        </div>
-      </header>
-
-      {/* ── 2. Namaste banner (moved below Hero) ─────────────────── */}
+      {/* ── 1+2. MERGED: Hero prelude + Namaste banner in a single card ── */}
       <NamasteBanner />
+
 
       {/* ── 3. Three circular clusters ─────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center px-4 py-6 sm:px-6 sm:py-6 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
@@ -208,11 +191,10 @@ export function WelcomeMerged({ onStart }: Props) {
 // नमस्ते in serif. Three wisdom cards (India · West · World) speak to
 // the "big why" of retirement planning from different traditions.
 
-// Diptych-style banner: two folded panels joined by a temple divider.
-//  ┌──── medallion ────┐ │◇│ ┌──── content ────┐
-//  Eye-shaped left bay holds the Namaste figure; right bay carries the
-//  headline plus a tight 2-card wisdom row. Total height ~55% smaller
-//  than the centred stack.
+// Merged Hero + Namaste card: Hero prelude on top (centred, announces
+// the planner), followed by a thin amber divider, followed by the
+// existing temple-diptych (medallion left · headlines + wisdom right).
+// One frame, two related zones — replaces what used to be two cards.
 
 function NamasteBanner() {
   return (
@@ -221,18 +203,39 @@ function NamasteBanner() {
       style={{
         backgroundImage:
           'radial-gradient(circle at 20px 20px, rgba(217,119,6,0.10) 1.5px, transparent 2px),' +
-          'radial-gradient(ellipse 35% 80% at 18% 50%, rgba(251,191,36,0.32), transparent 70%),' +
+          'radial-gradient(ellipse 35% 80% at 18% 70%, rgba(251,191,36,0.30), transparent 70%),' +
           'linear-gradient(115deg, rgb(254,243,199) 0%, rgb(255,251,235) 45%, rgb(236,253,245) 100%)',
         backgroundSize: '40px 40px, 100% 100%, 100% 100%',
       }}
     >
-      {/* Corner mandala ornaments — slightly smaller, still strong contrast */}
+      {/* Corner mandala ornaments — frame the whole merged card */}
       <CornerOrnament className="absolute top-2 left-2 opacity-70 w-12 h-12 sm:w-14 sm:h-14" />
       <CornerOrnament className="absolute top-2 right-2 opacity-70 -scale-x-100 w-12 h-12 sm:w-14 sm:h-14" />
       <CornerOrnament className="absolute bottom-2 left-2 opacity-70 -scale-y-100 w-12 h-12 sm:w-14 sm:h-14" />
       <CornerOrnament className="absolute bottom-2 right-2 opacity-70 -scale-x-100 -scale-y-100 w-12 h-12 sm:w-14 sm:h-14" />
 
-      <div className="relative grid grid-cols-1 md:grid-cols-[220px_1px_1fr] lg:grid-cols-[240px_1px_1fr] gap-0 px-5 py-5 sm:px-7 sm:py-6">
+      {/* ── Hero prelude — centred, sets the promise ──────────── */}
+      <div className="relative text-center px-6 pt-5 pb-4 sm:px-10 sm:pt-7 sm:pb-5">
+        <div className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700 mb-2">
+          Indian Retirement Planner · Version 2.0
+        </div>
+        <h1 className="text-2xl sm:text-3xl lg:text-[2.5rem] font-extralight tracking-tight text-slate-900 leading-[1.08]">
+          Plan your retirement <em className="font-extrabold not-italic text-blue-700">with confidence.</em>
+        </h1>
+        <p className="mt-2 text-[12px] sm:text-[13px] text-slate-600 max-w-xl mx-auto leading-relaxed">
+          Four-bucket strategy · ten frameworks compared · Indian tax engine · Monte Carlo stress-tested.
+        </p>
+      </div>
+
+      {/* Soft divider between Hero prelude and Namaste diptych */}
+      <div className="relative flex items-center justify-center gap-3 px-6 sm:px-10" aria-hidden="true">
+        <span className="h-px flex-1 bg-gradient-to-r from-transparent via-amber-400/60 to-amber-400/60" />
+        <span className="text-amber-700 text-[10px] leading-none">◆</span>
+        <span className="h-px flex-1 bg-gradient-to-l from-transparent via-amber-400/60 to-amber-400/60" />
+      </div>
+
+      {/* ── Namaste diptych — existing structure ─────────────── */}
+      <div className="relative grid grid-cols-1 md:grid-cols-[220px_1px_1fr] lg:grid-cols-[240px_1px_1fr] gap-0 px-5 pt-4 pb-5 sm:px-7 sm:pt-5 sm:pb-6">
 
         {/* ── Left panel — medallion ───────────────────────────── */}
         <div className="flex flex-col items-center justify-center text-center px-1 py-2 md:py-1">
