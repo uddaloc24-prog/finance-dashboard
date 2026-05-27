@@ -25,18 +25,6 @@ interface Props {
   onStart?: () => void
 }
 
-const SECTIONS = [
-  { id: 'sec-mission',   label: 'Mission'   },
-  { id: 'sec-aboutyou',  label: 'About you' },
-  { id: 'sec-reality',   label: 'Reality'   },
-  { id: 'sec-phases',    label: 'Phases'    },
-  { id: 'sec-wisdom',    label: 'Wisdom'    },
-  { id: 'sec-mistakes',  label: 'Mistakes'  },
-  { id: 'sec-action',    label: 'Action'    },
-  { id: 'sec-reflection',label: 'Reflect'   },
-  { id: 'sec-setup',     label: 'Setup'     },
-]
-
 export function WelcomeMerged({ onStart }: Props) {
   const [identity, setIdentity] = useState<UserIdentity>(() =>
     storage.getIdentity() ?? {
@@ -47,6 +35,8 @@ export function WelcomeMerged({ onStart }: Props) {
     },
   )
   const [uploadOpen, setUploadOpen] = useState(false)
+  const [playbookOpen, setPlaybookOpen] = useState(false)
+  const [setupOpen, setSetupOpen] = useState(false)
 
   // Identity is OPTIONAL on the merged page (defaults to Anonymous if
   // blank). Auto-save every change so partial input survives a refresh.
@@ -75,13 +65,13 @@ export function WelcomeMerged({ onStart }: Props) {
   return (
     <div className="relative bg-gradient-to-br from-slate-50 via-white to-blue-50 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2">
 
-      {/* Top-right 3D Upload Plan button */}
-      <UploadPlanButton onClick={() => setUploadOpen(true)} />
+      {/* Top-right 3D action buttons — Playbook (modal) + Upload (modal) */}
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex items-center gap-2">
+        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
+        <UploadPlanButton onClick={() => setUploadOpen(true)} />
+      </div>
 
-      {/* Anchor mini-nav — scroll target shortcuts */}
-      <AnchorNav />
-
-      {/* ── 0. Welcome banner — Namaste · the big why · three traditions ── */}
+      {/* ── 0. Welcome banner — Namaste · the big why · two traditions ─ */}
       <NamasteBanner />
 
       {/* ── 1. Hero ────────────────────────────────────────────────── */}
@@ -130,11 +120,30 @@ export function WelcomeMerged({ onStart }: Props) {
         />
       </div>
 
-      {/* ── 3. About-you compact toolbar + CTA (action-first) ────── */}
-      <div id="sec-aboutyou" className="scroll-mt-20">
+      {/* ── 3. Merged Profile block — About-you toolbar + full Setup ── */}
+      <section className="mb-4">
         <IdentityForm identity={identity} onChange={setIdentity} />
-      </div>
 
+        {/* Full profile setup — collapsed by default to keep the CTA reachable */}
+        <button
+          type="button"
+          onClick={() => setSetupOpen((o) => !o)}
+          className="mt-1 inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[2px] text-amber-700 hover:text-amber-900 hover:bg-amber-50 rounded px-2 py-1 transition-colors"
+          aria-expanded={setupOpen}
+        >
+          <span className="text-base leading-none">{setupOpen ? '−' : '+'}</span>
+          <span>{setupOpen ? 'Hide full profile setup' : 'Full profile setup'}</span>
+          <span className="text-[9px] font-normal normal-case tracking-normal text-slate-500 italic">33 fields · 7 sections · auto-saved</span>
+        </button>
+
+        {setupOpen && (
+          <div className="mt-2 rounded-xl border-2 border-amber-200 bg-white shadow-sm overflow-hidden">
+            <SetupReplica />
+          </div>
+        )}
+      </section>
+
+      {/* ── 4. CTA — always reachable just below the toolbar ────── */}
       <div className="text-center mb-10">
         <Button onClick={start} className="!px-7 !py-3 !text-sm">
           Start planning →
@@ -142,20 +151,6 @@ export function WelcomeMerged({ onStart }: Props) {
         <p className="text-[10px] text-slate-500 mt-2.5">
           Free · No signup · Everything stays in your browser · Name defaults to "Anonymous" if blank
         </p>
-      </div>
-
-      {/* ── 4-8. Editorial sections (RetirementWelcome, hero suppressed) ── */}
-      <div id="sec-reality" className="scroll-mt-20" />
-      <RetirementWelcome hideHero={true} />
-
-      {/* Section anchors for the editorial body — RetirementWelcome
-          doesn't expose IDs, so we drop invisible markers near each
-          eyebrow when the anchor nav fires. */}
-      <ScrollAnchors />
-
-      {/* ── 9. Setup replica — full v10 Adaptive psychometric setup ── */}
-      <div id="sec-setup" className="scroll-mt-20">
-        <SetupReplica />
       </div>
 
       {/* Upload-plan modal */}
@@ -168,6 +163,18 @@ export function WelcomeMerged({ onStart }: Props) {
         onClose={() => setUploadOpen(false)}
       >
         <UploadSection />
+      </Modal>
+
+      {/* Playbook modal — Reality · Phases · Wisdom · Mistakes · Action · Reflect */}
+      <Modal
+        open={playbookOpen}
+        title="The Indian Retirement Playbook"
+        subtitle="Reality · Phases · Wisdom · Mistakes · Action · Reflect"
+        accent="amber"
+        size="4xl"
+        onClose={() => setPlaybookOpen(false)}
+      >
+        <RetirementWelcome hideHero={true} />
       </Modal>
     </div>
   )
@@ -315,36 +322,24 @@ function CornerOrnament({ className }: { className?: string }) {
   )
 }
 
-// ── Anchor mini-nav (top of page) ─────────────────────────────────────
+// ── Top-right 3D Playbook button ─────────────────────────────────────
 
-function AnchorNav() {
+function PlaybookButton({ onClick }: { onClick: () => void }) {
   return (
-    <nav className="sticky top-0 z-20 -mx-3 sm:-mx-4 px-3 sm:px-4 py-2 mb-4 bg-white/85 backdrop-blur border-b border-slate-200 overflow-x-auto">
-      <ul className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
-        {SECTIONS.map((s) => (
-          <li key={s.id}>
-            <a
-              href={`#${s.id}`}
-              className="inline-block px-2 py-1 rounded text-slate-600 hover:text-amber-700 hover:bg-amber-50 transition-colors"
-            >
-              {s.label}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
-  )
-}
-
-/** Invisible scroll-target markers for the editorial body. Positioned
- *  absolutely so they don't break RetirementWelcome's layout. */
-function ScrollAnchors() {
-  return (
-    <>
-      {(['sec-phases', 'sec-wisdom', 'sec-mistakes', 'sec-action', 'sec-reflection'] as const).map((id) => (
-        <span key={id} id={id} className="block scroll-mt-20" aria-hidden="true" />
-      ))}
-    </>
+    <button
+      type="button"
+      onClick={onClick}
+      title="Open the Indian Retirement Playbook — reality · phases · wisdom · mistakes · action · reflect"
+      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-b from-amber-300 via-amber-500 to-amber-700 hover:from-amber-200 hover:via-amber-400 hover:to-amber-600 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      style={{
+        boxShadow: '0 4px 0 0 rgb(120,53,15), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -1px 0 rgba(0,0,0,0.20)',
+        textShadow: '0 1px 1px rgba(0,0,0,0.40)',
+      }}
+    >
+      <span aria-hidden="true" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.35))' }}>🪔</span>
+      <span className="hidden sm:inline">Playbook</span>
+      <span className="sm:hidden">Read</span>
+    </button>
   )
 }
 
@@ -356,7 +351,7 @@ function UploadPlanButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       title="Upload an existing plan (.pdf · .docx · .json)"
-      className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-b from-indigo-400 via-indigo-600 to-indigo-800 hover:from-indigo-300 hover:via-indigo-500 hover:to-indigo-700 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 sm:px-3.5 sm:py-2 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-white bg-gradient-to-b from-indigo-400 via-indigo-600 to-indigo-800 hover:from-indigo-300 hover:via-indigo-500 hover:to-indigo-700 border border-black/15 select-none active:translate-y-[2px] transition-all"
       style={{
         boxShadow: '0 4px 0 0 rgb(49,46,129), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.20)',
         textShadow: '0 1px 1px rgba(0,0,0,0.40)',
