@@ -177,6 +177,20 @@ export function WelcomeMerged({ onStart, onNavigateTab }: Props) {
 
       </div>{/* /bordered inner frame */}
 
+      {/* ── Hard reset (stuck on old version) ─────────────────────── */}
+      <section className="relative z-10 mt-5 pt-4 border-t border-slate-200 text-center">
+        <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-500 mb-2">
+          Stuck on an old version?
+        </div>
+        <p className="text-[11px] text-slate-600 max-w-md mx-auto leading-relaxed mb-3">
+          Clears the service-worker cache, the offline asset bundle, and your locally-saved inputs, then reloads from the server.
+        </p>
+        <ResetButton />
+        <p className="text-[10px] text-amber-700 mt-2 italic">
+          Tip: only use this if the page seems stale even after a refresh.
+        </p>
+      </section>
+
       {/* Upload-plan modal */}
       <Modal
         open={uploadOpen}
@@ -439,6 +453,53 @@ function UploadPlanButton({ onClick }: { onClick: () => void }) {
     >
       <span aria-hidden="true" className="text-[11px] leading-none">📂</span>
       <span>Upload</span>
+    </button>
+  )
+}
+
+// ── Hard reset · clears PWA cache + service worker + storage ─────────
+
+async function hardReset() {
+  if (!window.confirm(
+    'Reset the app?\n\nThis will:\n• Unregister the service worker\n• Delete all cached files\n• Clear your locally-saved inputs (corpus, profile, etc.)\n\nThe page will then reload from the server.'
+  )) return
+
+  // Best-effort — keep going if any step fails.
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+  } catch { /* ignore */ }
+  try {
+    if ('caches' in window) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+  } catch { /* ignore */ }
+  try { window.localStorage.clear() }   catch { /* ignore */ }
+  try { window.sessionStorage.clear() } catch { /* ignore */ }
+
+  // Hard-reload with a cache-buster — the URL change forces the browser
+  // to bypass any in-flight HTTP cache and re-fetch index.html.
+  const sep = window.location.pathname.includes('?') ? '&' : '?'
+  window.location.replace(window.location.pathname + sep + '_=' + Date.now())
+}
+
+function ResetButton() {
+  return (
+    <button
+      type="button"
+      onClick={hardReset}
+      title="Clear the PWA cache, service worker, and locally-saved inputs"
+      className="inline-flex items-center gap-1.5 rounded-md px-3.5 py-2 text-[11px] font-bold uppercase tracking-[1.5px] text-white bg-gradient-to-b from-rose-400 via-rose-600 to-rose-800 hover:from-rose-300 hover:via-rose-500 hover:to-rose-700 border border-black/15 select-none active:translate-y-[1px] transition-all"
+      style={{
+        boxShadow: '0 3px 0 0 rgb(136,19,55), 0 6px 10px -3px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.50)',
+        textShadow: '0 1px 1px rgba(0,0,0,0.40)',
+      }}
+    >
+      <span aria-hidden="true" className="text-[13px] leading-none">↻</span>
+      <span>Reset · Clear cache &amp; reload</span>
     </button>
   )
 }
