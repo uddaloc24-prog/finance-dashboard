@@ -17,15 +17,19 @@ import { Modal } from './ui/Modal'
 import { UploadSection } from './UploadSection'
 import { SetupReplica } from './SetupReplica'
 import { PlaybookFlipBook } from './PlaybookFlipBook'
+import { GuideFlipBook } from './GuideFlipBook'
 
 interface Props {
   /** Fires when "Start planning →" is clicked. The parent (Dashboard)
    *  flips activeTab to 'plan' and persists getWelcomeSeen so this
    *  tab isn't auto-opened on subsequent launches. */
   onStart?: () => void
+  /** Switch Dashboard's active tab from inside the Guide-book modal.
+   *  Optional — pages render without action buttons if not provided. */
+  onNavigateTab?: (tab: string) => void
 }
 
-export function WelcomeMerged({ onStart }: Props) {
+export function WelcomeMerged({ onStart, onNavigateTab }: Props) {
   const [identity, setIdentity] = useState<UserIdentity>(() =>
     storage.getIdentity() ?? {
       fullName: '', email: '', phone: '', dateOfBirth: '', panCard: '',
@@ -36,6 +40,7 @@ export function WelcomeMerged({ onStart }: Props) {
   )
   const [uploadOpen, setUploadOpen] = useState(false)
   const [playbookOpen, setPlaybookOpen] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(false)
   const [setupOpen, setSetupOpen] = useState(false)
 
   // Identity is OPTIONAL on the merged page (defaults to Anonymous if
@@ -87,44 +92,59 @@ export function WelcomeMerged({ onStart }: Props) {
       {/* ── 1+2. MERGED: Hero prelude + Namaste banner in a single card ── */}
       <NamasteBanner />
 
+      {/* ── 3. Three circular clusters — with elegant header + Playbook button ── */}
+      <section className="relative mb-3 px-4 pt-5 pb-6 sm:px-6 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
 
-      {/* ── 2.5. Action strip — Playbook + Upload, right-aligned, above clusters ─── */}
-      <div className="flex justify-end items-center gap-2 mb-3">
-        <PlaybookButton onClick={() => setPlaybookOpen(true)} />
-        <UploadPlanButton onClick={() => setUploadOpen(true)} />
-      </div>
+        {/* Guide + Playbook buttons — top-right of this block */}
+        <div className="absolute top-2.5 right-2.5 z-10 flex items-center gap-1.5">
+          <GuideButton onClick={() => setGuideOpen(true)} />
+          <PlaybookButton onClick={() => setPlaybookOpen(true)} />
+        </div>
 
-      {/* ── 3. Three circular clusters ─────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 mb-3 justify-items-center px-4 py-6 sm:px-6 sm:py-6 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
-        <CircleCluster
-          theme="navy" hubLabel="The Offer" hubTag="01·02·03"
-          satellites={[
-            { num: '01', title: 'Plan with confidence', tag: 'Mission',     body: 'A guided four-bucket withdrawal model — defensible, not a guess.' },
-            { num: '02', title: '10 strategies · 5 profiles', tag: 'At a glance', body: '200 Monte Carlo paths · FY 24-25 Indian tax engine.' },
-            { num: '03', title: '5 min',                tag: 'Time',        body: 'From corpus inputs to a downloadable take-home PDF.' },
-          ]}
-        />
-        <CircleCluster
-          theme="amber" hubLabel="The Challenge" hubTag="04·05·06"
-          satellites={[
-            { num: '04', title: 'Inflation',     tag: 'Erosion',     body: 'General 6.5% · healthcare 10% · education 12% — eats real purchasing power.' },
-            { num: '05', title: 'Indian tax',    tag: 'Vehicle drag', body: 'Debt MFs at slab; equity LTCG only above ₹1.25L. The vehicle matters.' },
-            { num: '06', title: 'Sequence risk', tag: 'Timing',      body: 'A year-5 crash permanently impairs even a "well-funded" plan.' },
-          ]}
-        />
-        <CircleCluster
-          theme="green" hubLabel="The Answer" hubTag="07·08·09"
-          satellites={[
-            { num: '07', title: 'Four buckets', tag: 'B1·B2·B3·B4', body: '10 / 20 / 25 / 45 split — staged liquidity, debt, hybrid, growth.' },
-            { num: '08', title: 'Guardrails',   tag: 'Safety net',  body: 'Skip equity sales in down years · freeze inflation below 85% · cut 10% below 70%.' },
-            { num: '09', title: 'Your verdict', tag: 'PDF report',  body: 'Personalised PDF with TOC, page borders, and your name on every page.' },
-          ]}
-        />
-      </div>
+        {/* Elegant cluster header */}
+        <header className="text-center mb-4 px-12 sm:px-16">
+          <div className="text-[9.5px] font-bold tracking-[4px] uppercase text-amber-700 mb-1">The Three Pillars · Nine Dimensions</div>
+          <h2 className="font-serif text-base sm:text-lg font-extrabold tracking-tight text-slate-900 leading-tight">
+            Offer <span className="mx-1.5 text-amber-400">·</span> Challenge <span className="mx-1.5 text-amber-400">·</span> Answer
+          </h2>
+          <div className="mt-1.5 flex items-center justify-center gap-2" aria-hidden="true">
+            <span className="h-px w-12 bg-amber-400/60" />
+            <span className="text-amber-700 text-[8px]">◆</span>
+            <span className="h-px w-12 bg-amber-400/60" />
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-3 justify-items-center">
+          <CircleCluster
+            theme="navy" hubLabel="The Offer" hubTag="01·02·03"
+            satellites={[
+              { num: '01', title: 'Plan with confidence', tag: 'Mission',     body: 'A guided four-bucket withdrawal model — defensible, not a guess.' },
+              { num: '02', title: '10 strategies · 5 profiles', tag: 'At a glance', body: '200 Monte Carlo paths · FY 24-25 Indian tax engine.' },
+              { num: '03', title: '5 min',                tag: 'Time',        body: 'From corpus inputs to a downloadable take-home PDF.' },
+            ]}
+          />
+          <CircleCluster
+            theme="amber" hubLabel="The Challenge" hubTag="04·05·06"
+            satellites={[
+              { num: '04', title: 'Inflation',     tag: 'Erosion',     body: 'General 6.5% · healthcare 10% · education 12% — eats real purchasing power.' },
+              { num: '05', title: 'Indian tax',    tag: 'Vehicle drag', body: 'Debt MFs at slab; equity LTCG only above ₹1.25L. The vehicle matters.' },
+              { num: '06', title: 'Sequence risk', tag: 'Timing',      body: 'A year-5 crash permanently impairs even a "well-funded" plan.' },
+            ]}
+          />
+          <CircleCluster
+            theme="green" hubLabel="The Answer" hubTag="07·08·09"
+            satellites={[
+              { num: '07', title: 'Four buckets', tag: 'B1·B2·B3·B4', body: '10 / 20 / 25 / 45 split — staged liquidity, debt, hybrid, growth.' },
+              { num: '08', title: 'Guardrails',   tag: 'Safety net',  body: 'Skip equity sales in down years · freeze inflation below 85% · cut 10% below 70%.' },
+              { num: '09', title: 'Your verdict', tag: 'PDF report',  body: 'Personalised PDF with TOC, page borders, and your name on every page.' },
+            ]}
+          />
+        </div>
+      </section>
 
       {/* ── 5. Merged Profile block — About-you toolbar + full Setup ── */}
       <section className="mb-4 px-4 py-4 sm:px-5 sm:py-5 rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-white/90 shadow-md">
-        <IdentityForm identity={identity} onChange={setIdentity} />
+        <IdentityForm identity={identity} onChange={setIdentity} onUpload={() => setUploadOpen(true)} />
 
         {/* Full profile setup — collapsed by default to keep the CTA reachable */}
         <button
@@ -179,6 +199,23 @@ export function WelcomeMerged({ onStart }: Props) {
         onClose={() => setPlaybookOpen(false)}
       >
         <PlaybookFlipBook />
+      </Modal>
+
+      {/* Guide modal — How-to-Use planner as a page-flipping book */}
+      <Modal
+        open={guideOpen}
+        title="How to Use the Planner"
+        subtitle="Five steps · one tab at a time — turn the pages"
+        accent="navy"
+        size="5xl"
+        onClose={() => setGuideOpen(false)}
+      >
+        <GuideFlipBook
+          onNavigate={(tab) => {
+            setGuideOpen(false)
+            onNavigateTab?.(tab)
+          }}
+        />
       </Modal>
     </div>
   )
@@ -366,6 +403,26 @@ function PlaybookButton({ onClick }: { onClick: () => void }) {
   )
 }
 
+// ── Top-right 3D Guide button ─────────────────────────────────────────
+
+function GuideButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="Open the planner's guide — five steps to using each tab"
+      className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[1.5px] text-white bg-gradient-to-b from-blue-400 via-blue-600 to-blue-800 hover:from-blue-300 hover:via-blue-500 hover:to-blue-700 border border-black/15 select-none active:translate-y-[1px] transition-all"
+      style={{
+        boxShadow: '0 2px 0 0 rgb(30,58,138), 0 4px 8px -3px rgba(15,23,42,0.35), inset 0 1px 0 rgba(255,255,255,0.50)',
+        textShadow: '0 1px 1px rgba(0,0,0,0.40)',
+      }}
+    >
+      <span aria-hidden="true" className="text-[11px] leading-none">📖</span>
+      <span>Guide</span>
+    </button>
+  )
+}
+
 // ── Top-right 3D Upload Plan button ───────────────────────────────────
 
 function UploadPlanButton({ onClick }: { onClick: () => void }) {
@@ -459,9 +516,9 @@ function CircleNode({ tone, sat }: { tone: ToneSpec; sat: Satellite }) {
 
 // ── Compact identity form (copied from WelcomePage) ───────────────────
 
-interface IdentityFormProps { identity: UserIdentity; onChange: (n: UserIdentity) => void }
+interface IdentityFormProps { identity: UserIdentity; onChange: (n: UserIdentity) => void; onUpload?: () => void }
 
-function IdentityForm({ identity, onChange }: IdentityFormProps) {
+function IdentityForm({ identity, onChange, onUpload }: IdentityFormProps) {
   const [moreOpen, setMoreOpen] = useState(false)
   const set = (patch: Partial<UserIdentity>) => onChange({ ...identity, ...patch })
   const setAddr = (patch: Partial<NonNullable<UserIdentity['address']>>) =>
@@ -477,12 +534,19 @@ function IdentityForm({ identity, onChange }: IdentityFormProps) {
     (identity.address?.city ? 1 : 0)
 
   return (
-    <section className="bg-white rounded-lg border border-slate-200 ring-1 ring-inset ring-slate-50 px-3 py-2.5 mb-3 shadow-sm">
-      <div className="flex items-center gap-2 mb-2">
+    <section className="relative bg-white rounded-lg border border-slate-200 ring-1 ring-inset ring-slate-50 px-3 py-2.5 mb-3 shadow-sm">
+      <div className="flex items-center gap-2 mb-2 pr-20 sm:pr-24">
         <span className="text-[10px] font-bold tracking-[2.5px] uppercase text-amber-700 shrink-0">About you</span>
         <span className="h-px flex-1 bg-gradient-to-r from-amber-300/60 to-transparent" aria-hidden="true" />
         <span className="text-[9px] text-slate-500 italic shrink-0">optional · stays in your browser</span>
       </div>
+
+      {/* Upload button — top-right of the About-you box */}
+      {onUpload && (
+        <div className="absolute top-1.5 right-1.5">
+          <UploadPlanButton onClick={onUpload} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1.4fr_1fr_1fr] gap-2">
         <CompactField label="Name">

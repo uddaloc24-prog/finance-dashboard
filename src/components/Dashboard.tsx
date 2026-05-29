@@ -53,7 +53,7 @@ const MonteCarloPanel = lazy(() => import('./montecarlo/MonteCarloPanel').then(m
 const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.TaxPanel })))
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
 const InsightsPage = lazy(() => import('./InsightsPage').then(m => ({ default: m.InsightsPage })))
-const HowToUsePage = lazy(() => import('./HowToUsePage').then(m => ({ default: m.HowToUsePage })))
+const GuideFlipBook = lazy(() => import('./GuideFlipBook').then(m => ({ default: m.GuideFlipBook })))
 
 function TabLoading() {
   return (
@@ -216,19 +216,25 @@ export function Dashboard({
 
         {activeTab === 'welcome' && (
           <div role="tabpanel" id="tabpanel-welcome" aria-labelledby="tab-welcome" className="space-y-3">
-            <WelcomeMerged onStart={() => {
-              storage.setWelcomeSeen(true)
-              storage.setHasLaunched(true)
-              storage.setLastWelcomed(new Date().toISOString())
-              setActiveTab('plan')
-            }} />
+            <WelcomeMerged
+              onStart={() => {
+                storage.setWelcomeSeen(true)
+                storage.setHasLaunched(true)
+                storage.setLastWelcomed(new Date().toISOString())
+                setActiveTab('plan')
+              }}
+              onNavigateTab={(t) => {
+                storage.setGuideSeen(true)
+                setActiveTab(t as TabId)
+              }}
+            />
           </div>
         )}
 
         {activeTab === 'guide' && (
           <div role="tabpanel" id="tabpanel-guide" aria-labelledby="tab-guide" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
-              <HowToUsePage onDone={(t) => {
+              <GuideFlipBook onNavigate={(t) => {
                 storage.setGuideSeen(true)
                 setActiveTab(t as TabId)
               }} />
