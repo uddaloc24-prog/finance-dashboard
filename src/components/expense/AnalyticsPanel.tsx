@@ -29,21 +29,39 @@ function todayYM(): string {
 }
 
 export function AnalyticsPanel({ profile, accounts, categories, transactions }: Props) {
-  const [yearMonth, setYearMonth] = useState(todayYM())
+  const [yearMonth,      setYearMonth]      = useState(todayYM())
+  const [drillParentId,  setDrillParentId]  = useState<string>('')
+
+  // Drill filter — narrow transactions to those in the drilled parent's
+  // descendant categories (and bare leaves if the drill points at one).
+  const drillFilteredTxns = useMemo(() => {
+    if (!drillParentId) return transactions
+    const drillCat = categories.find((c) => c.id === drillParentId)
+    if (!drillCat) return transactions
+    // Parent → match transactions whose category's parentId === drillParentId
+    if (drillCat.parentId === null) {
+      const childIds = new Set(
+        categories.filter((c) => c.parentId === drillParentId).map((c) => c.id),
+      )
+      return transactions.filter((t) => t.categoryId && childIds.has(t.categoryId))
+    }
+    // Leaf — direct id match.
+    return transactions.filter((t) => t.categoryId === drillParentId)
+  }, [transactions, categories, drillParentId])
 
   const summary = useMemo(
-    () => monthlySummary(transactions, categories, accounts, yearMonth),
-    [transactions, categories, accounts, yearMonth],
+    () => monthlySummary(drillFilteredTxns, categories, accounts, yearMonth),
+    [drillFilteredTxns, categories, accounts, yearMonth],
   )
 
   const trend = useMemo(
-    () => trends(transactions, categories, 6, new Date(`${yearMonth}-01`)),
-    [transactions, categories, yearMonth],
+    () => trends(drillFilteredTxns, categories, 6, new Date(`${yearMonth}-01`)),
+    [drillFilteredTxns, categories, yearMonth],
   )
 
   const recon = useMemo(
-    () => reconcileWithBudget(transactions, categories, profile.expenses?.breakdown, yearMonth),
-    [transactions, categories, profile, yearMonth],
+    () => reconcileWithBudget(drillFilteredTxns, categories, profile.expenses?.breakdown, yearMonth),
+    [drillFilteredTxns, categories, profile, yearMonth],
   )
 
   const narrative = useMemo(
@@ -51,20 +69,43 @@ export function AnalyticsPanel({ profile, accounts, categories, transactions }: 
     [summary, recon],
   )
 
+  // Parents only for the drill picker.
+  const drillParents = useMemo(
+    () => categories.filter((c) => c.parentId === null && c.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
+    [categories],
+  )
+
   return (
     <section className="rounded-lg border-2 border-slate-200 bg-white">
-      {/* Header + month picker */}
+      {/* Header + month picker + drill */}
       <div className="flex items-baseline justify-between gap-3 px-4 py-3 border-b border-slate-200 flex-wrap">
         <div>
           <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">Analytics</div>
-          <h3 className="font-serif text-base font-extrabold text-slate-900">Month at a glance.</h3>
+          <h3 className="font-serif text-base font-extrabold text-slate-900">
+            {drillParentId
+              ? `${drillParents.find((p) => p.id === drillParentId)?.name ?? 'Group'} at a glance.`
+              : 'Month at a glance.'}
+          </h3>
         </div>
-        <input
-          type="month"
-          value={yearMonth}
-          onChange={(e) => setYearMonth(e.target.value)}
-          className="bg-white border border-slate-300 rounded px-2 py-1 text-[12px] focus:outline-none focus:border-teal-500"
-        />
+        <div className="flex items-baseline gap-2 flex-wrap">
+          <label className="text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-500">
+            Drill into
+            <select
+              value={drillParentId}
+              onChange={(e) => setDrillParentId(e.target.value)}
+              className="ml-1 bg-white border border-slate-300 rounded px-1.5 py-0.5 text-[11.5px] normal-case font-normal tracking-normal focus:outline-none focus:border-teal-500"
+            >
+              <option value="">All categories</option>
+              {drillParents.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </label>
+          <input
+            type="month"
+            value={yearMonth}
+            onChange={(e) => setYearMonth(e.target.value)}
+            className="bg-white border border-slate-300 rounded px-2 py-1 text-[12px] focus:outline-none focus:border-teal-500"
+          />
+        </div>
       </div>
 
       <div className="p-4 space-y-3">
@@ -74,6 +115,7 @@ export function AnalyticsPanel({ profile, accounts, categories, transactions }: 
           transactions={transactions}
           categories={categories}
           yearMonth={yearMonth}
+          drillParentId={drillParentId || undefined}
         />
 
         {/* Templated narrative */}

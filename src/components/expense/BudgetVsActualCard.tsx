@@ -16,6 +16,8 @@ interface Props {
   transactions: Transaction[]
   categories: Category[]
   yearMonth: string                      // YYYY-MM
+  /** Optional drill — when set, only rows whose parent matches are shown. */
+  drillParentId?: string
 }
 
 function fmtINR(n: number): string {
@@ -26,12 +28,38 @@ function fmtINR(n: number): string {
   return `₹${Math.round(abs)}`
 }
 
-export function BudgetVsActualCard({ profile, transactions, categories, yearMonth }: Props) {
+export function BudgetVsActualCard({ profile, transactions, categories, yearMonth, drillParentId }: Props) {
   const breakdown = profile.expenses?.breakdown
-  const recon = useMemo(
+  const reconRaw = useMemo(
     () => reconcileWithBudget(transactions, categories, breakdown, yearMonth),
     [transactions, categories, breakdown, yearMonth],
   )
+
+  // Apply optional drill — narrow rows + recompute totals + top-3 lists.
+  const recon = useMemo(() => {
+    if (!drillParentId) return reconRaw
+    const parent = categories.find((c) => c.id === drillParentId)
+    if (!parent) return reconRaw
+    const rows = reconRaw.rows.filter((r) => r.groupName === parent.name)
+    const budgeted = rows.reduce((s, r) => s + r.budgetedMonthly, 0)
+    const actual   = rows.reduce((s, r) => s + r.actualMtd, 0)
+    const overshoots = rows.filter((r) => r.status === 'over').length
+    const unders     = rows.filter((r) => r.status === 'under' && r.budgetedMonthly > 0).length
+    let weightedOver = 0
+    for (const r of rows) weightedOver += Math.max(0, r.actualMtd - r.budgetedMonthly)
+    const score = budgeted > 0 ? Math.max(0, Math.min(1, 1 - weightedOver / budgeted)) : 0
+    const sorted = [...rows].sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    return {
+      yearMonth: reconRaw.yearMonth,
+      rows,
+      totals: {
+        budgeted, actual, delta: actual - budgeted,
+        disciplineScore: score, overshootCount: overshoots, underCount: unders,
+      },
+      topOvershoots: sorted.filter((r) => r.status === 'over').slice(0, 3),
+      topUnderSpends: sorted.filter((r) => r.status === 'under' && r.budgetedMonthly > 0).slice(0, 3),
+    }
+  }, [reconRaw, drillParentId, categories])
 
   if (!breakdown || recon.totals.budgeted <= 0) {
     return (
