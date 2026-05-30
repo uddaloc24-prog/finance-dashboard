@@ -217,6 +217,7 @@ export const TAB_ITEMS = [
   { id: 'welcome', label: 'Welcome', icon: '🙏' },
   { id: 'guide', label: 'Guide', icon: '📖' },
   { id: 'plan', label: 'Plan', icon: '📋' },
+  { id: 'expense', label: 'Expense', icon: '💸' },
   { id: 'profiles', label: 'Profile', icon: '👤' },
   { id: 'engine', label: 'Engine', icon: '⚗️' },
   { id: 'strategies', label: 'Compare', icon: '⚖️' },
@@ -226,7 +227,6 @@ export const TAB_ITEMS = [
   { id: 'tax', label: 'Tax', icon: '🧾' },
   { id: 'insights', label: 'Insights', icon: '◆' },
   { id: 'ai', label: 'AI', icon: '🤖' },
-  { id: 'expense', label: 'Expense', icon: '💸' },
 ] as const
 
 export type TabId = typeof TAB_ITEMS[number]['id']

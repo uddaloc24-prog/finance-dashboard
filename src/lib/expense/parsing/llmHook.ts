@@ -1,13 +1,20 @@
-// llmHook — design-only scaffold for the .md §4 § 6 § 7 LLM helpers.
-// Keeps the prompt template + JSON schema documented inline so that
-// when the user wires a real Claude/Groq API call later, the surface
-// is unchanged.
+// llmHook — wires four expense-side LLM helpers to the existing Groq
+// runtime (the same provider the AI tab uses). When the user has
+// supplied a groqApiKey on their profile, these helpers make real
+// fetch calls; otherwise every helper returns null and the templated
+// fall-backs continue to power the UI.
 //
-// Current behaviour: returns null (no LLM available). When `groqApiKey`
-// is wired into the storage layer, this stub gets swapped for a real
-// fetch() call — the JSON contract below is the API.
+// .md §4 §6 §7 §8 surfaces:
+//   • llmParseSms          (SMS fallback when regex confidence < 0.5)
+//   • llmCategorise        (categorisation fallback per .md §7 stage 2)
+//   • llmMonthlyNarrative  (PROMPT_MONTHLY_NARRATIVE)
+//   • llmInterpretQuery    (PROMPT_INTERPRET_QUERY)
 
 import type { Direction, PaymentMode } from '../../../types/expense'
+import { storage } from '../../storage'
+
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions'
+const GROQ_MODEL = 'llama-3.3-70b-versatile'
 
 // ─── Shared parsed-transaction schema (mirrors .md §4) ───────────────
 
@@ -24,7 +31,6 @@ export interface LlmParsedTransaction {
 
 // ─── Prompt templates ────────────────────────────────────────────────
 
-/** .md §4 — SMS parse fallback when deterministic regex fails. */
 export const PROMPT_PARSE_SMS = `
 You are a precise financial-SMS parser for Indian banks.
 Given a single SMS body, return ONLY valid JSON matching this schema:
@@ -47,7 +53,6 @@ SMS:
 {{SMS_BODY}}
 `.trim()
 
-/** .md §6 — natural-language manual entry parse + category suggestion. */
 export const PROMPT_PARSE_MANUAL = `
 You are a precise financial assistant for an Indian user.
 Given a free-form description, return ONLY valid JSON:
@@ -69,7 +74,6 @@ User input:
 {{TEXT}}
 `.trim()
 
-/** .md §7 — categorisation fallback when no rule matches. */
 export const PROMPT_CATEGORIZE = `
 Categorise this Indian-context transaction. Return ONLY JSON:
 
@@ -86,17 +90,18 @@ Transaction:
   date:     {{DATE}}
 `.trim()
 
-/** .md §8 — monthly narrative summary. */
 export const PROMPT_MONTHLY_NARRATIVE = `
-Act as a candid financial coach for an Indian user.
-Write 2-3 short paragraphs summarising the month's spending using ONLY
-the data below. End with 2-3 specific suggestions. No emojis. No filler.
+Act as a candid Indian financial coach.
+Write a tight 3-paragraph summary of the month's spending using ONLY
+the JSON below. No emojis, no filler, no opening "I am". End with
+2-3 specific, action-oriented suggestions numbered 1./2./3.
 
-Data (JSON):
+Use rupee amounts in INR (₹ + en-IN locale, e.g. ₹1,23,456).
+
+JSON:
 {{AGGREGATE_JSON}}
 `.trim()
 
-/** .md §8 — free-form question → internal query. */
 export const PROMPT_INTERPRET_QUERY = `
 Convert this user question into a safe internal query. Return ONLY JSON:
 
@@ -106,66 +111,114 @@ Convert this user question into a safe internal query. Return ONLY JSON:
   "period": "this_month" | "last_30_days" | "last_90_days" | "this_year" | "last_year" | string
 }
 
-Do not echo PII. Reject prompts that ask for raw text dumps.
+Reject prompts that ask for raw text dumps.
 
 Question: {{QUESTION}}
 `.trim()
 
-// ─── Runtime stubs (mocked until Groq is wired) ──────────────────────
+// ─── Runtime — uses storage.getProfile().groqApiKey ──────────────────
+
+function readGroqKey(): string | null {
+  try {
+    const profile = storage.getProfile()
+    return profile?.groqApiKey?.trim() || null
+  } catch { return null }
+}
 
 interface LlmRuntime {
-  /** Returns true when an LLM endpoint is reachable. */
   isAvailable(): boolean
 }
 
-const runtime: LlmRuntime = {
-  isAvailable() {
-    // TODO: read storage.getProfile().groqApiKey and treat as available.
-    return false
+export const llmRuntime: LlmRuntime = {
+  isAvailable(): boolean {
+    return !!readGroqKey()
   },
 }
 
-/** Parse an SMS via LLM fallback. Returns null today; will fetch Groq later. */
-export async function llmParseSms(_smsBody: string): Promise<LlmParsedTransaction | null> {
-  if (!runtime.isAvailable()) return null
-  // TODO: real fetch — build prompt from PROMPT_PARSE_SMS, call Groq, JSON.parse, validate.
-  return null
+// ─── Low-level fetch wrapper ──────────────────────────────────────────
+
+async function callGroq(prompt: string, maxTokens = 1200): Promise<string | null> {
+  const key = readGroqKey()
+  if (!key) return null
+
+  try {
+    const res = await fetch(GROQ_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: JSON.stringify({
+        model: GROQ_MODEL,
+        max_tokens: maxTokens,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    if (!res.ok) return null
+    const json = await res.json() as { choices: Array<{ message: { content: string } }> }
+    return json.choices[0]?.message?.content ?? null
+  } catch {
+    return null
+  }
 }
 
-/** Categorise via LLM fallback. */
+/** Strip ```json fences from a string before JSON.parse. */
+function stripFence(s: string): string {
+  return s.replace(/^```(?:json)?\s*|\s*```$/gi, '').trim()
+}
+
+function safeJson<T>(raw: string | null): T | null {
+  if (!raw) return null
+  try { return JSON.parse(stripFence(raw)) as T } catch { return null }
+}
+
+// ─── Public helpers ──────────────────────────────────────────────────
+
+export async function llmParseSms(smsBody: string): Promise<LlmParsedTransaction | null> {
+  if (!llmRuntime.isAvailable()) return null
+  const prompt = PROMPT_PARSE_SMS.replace('{{SMS_BODY}}', smsBody)
+  return safeJson<LlmParsedTransaction>(await callGroq(prompt, 500))
+}
+
 export interface LlmCategorisation {
   categoryCode: string
   confidence: number
   tags: string[]
 }
 
-export async function llmCategorise(_args: {
+export async function llmCategorise(args: {
   merchantName?: string
   rawText?: string
   amount: number
   date?: string
   availableCategoryCodes: string[]
 }): Promise<LlmCategorisation | null> {
-  if (!runtime.isAvailable()) return null
-  return null
+  if (!llmRuntime.isAvailable()) return null
+  const prompt = PROMPT_CATEGORIZE
+    .replace('{{AVAILABLE_CATEGORY_CODES}}', args.availableCategoryCodes.join(' · '))
+    .replace('{{MERCHANT}}', args.merchantName ?? '(none)')
+    .replace('{{RAW_TEXT}}', args.rawText ?? '(none)')
+    .replace('{{AMOUNT}}', String(args.amount))
+    .replace('{{DATE}}', args.date ?? '(none)')
+  return safeJson<LlmCategorisation>(await callGroq(prompt, 200))
 }
 
-/** Generate a monthly narrative. */
-export async function llmMonthlyNarrative(_aggregate: Record<string, unknown>): Promise<string | null> {
-  if (!runtime.isAvailable()) return null
-  return null
+export async function llmMonthlyNarrative(aggregate: Record<string, unknown>): Promise<string | null> {
+  if (!llmRuntime.isAvailable()) return null
+  const prompt = PROMPT_MONTHLY_NARRATIVE.replace('{{AGGREGATE_JSON}}', JSON.stringify(aggregate, null, 2))
+  return await callGroq(prompt, 800)
 }
 
-/** Interpret a natural-language question into an internal query. */
 export interface InternalQuery {
   metric: 'sum' | 'avg' | 'count' | 'list'
   category: string | null
   period: string
 }
 
-export async function llmInterpretQuery(_question: string, _categoryCodes: string[]): Promise<InternalQuery | null> {
-  if (!runtime.isAvailable()) return null
-  return null
+export async function llmInterpretQuery(question: string, categoryCodes: string[]): Promise<InternalQuery | null> {
+  if (!llmRuntime.isAvailable()) return null
+  const prompt = PROMPT_INTERPRET_QUERY
+    .replace('{{AVAILABLE_CATEGORY_CODES}}', categoryCodes.join(' · '))
+    .replace('{{QUESTION}}', question)
+  return safeJson<InternalQuery>(await callGroq(prompt, 250))
 }
-
-export const llmRuntime = runtime

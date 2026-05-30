@@ -1,12 +1,13 @@
 // AnalyticsPanel — month picker + KPIs + category/payment breakdown +
 // 6-month trend + templated narrative.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { Account, Category, Transaction } from '../../types/expense'
 import type { UserProfile } from '../../types'
 import { monthlySummary, trends } from '../../lib/expense/analytics'
 import { reconcileWithBudget } from '../../lib/expense/budgetReconciler'
 import { buildTemplatedNarrative } from '../../lib/expense/narrative'
+import { llmMonthlyNarrative, llmRuntime } from '../../lib/expense/parsing/llmHook'
 import { BudgetVsActualCard } from './BudgetVsActualCard'
 
 interface Props {
@@ -69,6 +70,47 @@ export function AnalyticsPanel({ profile, accounts, categories, transactions }: 
     [summary, recon],
   )
 
+  // ── AI narrative — opt-in, requires profile.groqApiKey ────────────
+  const [aiNarrative, setAiNarrative] = useState<string | null>(null)
+  const [aiLoading,   setAiLoading]   = useState(false)
+  const [aiError,     setAiError]     = useState<string | null>(null)
+  const aiAvailable = llmRuntime.isAvailable()
+
+  // Reset AI output when the underlying month / drill changes.
+  useEffect(() => {
+    setAiNarrative(null)
+    setAiError(null)
+  }, [yearMonth, drillParentId, summary.totals.count])
+
+  async function fetchAiNarrative() {
+    setAiLoading(true)
+    setAiError(null)
+    try {
+      const aggregate = {
+        yearMonth: summary.yearMonth,
+        totals:    summary.totals,
+        byCategoryType: summary.byCategoryType,
+        topCategories:  summary.topCategories,
+        byPaymentMode:  summary.byPaymentMode,
+        budgetVsActual: recon.totals.budgeted > 0 ? {
+          budgeted: recon.totals.budgeted,
+          actual:   recon.totals.actual,
+          delta:    recon.totals.delta,
+          disciplineScore: recon.totals.disciplineScore,
+          topOvershoots:   recon.topOvershoots.map((r) => ({ category: r.categoryName, delta: r.delta })),
+          topUnderSpends:  recon.topUnderSpends.map((r) => ({ category: r.categoryName, delta: r.delta })),
+        } : null,
+      }
+      const out = await llmMonthlyNarrative(aggregate)
+      if (out) setAiNarrative(out)
+      else     setAiError('No response — check your Groq key or try again.')
+    } catch (e) {
+      setAiError(e instanceof Error ? e.message : 'AI call failed.')
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
   // Parents only for the drill picker.
   const drillParents = useMemo(
     () => categories.filter((c) => c.parentId === null && c.isActive).sort((a, b) => a.sortOrder - b.sortOrder),
@@ -118,11 +160,46 @@ export function AnalyticsPanel({ profile, accounts, categories, transactions }: 
           drillParentId={drillParentId || undefined}
         />
 
-        {/* Templated narrative */}
+        {/* Narrative — AI swap-in when Groq key is set */}
         <section className="rounded-lg border border-slate-200 bg-slate-50/40 p-3">
-          <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-1">Monthly narrative</div>
-          <p className="text-[11.5px] text-slate-800 leading-relaxed whitespace-pre-line">{narrative}</p>
-          <p className="text-[9.5px] text-slate-500 italic mt-1.5">Templated · LLM-narrated version lights up when a Groq key is wired.</p>
+          <div className="flex items-baseline justify-between mb-1 flex-wrap gap-2">
+            <div className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700">
+              Monthly narrative {aiNarrative && <span className="ml-1 text-teal-700">· AI</span>}
+            </div>
+            {aiAvailable && (
+              <span className="flex items-baseline gap-1">
+                {!aiNarrative ? (
+                  <button
+                    type="button"
+                    onClick={fetchAiNarrative}
+                    disabled={aiLoading || summary.totals.count === 0}
+                    className="text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-0.5 text-white bg-teal-700 hover:bg-teal-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {aiLoading ? 'Writing…' : '✨ Use AI'}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => { setAiNarrative(null); setAiError(null) }}
+                    className="text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-0.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                  >
+                    Show templated
+                  </button>
+                )}
+              </span>
+            )}
+          </div>
+          <p className="text-[11.5px] text-slate-800 leading-relaxed whitespace-pre-line">
+            {aiNarrative ?? narrative}
+          </p>
+          {aiError && (
+            <p className="text-[10px] text-rose-700 italic mt-1">{aiError}</p>
+          )}
+          <p className="text-[9.5px] text-slate-500 italic mt-1.5">
+            {aiAvailable
+              ? (aiNarrative ? 'Generated via Groq · click "Show templated" to revert.' : 'Click "Use AI" to swap the templated copy for a Groq-written one.')
+              : 'Templated · enter a Groq API key in Profile & Settings to enable AI narration.'}
+          </p>
         </section>
 
         {/* Category breakdown */}
