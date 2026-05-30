@@ -5,10 +5,23 @@
 // Post-Phase-6 will additionally render: live ranked-goal list, per-
 // criterion score breakdown, strategy-fitter output.
 
+import { useState } from 'react'
 import type { UserProfile, BucketState } from '../types'
 import { MarkdownView } from './admin/MarkdownView'
 import { useFittedStrategy } from '../hooks/useFittedStrategy'
-import type { EngineInput, EngineOutput, RankedGoal, CriterionWeights, StrategyFit, FittedGoal, FitAction } from '../types/orchestration'
+import type {
+  EngineInput, EngineOutput, RankedGoal, CriterionWeights, StrategyFit, FittedGoal, FitAction,
+  StrategySelection, ProductPlan, MonitoringFramework, ReviewItem,
+} from '../types/orchestration'
+import { strategyById } from '../lib/orchestration/strategyCatalogue'
+import {
+  type PreemptOverrides,
+  DEFAULT_TERM_LIFE_FLOOR_X_ANNUAL_BURN,
+  DEFAULT_TERM_LIFE_AGE_CUTOFF,
+  DEFAULT_HEALTH_BASE_BENCHMARK_INR,
+  DEFAULT_EMERGENCY_MONTHS_OF_BURN,
+} from '../lib/orchestration/preempt'
+import { storage } from '../lib/storage'
 
 import engineMemo from '../../tasks/engine-design-memo-2026-05-24.md?raw'
 
@@ -38,7 +51,27 @@ function fmtINR(n: number): string {
 }
 
 export function EnginePage({ profile, buckets }: Props) {
-  const { input, ranked: output, fit } = useFittedStrategy(profile, buckets)
+  // Memo §11 Q2 — user-tunable pre-emption floors. Initial value pulled
+  // from storage; UI controls write back on every change.
+  const [overrides, setOverrides] = useState<PreemptOverrides>(
+    () => storage.getPreemptOverrides() ?? {},
+  )
+  const { input, ranked: output, fit, strategies, productPlan, monitoring } =
+    useFittedStrategy(profile, buckets, overrides)
+
+  function updateOverride<K extends keyof PreemptOverrides>(field: K, value: PreemptOverrides[K] | undefined) {
+    const next: PreemptOverrides = { ...overrides }
+    if (value === undefined) delete next[field]
+    else next[field] = value
+    setOverrides(next)
+    if (Object.keys(next).length === 0) storage.clearPreemptOverrides()
+    else                                 storage.setPreemptOverrides(next)
+  }
+
+  function resetOverrides() {
+    setOverrides({})
+    storage.clearPreemptOverrides()
+  }
 
   return (
     <section className="space-y-3">
@@ -84,6 +117,18 @@ export function EnginePage({ profile, buckets }: Props) {
 
       {/* Phase 6 live fitted strategy */}
       <FittedStrategyView fit={fit} output={output} />
+
+      {/* Strategy pipeline (Phases 4–7 of this session) */}
+      <StrategiesView strategies={strategies} output={output} />
+      <ProductPlanView productPlan={productPlan} output={output} />
+      <MonitoringView monitoring={monitoring} />
+
+      {/* §11 Q2 — pre-emption threshold overrides */}
+      <PreemptOverridesPanel
+        overrides={overrides}
+        onChange={updateOverride}
+        onReset={resetOverrides}
+      />
 
       {/* Phase 4 input preview (collapsible) */}
       <details className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 overflow-hidden">
@@ -451,5 +496,321 @@ function Row({ k, v }: { k: string; v: string | number }) {
       <span className="text-slate-500">{k}</span>
       <span className="font-semibold text-slate-900 tabular-nums">{v}</span>
     </div>
+  )
+}
+
+// ─── Strategies view (Phase 4 — TOPSIS recommended strategy per goal) ─
+
+function StrategiesView({ strategies, output }: { strategies: StrategySelection; output: EngineOutput }) {
+  if (strategies.byGoal.length === 0) return null
+  return (
+    <section className="rounded-md border-2 border-amber-200 bg-amber-50/30 p-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-amber-800">Phase 4 · TOPSIS</div>
+          <h3 className="font-serif text-base font-extrabold text-slate-900">Recommended strategy per goal.</h3>
+        </div>
+        <span className="text-[10px] font-mono text-amber-700/70">closeness-to-ideal · top of 12 catalogue entries</span>
+      </div>
+      <div className="space-y-2.5">
+        {strategies.byGoal.map((gs) => {
+          const goal = output.ranked.find((r) => r.goal.id === gs.goalId)?.goal
+          const top = gs.ranked[0]
+          const topStrat = strategyById(top?.strategyId ?? '')
+          if (!goal || !top || !topStrat) return null
+          return (
+            <article key={gs.goalId} className="rounded border border-amber-300 bg-white p-2.5">
+              <div className="flex items-baseline justify-between gap-2 flex-wrap mb-1">
+                <span className="font-serif text-[13px] font-bold text-slate-900">{goal.label}</span>
+                <span className="text-[10px] text-slate-500 font-mono">{goal.id}</span>
+              </div>
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-amber-700">Recommended</span>
+                <span className="font-serif italic text-[13px] font-extrabold text-amber-800">{topStrat.name}</span>
+                <span className="text-[9.5px] font-mono text-amber-700/80">[{topStrat.ref}]</span>
+                <span className="text-[10px] text-slate-500">TOPSIS {top.topsisScore.toFixed(2)}</span>
+              </div>
+              <p className="text-[10.5px] text-slate-700 italic mt-0.5 leading-snug">{topStrat.tagline}</p>
+              <details className="mt-1.5 text-[10px]">
+                <summary className="cursor-pointer text-amber-700 font-bold uppercase tracking-[1.5px] hover:text-amber-900">
+                  Top-5 ranked
+                </summary>
+                <table className="w-full mt-1 text-[10px]">
+                  <thead>
+                    <tr className="text-slate-500 text-left">
+                      <th className="font-normal pr-2">#</th>
+                      <th className="font-normal pr-2">Strategy</th>
+                      <th className="font-normal pr-2 text-right">TOPSIS</th>
+                      <th className="font-normal pr-2 text-right">RiskFit</th>
+                      <th className="font-normal pr-2 text-right">BiasFit</th>
+                      <th className="font-normal text-right">HorizonFit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {gs.ranked.slice(0, 5).map((rs) => {
+                      const s = strategyById(rs.strategyId)
+                      return (
+                        <tr key={rs.strategyId} className="border-t border-amber-100">
+                          <td className="py-0.5 text-slate-600 tabular-nums">{rs.rank}</td>
+                          <td className="py-0.5 text-slate-900">{s?.name ?? rs.strategyId}</td>
+                          <td className="py-0.5 text-right tabular-nums font-semibold">{rs.topsisScore.toFixed(3)}</td>
+                          <td className="py-0.5 text-right tabular-nums">{rs.criterionScores.riskFit}</td>
+                          <td className="py-0.5 text-right tabular-nums">{rs.criterionScores.biasFit}</td>
+                          <td className="py-0.5 text-right tabular-nums">{rs.criterionScores.horizonFit}</td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </details>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+// ─── Product plan view (Phase 7 — per-goal per-bucket products) ───────
+
+function ProductPlanView({ productPlan, output }: { productPlan: ProductPlan; output: EngineOutput }) {
+  if (productPlan.byGoal.length === 0) return null
+  return (
+    <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Phase 7 · Product plan</div>
+          <h3 className="font-serif text-base font-extrabold text-slate-900">What to actually buy.</h3>
+        </div>
+        <span className="text-[10px] font-mono text-emerald-700/70">India-tax-aware · age-eligible · top-3 per bucket</span>
+      </div>
+      <div className="space-y-2.5">
+        {productPlan.byGoal.map((gp) => {
+          const goal = output.ranked.find((r) => r.goal.id === gp.goalId)?.goal
+          if (!goal || gp.totalAllocated <= 0) return null
+          return (
+            <article key={gp.goalId} className="rounded border border-emerald-300 bg-white p-2.5">
+              <div className="flex items-baseline justify-between mb-1.5">
+                <span className="font-serif text-[13px] font-bold text-slate-900">{goal.label}</span>
+                <span className="text-[10.5px] font-mono font-bold text-emerald-800 tabular-nums">{fmtINR(gp.totalAllocated)}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+                {gp.slices.map((s) => (
+                  <SliceCard key={s.bucket} slice={s} />
+                ))}
+              </div>
+            </article>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+function SliceCard({ slice }: { slice: ProductPlan['byGoal'][number]['slices'][number] }) {
+  if (slice.amount === 0) {
+    return (
+      <div className="rounded border border-slate-200 bg-slate-50/50 p-2 opacity-70">
+        <div className="flex items-baseline justify-between mb-0.5">
+          <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-slate-500">{slice.bucket.toUpperCase()}</span>
+          <span className="text-[10px] text-slate-400 tabular-nums">{fmtINR(0)}</span>
+        </div>
+        <div className="text-[10px] text-slate-400 italic">No allocation</div>
+      </div>
+    )
+  }
+  const accent = slice.bucket === 'b1' ? 'border-blue-300 bg-blue-50/40'
+              : slice.bucket === 'b2' ? 'border-teal-300 bg-teal-50/40'
+              : slice.bucket === 'b3' ? 'border-violet-300 bg-violet-50/40'
+              :                          'border-orange-300 bg-orange-50/40'
+  return (
+    <div className={`rounded border ${accent} p-2`}>
+      <div className="flex items-baseline justify-between mb-1">
+        <span className="text-[10px] font-bold uppercase tracking-[1.5px] text-slate-700">{slice.bucket.toUpperCase()}</span>
+        <span className="text-[10px] font-mono font-bold text-slate-900 tabular-nums">{fmtINR(slice.amount)}</span>
+      </div>
+      <ul className="space-y-0.5">
+        {slice.items.map((it) => (
+          <li key={it.categoryId} className="text-[10px] text-slate-800 leading-snug">
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="font-semibold">{it.name}</span>
+              <span className="font-mono tabular-nums shrink-0">{(it.weight * 100).toFixed(0)} %</span>
+            </div>
+            <div className="text-slate-500 text-[9.5px] italic">{it.rationale}</div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+// ─── Monitoring view (Phase 8 — review schedule) ──────────────────────
+
+function MonitoringView({ monitoring }: { monitoring: MonitoringFramework }) {
+  if (monitoring.items.length === 0) return null
+  return (
+    <section className="rounded-md border-2 border-rose-200 bg-rose-50/30 p-4">
+      <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-rose-800">Phase 8 · Monitoring</div>
+          <h3 className="font-serif text-base font-extrabold text-slate-900">Review calendar.</h3>
+        </div>
+        <span className="text-[10px] font-mono text-rose-700/70">{monitoring.items.length} items · {monitoring.upcoming.length} upcoming</span>
+      </div>
+
+      {monitoring.upcoming.length > 0 && (
+        <div className="mb-3">
+          <div className="text-[10px] font-bold tracking-[2px] uppercase text-rose-800 mb-1">Next 10 scheduled</div>
+          <ol className="space-y-0.5 text-[11px]">
+            {monitoring.upcoming.map((u) => (
+              <li key={u.itemId} className="grid grid-cols-[90px_1fr] gap-2 items-baseline">
+                <span className="font-mono text-[10.5px] text-rose-900 tabular-nums">{u.date.slice(0, 10)}</span>
+                <span className="text-slate-900">{u.summary}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <details className="mt-2">
+        <summary className="cursor-pointer text-[10px] font-bold uppercase tracking-[1.5px] text-rose-700 hover:text-rose-900">
+          All {monitoring.items.length} review items
+        </summary>
+        <ul className="mt-1.5 space-y-1.5">
+          {monitoring.items.map((it) => (
+            <ReviewItemRow key={it.id} item={it} />
+          ))}
+        </ul>
+      </details>
+    </section>
+  )
+}
+
+function ReviewItemRow({ item }: { item: ReviewItem }) {
+  const cadenceColor = item.cadence === 'monthly' ? 'bg-rose-100 text-rose-800'
+                     : item.cadence === 'quarterly' ? 'bg-amber-100 text-amber-800'
+                     : item.cadence === 'half-yearly' ? 'bg-blue-100 text-blue-800'
+                     : item.cadence === 'yearly' ? 'bg-emerald-100 text-emerald-800'
+                     :                              'bg-slate-100 text-slate-700'
+  const priorityDot = item.priority === 1 ? '#dc2626' : item.priority === 2 ? '#f59e0b' : '#94a3b8'
+  return (
+    <li className="rounded border border-rose-200 bg-white p-2 text-[11px]">
+      <div className="flex items-baseline gap-1.5 flex-wrap mb-0.5">
+        <span aria-hidden="true" className="inline-block w-2 h-2 rounded-full" style={{ background: priorityDot }} />
+        <span className="font-serif font-bold text-slate-900 text-[12px]">{item.title}</span>
+        <span className={`text-[9px] font-bold uppercase tracking-[1.5px] rounded px-1.5 py-0 ${cadenceColor}`}>{item.cadence}</span>
+        <span className="text-[9px] uppercase tracking-[1.5px] text-slate-500">{item.kind}</span>
+      </div>
+      <div className="text-[10.5px] text-slate-700 leading-snug">{item.detail}</div>
+      <div className="text-[10px] text-slate-600 mt-0.5">
+        <strong>Trigger:</strong> {item.trigger} · <strong>Action:</strong> {item.action}
+      </div>
+      {item.nextDate && (
+        <div className="text-[10px] font-mono text-rose-700 mt-0.5">Next: {item.nextDate.slice(0, 10)} · responsibility: {item.responsibility}</div>
+      )}
+    </li>
+  )
+}
+
+// ─── Pre-emption thresholds panel (memo §11 Q2) ───────────────────────
+
+function PreemptOverridesPanel({
+  overrides, onChange, onReset,
+}: {
+  overrides: PreemptOverrides
+  onChange: <K extends keyof PreemptOverrides>(field: K, value: PreemptOverrides[K] | undefined) => void
+  onReset: () => void
+}) {
+  const dirty = Object.keys(overrides).length > 0
+  return (
+    <details className="rounded-md border-2 border-slate-200 bg-white" open={dirty}>
+      <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-slate-700 hover:bg-slate-50 transition-colors flex items-baseline justify-between">
+        <span>Pre-emption thresholds — advanced</span>
+        <span className="text-[10px] font-normal normal-case tracking-normal text-slate-500 italic">
+          {dirty ? `${Object.keys(overrides).length} field${Object.keys(overrides).length > 1 ? 's' : ''} overridden` : 'using defaults'}
+        </span>
+      </summary>
+      <div className="px-4 pb-4 pt-1 space-y-3">
+        <p className="text-[11px] text-slate-600 leading-snug max-w-2xl">
+          Tunable floors used by <code className="text-[10px] bg-slate-100 px-1 rounded">preempt()</code> when the engine
+          decides which system goals to inject (term cover, health cover, emergency fund). Defaults match the design memo §7.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <OverrideField
+            label="Term-life floor (× annual burn)"
+            placeholder={String(DEFAULT_TERM_LIFE_FLOOR_X_ANNUAL_BURN)}
+            value={overrides.termLifeFloorXAnnualBurn}
+            onChange={(v) => onChange('termLifeFloorXAnnualBurn', v)}
+            step="0.5" min={1} max={20}
+          />
+          <OverrideField
+            label="Term-life cutoff age (y)"
+            placeholder={String(DEFAULT_TERM_LIFE_AGE_CUTOFF)}
+            value={overrides.termLifeAgeCutoff}
+            onChange={(v) => onChange('termLifeAgeCutoff', v)}
+            step="1" min={40} max={85}
+          />
+          <OverrideField
+            label="Health benchmark base (₹L)"
+            placeholder={String(DEFAULT_HEALTH_BASE_BENCHMARK_INR / 1e5)}
+            value={overrides.healthBaseBenchmarkINR !== undefined ? overrides.healthBaseBenchmarkINR / 1e5 : undefined}
+            onChange={(v) => onChange('healthBaseBenchmarkINR', v !== undefined ? v * 1e5 : undefined)}
+            step="1" min={5} max={100}
+          />
+          <OverrideField
+            label="Emergency fund (months of burn)"
+            placeholder={String(DEFAULT_EMERGENCY_MONTHS_OF_BURN)}
+            value={overrides.emergencyMonthsOfBurn}
+            onChange={(v) => onChange('emergencyMonthsOfBurn', v)}
+            step="1" min={3} max={24}
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={!dirty}
+            className="text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-1 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Reset to defaults
+          </button>
+          <span className="text-[10px] text-slate-500 italic">
+            Engine recomputes immediately. Snapshot is refreshed on every change.
+          </span>
+        </div>
+      </div>
+    </details>
+  )
+}
+
+function OverrideField({ label, placeholder, value, onChange, step, min, max }: {
+  label: string
+  placeholder: string
+  value: number | undefined
+  onChange: (v: number | undefined) => void
+  step: string
+  min: number
+  max: number
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-1">{label}</span>
+      <input
+        type="number"
+        step={step}
+        min={min}
+        max={max}
+        placeholder={`${placeholder} (default)`}
+        value={value ?? ''}
+        onChange={(e) => {
+          const raw = e.target.value
+          if (raw === '') { onChange(undefined); return }
+          const n = parseFloat(raw)
+          if (!Number.isFinite(n)) return
+          onChange(n)
+        }}
+        className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[12px] tabular-nums focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+      />
+    </label>
   )
 }

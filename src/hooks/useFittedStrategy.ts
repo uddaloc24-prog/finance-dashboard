@@ -10,6 +10,7 @@ import type { UserProfile, BucketState } from '../types'
 import type { EngineInput, EngineOutput, StrategyFit, StrategySelection, ProductPlan, MonitoringFramework } from '../types/orchestration'
 import { buildOrchestrationInputsFromStorage } from '../lib/orchestration/inputs'
 import { rankGoals } from '../lib/orchestration/rankGoals'
+import type { PreemptOverrides } from '../lib/orchestration/preempt'
 import { fitStrategy } from '../lib/orchestration/fitStrategy'
 import { selectStrategies } from '../lib/orchestration/strategySelector'
 import { buildProductPlan } from '../lib/orchestration/productMap'
@@ -28,11 +29,19 @@ export interface OrchestrationResult {
   monitoring: MonitoringFramework
 }
 
-export function useFittedStrategy(profile: UserProfile, buckets: BucketState): OrchestrationResult {
+export function useFittedStrategy(
+  profile: UserProfile,
+  buckets: BucketState,
+  preemptOverrides?: PreemptOverrides,
+): OrchestrationResult {
+  // Stringify the overrides so React's deps comparison is value-based —
+  // a new {} literal every render wouldn't otherwise re-trigger.
+  const overridesKey = JSON.stringify(preemptOverrides ?? {})
+
   const result = useMemo<OrchestrationResult>(() => {
     const now = new Date()
     const input = buildOrchestrationInputsFromStorage(profile, buckets, now)
-    const ranked = rankGoals(input, now)
+    const ranked = rankGoals(input, now, preemptOverrides)
     const strategies = selectStrategies(input, now)
     // Phase 5: fitter receives `strategies` so per-goal bucket splits
     // reflect the recommended strategy + risk-tilt + safety-floor.
@@ -44,18 +53,19 @@ export function useFittedStrategy(profile: UserProfile, buckets: BucketState): O
     // + bias guardrails + age-keyed lifecycle.
     const monitoring = buildMonitoringFramework(input, fit.goals, strategies, productPlan, now)
     return { input, ranked, fit, strategies, productPlan, monitoring }
-  }, [profile, buckets])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile, buckets, overridesKey])
 
-  // Persist a snapshot when the engine input hash changes — lets the
-  // exporters render even after the user navigates away, and gives the
-  // PDF / DOCX a clean as-of timestamp. Skipped if hash didn't move.
+  // Persist a snapshot when the engine input hash OR pre-emption
+  // overrides change — exporters need the fresh decision either way.
   const lastHash = useRef<string | null>(null)
   useEffect(() => {
-    if (result.ranked.inputsHash !== lastHash.current) {
-      lastHash.current = result.ranked.inputsHash
+    const composite = result.ranked.inputsHash + ':' + overridesKey
+    if (composite !== lastHash.current) {
+      lastHash.current = composite
       writeSnapshot(result.ranked, result.fit)
     }
-  }, [result])
+  }, [result, overridesKey])
 
   return result
 }

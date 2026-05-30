@@ -7,13 +7,18 @@ import type {
 } from '../../types/orchestration'
 import { resolveWeights } from './personaWeights'
 import { scoreAll } from './scorers'
-import { preempt } from './preempt'
+import { preempt, type PreemptOverrides } from './preempt'
 import { stableCompare } from './tiebreaker'
 import { hashInput } from './hash'
 
 /** Run the engine. `now` is optional — pass it for deterministic tests;
- *  omit for live use (UI hook supplies `new Date()`). */
-export function rankGoals(input: EngineInput, now: Date = new Date()): EngineOutput {
+ *  omit for live use (UI hook supplies `new Date()`). `preemptOverrides`
+ *  lets the caller tune the §7 floors at runtime (memo §11 Q2). */
+export function rankGoals(
+  input: EngineInput,
+  now: Date = new Date(),
+  preemptOverrides?: PreemptOverrides,
+): EngineOutput {
   // 1. Resolve weights from persona + optional user overrides
   const { weights, derivation } = resolveWeights(
     input.preferences.personaPrimary,
@@ -21,7 +26,7 @@ export function rankGoals(input: EngineInput, now: Date = new Date()): EngineOut
   )
 
   // 2. Mandatory pre-emption — system goals prepended to the user pile
-  const systemGoals = preempt(input.plan)
+  const systemGoals = preempt(input.plan, preemptOverrides)
   const allGoals: RawGoal[] = [...systemGoals, ...input.goals]
 
   // 3. Score every goal on every criterion (0..100)
