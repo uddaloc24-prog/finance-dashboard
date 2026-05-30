@@ -90,6 +90,16 @@ function distilPlanFacts(profile: UserProfile, buckets: BucketState, now: Date):
     : []
   const liabilities = activeLoans.reduce((s, [, l]) => s + (l.outstanding || 0), 0)
   const monthlyEMI  = activeLoans.reduce((s, [, l]) => s + (l.emi || 0), 0)
+  // Preserve per-loan rates (sorted desc) so the high-rate-debt rule
+  // in preempt.ts can pick out individual high-cost liabilities. The
+  // threshold is applied at the rule level, not at distillation.
+  const loans = activeLoans
+    .map(([, l]) => ({
+      outstanding:  l.outstanding  || 0,
+      interestRate: l.interestRate || 0,
+      emi:          l.emi          || 0,
+    }))
+    .sort((a, b) => b.interestRate - a.interestRate)
 
   const exp = profile.expenses
   const monthlyBurn = exp
@@ -111,6 +121,8 @@ function distilPlanFacts(profile: UserProfile, buckets: BucketState, now: Date):
     monthlyEMI,
     monthlyWithdrawal: profile.monthlyWithdrawal ?? 0,
     monthlySIP:        profile.sipAmount ?? 0,
+
+    loans,
 
     currentAge:     profile.demographics?.currentAge     ?? 60,
     retireAge:      profile.demographics?.retirementAge  ?? 60,

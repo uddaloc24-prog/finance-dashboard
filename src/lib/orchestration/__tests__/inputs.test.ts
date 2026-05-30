@@ -96,6 +96,13 @@ describe('buildOrchestrationInputs → PlanFacts', () => {
     expect(input.plan.monthlyEMI).toBe(25_000 + 10_000)
   })
 
+  it('distils per-loan list — active only, sorted by interestRate desc', () => {
+    expect(input.plan.loans).toHaveLength(2)        // plot loan is inactive
+    expect(input.plan.loans[0].interestRate).toBeGreaterThanOrEqual(input.plan.loans[1].interestRate)
+    const rates = input.plan.loans.map((l) => l.interestRate).sort((a, b) => b - a)
+    expect(rates).toEqual([9.5, 8.5])
+  })
+
   it('pulls monthlyWithdrawal + monthlySIP from the profile', () => {
     expect(input.plan.monthlyWithdrawal).toBe(1_00_000)
     expect(input.plan.monthlySIP).toBe(50_000)

@@ -25,6 +25,15 @@ export interface PlanFacts {
   monthlyWithdrawal: number   // INR / month, from profile
   monthlySIP: number          // INR / month, from profile
 
+  // Active loans — preserved as a list so the engine's high-rate-debt
+  // pre-emption rule (§7) can pick out the worst ones individually.
+  // Sorted by interestRate descending.
+  loans: Array<{
+    outstanding: number       // INR
+    interestRate: number      // annual %
+    emi: number               // INR / month
+  }>
+
   // Time
   currentAge: number
   retireAge: number

@@ -20,6 +20,7 @@ import {
   DEFAULT_TERM_LIFE_AGE_CUTOFF,
   DEFAULT_HEALTH_BASE_BENCHMARK_INR,
   DEFAULT_EMERGENCY_MONTHS_OF_BURN,
+  DEFAULT_HIGH_RATE_DEBT_RATE_THRESHOLD,
 } from '../lib/orchestration/preempt'
 import { storage } from '../lib/storage'
 
@@ -901,6 +902,13 @@ function PreemptOverridesPanel({
             value={overrides.emergencyMonthsOfBurn}
             onChange={(v) => onChange('emergencyMonthsOfBurn', v)}
             step="1" min={3} max={24}
+          />
+          <OverrideField
+            label="High-rate debt threshold (% p.a.)"
+            placeholder={String(DEFAULT_HIGH_RATE_DEBT_RATE_THRESHOLD)}
+            value={overrides.highRateDebtRateThreshold}
+            onChange={(v) => onChange('highRateDebtRateThreshold', v)}
+            step="0.5" min={5} max={36}
           />
         </div>
         <div className="flex items-center gap-2 pt-1">

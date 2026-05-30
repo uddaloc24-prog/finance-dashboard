@@ -342,11 +342,13 @@ floors) can pass tuned values without forking the rule. Tests:
 `__tests__/memo-q2-q3.test.ts` — locks defaults + verifies override
 path.
 
-**Deferred:** the §7 "high-rate debt ≥ 15 %" rule is not yet
-implemented because `PlanFacts` exposes aggregate `monthlyEMI` only.
-Adding it requires extending `PlanFacts` with
-`highRateDebt?: { outstanding, interestRate }` distilled from
-`profile.loanProfile`. Tracked as a follow-on.
+**Update 2026-05-30:** the §7 "high-rate debt ≥ 15 %" rule **shipped**.
+`PlanFacts` now carries `loans: Array<{outstanding, interestRate, emi}>`
+(sorted by rate desc); `highRateDebtRule()` aggregates active loans
+above `DEFAULT_HIGH_RATE_DEBT_RATE_THRESHOLD = 15` (overridable via
+`PreemptOverrides.highRateDebtRateThreshold`) and emits a single
+`sys-high-rate-debt` system goal whose `amount` is the total to clear.
+Surfaced on the Engine tab's threshold panel.
 
 ### Q3 — System goals: `ranked` vs separate `reservations` ✅ Keep integrated; add helpers
 System-pre-emption goals stay inside `EngineOutput.ranked` with

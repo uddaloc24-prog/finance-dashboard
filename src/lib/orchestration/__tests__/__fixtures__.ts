@@ -20,6 +20,8 @@ export const plan50: PlanFacts = {
   monthlyWithdrawal:           0,    // pre-retirement
   monthlySIP:             80_000,
 
+  loans: [],                         // no high-rate debt by default
+
   currentAge: 50, retireAge: 60, lifeExpectancy: 85, currentYear: 2026,
 
   inflation: { general: 6.0, healthcare: 8.5, education: 10.0 },
