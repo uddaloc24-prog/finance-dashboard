@@ -13,7 +13,7 @@
 // add the analytics dashboard + narrative summaries.
 
 import { useEffect, useMemo, useState } from 'react'
-import type { Account, Category, Direction, PaymentMode, Transaction } from '../../types/expense'
+import type { Account, Category, Direction, PaymentMode, Source, Transaction } from '../../types/expense'
 import type { UserProfile } from '../../types'
 import { expenseStorage } from '../../lib/expense/expenseStorage'
 import { ImportPanel } from './ImportPanel'
@@ -121,12 +121,57 @@ export function ExpenseTrackerPage({ profile }: Props) {
     setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
   }
 
-  // ─── Sorted list ───────────────────────────────────────────────────
+  // ─── Filters ──────────────────────────────────────────────────────
+
+  const [filterFrom,     setFilterFrom]     = useState<string>('')
+  const [filterTo,       setFilterTo]       = useState<string>('')
+  const [filterAccountId,setFilterAccountId]= useState<string>('')   // '' = all
+  const [filterCategoryId,setFilterCategoryId] = useState<string>('') // '' = all
+  const [filterSource,   setFilterSource]   = useState<Source | ''>('')
+  const [filterQuery,    setFilterQuery]    = useState<string>('')
+
+  function resetFilters() {
+    setFilterFrom('')
+    setFilterTo('')
+    setFilterAccountId('')
+    setFilterCategoryId('')
+    setFilterSource('')
+    setFilterQuery('')
+  }
+  const anyFilterActive =
+    !!(filterFrom || filterTo || filterAccountId || filterCategoryId || filterSource || filterQuery.trim())
+
+  // ─── Sorted + filtered list ──────────────────────────────────────
 
   const sortedTxns = useMemo(
     () => [...transactions].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : (a.createdAt < b.createdAt ? 1 : -1))),
     [transactions],
   )
+
+  const filteredTxns = useMemo(() => {
+    const q = filterQuery.trim().toLowerCase()
+    return sortedTxns.filter((t) => {
+      if (filterFrom       && t.date < filterFrom)                                 return false
+      if (filterTo         && t.date > filterTo)                                   return false
+      if (filterAccountId  && t.accountId !== filterAccountId)                     return false
+      if (filterSource     && t.source !== filterSource)                           return false
+      if (filterCategoryId) {
+        // Match the category or any descendant of a selected parent.
+        if (filterCategoryId === '__uncategorised__') {
+          if (t.categoryId !== null) return false
+        } else if (t.categoryId !== filterCategoryId) {
+          // If the filter points at a PARENT, accept any child.
+          const cat = categories.find((c) => c.id === t.categoryId)
+          if (cat?.parentId !== filterCategoryId) return false
+        }
+      }
+      if (q) {
+        const blob = `${t.notes ?? ''} ${t.rawText ?? ''}`.toLowerCase()
+        if (!blob.includes(q)) return false
+      }
+      return true
+    })
+  }, [sortedTxns, filterFrom, filterTo, filterAccountId, filterCategoryId, filterSource, filterQuery, categories])
   const acctById = useMemo(() => Object.fromEntries(accounts.map((a) => [a.id, a])) as Record<string, Account>, [accounts])
   const catById  = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])) as Record<string, Category>, [categories])
 
@@ -270,18 +315,83 @@ export function ExpenseTrackerPage({ profile }: Props) {
 
       {/* Transactions list */}
       <section className="rounded-lg border-2 border-slate-200 bg-white">
-        <div className="flex items-baseline justify-between px-4 py-3 border-b border-slate-200">
+        <div className="flex items-baseline justify-between px-4 py-3 border-b border-slate-200 flex-wrap gap-2">
           <h3 className="font-serif text-base font-extrabold text-slate-900">All transactions</h3>
-          <span className="text-[10px] font-mono text-slate-500">{transactions.length} total</span>
+          <span className="text-[10px] font-mono text-slate-500">
+            {anyFilterActive ? `${filteredTxns.length} of ${transactions.length} shown` : `${transactions.length} total`}
+          </span>
         </div>
+
+        {/* Filter bar */}
+        {transactions.length > 0 && (
+          <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              <FilterField label="From">
+                <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className={filterInputCls} />
+              </FilterField>
+              <FilterField label="To">
+                <input type="date" value={filterTo} onChange={(e) => setFilterTo(e.target.value)} className={filterInputCls} />
+              </FilterField>
+              <FilterField label="Account">
+                <select value={filterAccountId} onChange={(e) => setFilterAccountId(e.target.value)} className={filterInputCls}>
+                  <option value="">All</option>
+                  {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </FilterField>
+              <FilterField label="Category">
+                <CategorySelect
+                  categories={categories}
+                  value={filterCategoryId}
+                  onChange={setFilterCategoryId}
+                  className={filterInputCls}
+                  allowEmpty
+                  emptyLabel="All categories"
+                />
+              </FilterField>
+              <FilterField label="Source">
+                <select value={filterSource} onChange={(e) => setFilterSource((e.target.value || '') as Source | '')} className={filterInputCls}>
+                  <option value="">All</option>
+                  <option value="MANUAL">Manual</option>
+                  <option value="SMS">SMS</option>
+                  <option value="BANK_API">Bank API / CSV</option>
+                  <option value="EMAIL">Email</option>
+                </select>
+              </FilterField>
+              <FilterField label="Search">
+                <input
+                  type="text"
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  placeholder="notes / raw text"
+                  className={filterInputCls}
+                />
+              </FilterField>
+            </div>
+            {anyFilterActive && (
+              <div className="mt-1.5 text-right">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-[10px] font-bold uppercase tracking-[1.5px] text-slate-600 hover:text-slate-900 px-2 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                >
+                  Clear filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {sortedTxns.length === 0 ? (
           <div className="px-4 py-8 text-center text-[12px] text-slate-500 italic">
             No transactions yet — add one above to get started.
           </div>
+        ) : filteredTxns.length === 0 ? (
+          <div className="px-4 py-8 text-center text-[12px] text-slate-500 italic">
+            No transactions match the current filters.
+          </div>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {sortedTxns.map((t) => {
+            {filteredTxns.map((t) => {
               const cat = t.categoryId ? catById[t.categoryId] : undefined
               const acc = acctById[t.accountId]
               const sign = t.direction === 'DEBIT' ? '−' : '+'
@@ -336,11 +446,21 @@ export function ExpenseTrackerPage({ profile }: Props) {
 // ─── Small UI primitives ─────────────────────────────────────────────
 
 const inputCls = 'w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-[12.5px] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-200'
+const filterInputCls = 'w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-200'
 
 function Field({ label, wide, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
   return (
     <label className={`block ${wide ? 'sm:col-span-2 lg:col-span-4' : ''}`}>
       <span className="block text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-1">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block">
+      <span className="block text-[8.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-0.5">{label}</span>
       {children}
     </label>
   )
