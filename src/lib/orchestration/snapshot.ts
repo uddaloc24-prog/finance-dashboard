@@ -4,11 +4,14 @@
 //
 // Memo reference: audit gap F9.
 
-import type { EngineOutput, StrategyFit } from '../../types/orchestration'
+import type { EngineOutput, StrategyFit, SpouseProfileMetric } from '../../types/orchestration'
 
 export interface OrchestrationSnapshot {
   ranked: EngineOutput
   fit: StrategyFit
+  /** memo §2.3 — opt-in metric. Older snapshots without this field
+   *  remain readable; the field is undefined for them. */
+  spouseMetric?: SpouseProfileMetric
   savedAt: string                  // ISO when persisted
   schemaVersion: 1
 }
@@ -29,10 +32,18 @@ export function readSnapshot(): OrchestrationSnapshot | null {
   }
 }
 
-export function writeSnapshot(ranked: EngineOutput, fit: StrategyFit, now: Date = new Date()): void {
+export function writeSnapshot(
+  ranked: EngineOutput,
+  fit: StrategyFit,
+  spouseMetric?: SpouseProfileMetric,
+  now: Date = new Date(),
+): void {
   if (typeof window === 'undefined') return
   try {
-    const snap: OrchestrationSnapshot = { ranked, fit, savedAt: now.toISOString(), schemaVersion: SCHEMA }
+    const snap: OrchestrationSnapshot = {
+      ranked, fit, spouseMetric,
+      savedAt: now.toISOString(), schemaVersion: SCHEMA,
+    }
     window.localStorage.setItem(KEY, JSON.stringify(snap))
   } catch {
     /* ignore quota / privacy errors */

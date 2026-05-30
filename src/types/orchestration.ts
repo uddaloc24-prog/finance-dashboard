@@ -387,3 +387,23 @@ export interface MonitoringFramework {
   emittedAt: string
   inputsHash: string
 }
+
+// ─── Spouse-profile usage metric (memo §2.3 — informs Nash gating) ────
+
+/** Deterministic snapshot of whether the user has a complete spouse
+ *  profile. The memo's v2 gating rule for Nash bargaining is:
+ *  ship spousal mode when > 30 % of active users have a complete
+ *  profile. Today this metric is emitted and persisted into the
+ *  snapshot so any future telemetry / analytics layer can aggregate
+ *  it without a schema bump. */
+export interface SpouseProfileMetric {
+  /** Self-reported marital status from UserIdentity. */
+  maritalStatus: 'single' | 'married' | 'divorced' | 'widowed' | undefined
+  /** True iff the user reports themselves as 'married'. */
+  isPartnered: boolean
+  /** True iff every spouse field (name + age + lifeExpectancy) is set. */
+  hasCompleteSpouseProfile: boolean
+  /** 0..1 — share of the three spouse fields populated. */
+  completeness: number
+  emittedAt: string
+}

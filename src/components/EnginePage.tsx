@@ -61,7 +61,7 @@ export function EnginePage({ profile, buckets }: Props) {
   const [weightOverrides, setWeightOverrides] = useState<Partial<CriterionWeights>>(
     () => storage.getWeightOverrides() ?? {},
   )
-  const { input, ranked: output, fit, strategies, productPlan, monitoring } =
+  const { input, ranked: output, fit, strategies, productPlan, monitoring, spouseMetric } =
     useFittedStrategy(profile, buckets, overrides, weightOverrides)
 
   function updateOverride<K extends keyof PreemptOverrides>(field: K, value: PreemptOverrides[K] | undefined) {
@@ -141,6 +141,9 @@ export function EnginePage({ profile, buckets }: Props) {
       <StrategiesView strategies={strategies} output={output} />
       <ProductPlanView productPlan={productPlan} output={output} />
       <MonitoringView monitoring={monitoring} />
+
+      {/* §2.3 — spouse-profile usage metric */}
+      <DecisionMakerCard metric={spouseMetric} />
 
       {/* §2.2 — user-tunable criterion weights */}
       <WeightOverridesPanel
@@ -737,6 +740,43 @@ function ReviewItemRow({ item }: { item: ReviewItem }) {
         <div className="text-[10px] font-mono text-rose-700 mt-0.5">Next: {item.nextDate.slice(0, 10)} · responsibility: {item.responsibility}</div>
       )}
     </li>
+  )
+}
+
+// ─── Decision-maker mode card (memo §2.3) ─────────────────────────────
+
+function DecisionMakerCard({ metric }: { metric: import('../types/orchestration').SpouseProfileMetric }) {
+  const completenessPct = Math.round(metric.completeness * 100)
+  const mode = 'Single decision-maker'   // v1 always; v2 may flip to "joint"
+  return (
+    <section className="rounded-md border-2 border-slate-200 bg-white p-3">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">§2.3 · Decision-maker mode</div>
+          <h3 className="font-serif text-[14px] font-extrabold text-slate-900 leading-tight">{mode}</h3>
+        </div>
+        <span className="text-[10px] font-mono text-slate-500">v1 · Nash bargaining deferred</span>
+      </div>
+      <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[1.5px] text-slate-500">Marital status</div>
+          <div className="font-semibold text-slate-900 mt-0.5 capitalize">{metric.maritalStatus ?? '— not set —'}</div>
+        </div>
+        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[1.5px] text-slate-500">Partnered</div>
+          <div className="font-semibold text-slate-900 mt-0.5">{metric.isPartnered ? 'Yes' : 'No'}</div>
+        </div>
+        <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+          <div className="text-[9px] font-bold uppercase tracking-[1.5px] text-slate-500">Spouse profile</div>
+          <div className="font-semibold text-slate-900 mt-0.5 tabular-nums">{completenessPct} % complete</div>
+        </div>
+      </div>
+      <p className="text-[10.5px] text-slate-600 italic mt-2 leading-snug">
+        v1 treats every plan as a single decision-maker. The memo's gating rule for v2 Nash-bargaining mode is &gt; 30 % of active users with a complete spouse profile.
+        This card emits the per-user metric so a future telemetry layer can aggregate it without a schema bump.
+        {metric.hasCompleteSpouseProfile && ' · ✓ your profile would count toward the cohort.'}
+      </p>
+    </section>
   )
 }
 

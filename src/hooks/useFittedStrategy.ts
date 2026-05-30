@@ -7,10 +7,11 @@
 
 import { useMemo, useEffect, useRef } from 'react'
 import type { UserProfile, BucketState } from '../types'
-import type { EngineInput, EngineOutput, StrategyFit, StrategySelection, ProductPlan, MonitoringFramework, CriterionWeights } from '../types/orchestration'
+import type { EngineInput, EngineOutput, StrategyFit, StrategySelection, ProductPlan, MonitoringFramework, CriterionWeights, SpouseProfileMetric } from '../types/orchestration'
 import { buildOrchestrationInputs } from '../lib/orchestration/inputs'
 import { rankGoals } from '../lib/orchestration/rankGoals'
 import type { PreemptOverrides } from '../lib/orchestration/preempt'
+import { computeSpouseProfileMetric } from '../lib/orchestration/spouseProfileMetric'
 import { storage } from '../lib/storage'
 import { fitStrategy } from '../lib/orchestration/fitStrategy'
 import { selectStrategies } from '../lib/orchestration/strategySelector'
@@ -28,6 +29,8 @@ export interface OrchestrationResult {
   productPlan: ProductPlan
   /** Structured review schedule keyed to strategies + products + bias (Phase 8). */
   monitoring: MonitoringFramework
+  /** Memo §2.3 — deterministic spouse-profile usage metric. */
+  spouseMetric: SpouseProfileMetric
 }
 
 export function useFittedStrategy(
@@ -67,7 +70,14 @@ export function useFittedStrategy(
     // Phase 8: structured review schedule across strategies + products
     // + bias guardrails + age-keyed lifecycle.
     const monitoring = buildMonitoringFramework(input, fit.goals, strategies, productPlan, now)
-    return { input, ranked, fit, strategies, productPlan, monitoring }
+    // §2.3: spouse-profile usage metric — read identity from storage
+    // and compute deterministically.
+    const spouseMetric = computeSpouseProfileMetric(
+      storage.getIdentity() ?? null,
+      profile.demographics ?? null,
+      now,
+    )
+    return { input, ranked, fit, strategies, productPlan, monitoring, spouseMetric }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile, buckets, overridesKey, weightsKey])
 
@@ -78,7 +88,7 @@ export function useFittedStrategy(
     const composite = result.ranked.inputsHash + ':' + overridesKey + ':' + weightsKey
     if (composite !== lastHash.current) {
       lastHash.current = composite
-      writeSnapshot(result.ranked, result.fit)
+      writeSnapshot(result.ranked, result.fit, result.spouseMetric)
     }
   }, [result, overridesKey, weightsKey])
 

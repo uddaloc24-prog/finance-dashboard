@@ -49,6 +49,8 @@ Reasoning: Nash bargaining is conceptually clean but needs a separately-complete
 
 **Add later if:** > 30% of active users have spouse profiles. Track this metric.
 
+**Update 2026-05-30:** the gating metric **shipped**. `computeSpouseProfileMetric(identity, demographics)` emits a deterministic `{ maritalStatus, isPartnered, hasCompleteSpouseProfile, completeness }` record on every render via `useFittedStrategy.spouseMetric`. Persisted into `OrchestrationSnapshot.spouseMetric` (optional field — older snapshots remain readable). Surfaced as the "Decision-maker mode" card on the Engine tab so the user sees their own state. A future telemetry layer can aggregate the field across users without a schema bump.
+
 ~~**Decision required:** confirm "single decision-maker in v1".~~  →  **Confirmed 2026-05-24.** v1 ships single decision-maker; `disputed: boolean` flag stays in the output schema but is always `false` in v1.
 
 ### 2.4 Determinism contract   ✅ LOCKED — Pure function, byte-for-byte identical output
