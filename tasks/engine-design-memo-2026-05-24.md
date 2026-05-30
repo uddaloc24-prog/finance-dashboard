@@ -312,13 +312,62 @@ src/hooks/useRankedGoals.ts             — React hook wrapping the engine
 
 ---
 
-## 11. Open questions (need answers from product owner)
+## 11. Open questions — RESOLVED 2026-05-30
 
-1. **Persona weight table (§5)** — sign off as-is, or commission per-persona review with the original v10 author?
-2. **Mandatory pre-emption thresholds (§7)** — are the multipliers (8× life cover, 6× emergency fund, 15% debt rate) acceptable defaults or should they be user-tunable?
-3. **Pre-empt "goals"** — should they appear in `ranked` (visible to user) or be hidden behind a separate `reservations` array (cleaner separation)?
-4. **Trace verbosity** — full per-goal reasoning bullets (heavy) or scores-only (lean)? Affects Engine Explain dashboard fidelity later.
-5. **Snapshot storage** — engine output snapshot on every Plan/Profile change, or only on explicit "Save Plan" action? Affects storage churn.
+> ✅ All five resolved by product owner on 2026-05-30. Decisions, code
+> ref, and test ref captured below. Changing any of these post-lock
+> requires updating this section + refreshing the relevant test.
+
+### Q1 — Persona weight table (§5) ✅ Signed off as-is
+The 9-row P1..P9 + default table in `personaWeights.ts` is locked at v1.
+Any future tweak must update the §5 table and refresh the golden
+snapshot in `__tests__/personaWeights.test.ts` ("§5 sign-off — every row
+matches the locked table"). Re-derivation with the original v10 author
+is **out of scope for v1**; revisit when persona-level usage data is
+available.
+
+### Q2 — Pre-emption thresholds (§7) ✅ Acceptable defaults + optional override
+Multipliers (5× annualBurn term floor, age-tiered ₹15 L health
+benchmark, 6 × monthlyBurn emergency floor, 70 y term-life cutoff) are
+**signed off as defaults** AND **promoted to named exports** in
+`preempt.ts` (`DEFAULT_TERM_LIFE_FLOOR_X_ANNUAL_BURN`,
+`DEFAULT_HEALTH_BASE_BENCHMARK_INR`, etc.).
+`preempt(plan, overrides?)` now accepts a per-call `PreemptOverrides`
+object so future product needs (regional benchmarks, employer-policy
+floors) can pass tuned values without forking the rule. Tests:
+`__tests__/memo-q2-q3.test.ts` — locks defaults + verifies override
+path.
+
+**Deferred:** the §7 "high-rate debt ≥ 15 %" rule is not yet
+implemented because `PlanFacts` exposes aggregate `monthlyEMI` only.
+Adding it requires extending `PlanFacts` with
+`highRateDebt?: { outstanding, interestRate }` distilled from
+`profile.loanProfile`. Tracked as a follow-on.
+
+### Q3 — System goals: `ranked` vs separate `reservations` ✅ Keep integrated; add helpers
+System-pre-emption goals stay inside `EngineOutput.ranked` with
+`source: 'system'`. Every downstream consumer (fitter, snapshot, 5
+exporters, dashboards) already iterates the unified list, and the
+`source` field disambiguates without an API split. New convenience
+helpers exported from `rankGoals.ts`:
+- `getReservations(output)` — system-only
+- `getUserGoals(output)`  — non-system
+
+Tests: `__tests__/memo-q2-q3.test.ts` — partition invariant + no-overlap
+properties.
+
+### Q4 — Trace verbosity ✅ Verbose bullets (shipped)
+Per-goal `EngineTrace.goalRationale[id]: string[]` continues to carry
+the full bullet list ("Top driver", "Weak X", "System-pre-empted",
+"Target …"). The trace is small (≤ 4 bullets/goal) and already powers
+the Engine Explain dashboard's per-goal cards. No churn to address.
+
+### Q5 — Snapshot cadence ✅ Every hash change (shipped)
+`useFittedStrategy` persists the engine + fitter output via
+`writeSnapshot` whenever `EngineOutput.inputsHash` changes. The hash
+gate prevents redundant writes for unchanged inputs, so the storage
+cost is bounded. "Explicit save" would only add UI friction without
+reducing churn meaningfully.
 
 ---
 
@@ -326,8 +375,8 @@ src/hooks/useRankedGoals.ts             — React hook wrapping the engine
 
 - [x] Memo drafted (2026-05-24)
 - [x] **Decisions §2.1–§2.5 confirmed (2026-05-24)** — weighted sum · persona-keyed weights · single decision-maker · pure-function determinism · 50 ms p95 latency
-- [ ] Persona weight table (§5) signed off
-- [ ] Open questions (§11) answered
+- [x] **Persona weight table (§5) signed off (2026-05-30)** — pinned via golden snapshot in `__tests__/personaWeights.test.ts`
+- [x] **Open questions (§11) answered (2026-05-30)** — Q1 sign-off · Q2 defaults locked + overrides path · Q3 helpers added (`getReservations`, `getUserGoals`) · Q4 verbose trace kept · Q5 every-hash-change cadence kept
 - [x] **Phase 4 shipped (2026-05-24):** `EngineInput` / `EngineOutput` types in `src/types/orchestration.ts` · aggregator in `src/lib/orchestration/inputs.ts` · GD→RawGoal projector in `src/lib/orchestration/goalsFromGd.ts` · live preview on the Engine tab
 - [x] **Phase 5 engine shipped (2026-05-24):** scorers · persona weight table · mandatory pre-emption · stable-sort tiebreaker · deterministic input hash · `rankGoals()` pure function · `useRankedGoals` hook · live ranked-goal cards in the Engine tab
 - [x] **Phase 5 tests shipped (2026-05-24):** vitest 4.1.7 installed + `vitest.config.ts` + `npm test` script. 137 tests across 10 files: unit (scorers · personaWeights · preempt · tiebreaker · hash) · integration (rankGoals · fitStrategy) · 5 golden-master snapshots (P1/P5/P7 × plan50/65/UnderProtected) · determinism (100× identical hash for 5 input scenarios + fitter) · latency (50 goals × 100 runs, p95 < 50 ms engine, < 75 ms engine+fitter) · GD projector parsers (43 cases). All green in ~700 ms.

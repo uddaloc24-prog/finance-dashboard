@@ -96,3 +96,23 @@ function labelFor(k: keyof CriterionScores): string {
     case 'riskFit':       return 'Risk-fit'
   }
 }
+
+// ─── §11 Q3 helpers (memo resolved 2026-05-30) ────────────────────────
+//
+// Decision: keep system-pre-emption goals INSIDE `EngineOutput.ranked`
+// (with `source === 'system'`) rather than splitting them into a
+// separate `reservations` array. Reason: every downstream consumer
+// (fitter, snapshot, exporters, dashboards) iterates the unified ranked
+// list, and the source field already disambiguates. These helpers
+// surface the two views as convenience without paying the API-split
+// cost.
+
+/** System-pre-empted "reservations" — term cover, health cover, emergency. */
+export function getReservations(output: EngineOutput): RankedGoal[] {
+  return output.ranked.filter((r) => r.goal.source === 'system')
+}
+
+/** User-authored goals — manual + GD-projected, excluding system reservations. */
+export function getUserGoals(output: EngineOutput): RankedGoal[] {
+  return output.ranked.filter((r) => r.goal.source !== 'system')
+}

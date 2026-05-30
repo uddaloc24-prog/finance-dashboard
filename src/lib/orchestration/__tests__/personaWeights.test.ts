@@ -22,6 +22,16 @@ describe('PERSONA_WEIGHTS table', () => {
       }
     }
   })
+
+  // ─── §5 sign-off lock (memo Q1 resolved 2026-05-30) ────────────────
+  //
+  // Pins every persona row byte-for-byte. Any change to a weight must
+  // refresh this snapshot DELIBERATELY — surface it in the memo + a
+  // golden refresh on rankGoals snapshots will follow automatically.
+
+  it('§5 sign-off — every row matches the locked table', () => {
+    expect(PERSONA_WEIGHTS).toMatchSnapshot('persona-weights-locked-v1')
+  })
 })
 
 describe('resolveWeights', () => {
