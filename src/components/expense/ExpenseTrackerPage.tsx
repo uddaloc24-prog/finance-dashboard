@@ -19,6 +19,7 @@ import { expenseStorage } from '../../lib/expense/expenseStorage'
 import { ImportPanel } from './ImportPanel'
 import { AnalyticsPanel } from './AnalyticsPanel'
 import { RulesManager } from './RulesManager'
+import { CategorySelect } from './CategorySelect'
 
 const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CARD', 'CASH', 'NET_BANKING', 'AUTO_DEBIT', 'OTHER']
 
@@ -108,6 +109,16 @@ export function ExpenseTrackerPage({ profile }: Props) {
   function removeTxn(id: string) {
     expenseStorage.deleteTransaction(id)
     setTransactions((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  function changeTxnCategory(id: string, newCategoryId: string) {
+    const patch = {
+      categoryId: newCategoryId || null,
+      needsReview: !newCategoryId,
+    }
+    const updated = expenseStorage.updateTransaction(id, patch)
+    if (!updated) return
+    setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
   }
 
   // ─── Sorted list ───────────────────────────────────────────────────
@@ -217,29 +228,13 @@ export function ExpenseTrackerPage({ profile }: Props) {
           </Field>
 
           <Field label="Category">
-            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className={inputCls}>
-              <option value="">— uncategorised (needs review) —</option>
-              {/* Render parents as <optgroup>; only leaf categories selectable. */}
-              {categories
-                .filter((c) => c.parentId === null && c.isActive)
-                .sort((a, b) => a.sortOrder - b.sortOrder)
-                .map((parent) => {
-                  const children = categories
-                    .filter((c) => c.parentId === parent.id && c.isActive)
-                    .sort((a, b) => a.sortOrder - b.sortOrder)
-                  if (children.length === 0) {
-                    // Catchall — render as direct option, no group.
-                    return <option key={parent.id} value={parent.id}>{parent.name}</option>
-                  }
-                  return (
-                    <optgroup key={parent.id} label={parent.name}>
-                      {children.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </optgroup>
-                  )
-                })}
-            </select>
+            <CategorySelect
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+              className={inputCls}
+              allowEmpty
+            />
           </Field>
 
           <Field label="Notes" wide>
@@ -295,10 +290,19 @@ export function ExpenseTrackerPage({ profile }: Props) {
                 <li key={t.id} className="px-4 py-2.5 grid grid-cols-[72px_1fr_auto] gap-2 items-baseline">
                   <span className="font-mono text-[11px] text-slate-500 tabular-nums">{t.date.slice(5)}</span>
                   <div className="min-w-0">
-                    <div className="text-[12px] font-semibold text-slate-900 truncate">
-                      {cat?.name ?? <em className="font-normal text-slate-500">Uncategorised</em>}
+                    <div className="flex items-baseline gap-1.5">
+                      <CategorySelect
+                        categories={categories}
+                        value={t.categoryId ?? ''}
+                        onChange={(v) => changeTxnCategory(t.id, v)}
+                        ariaLabel={`Category for ${cat?.name ?? 'uncategorised'} transaction`}
+                        className={[
+                          'bg-transparent border-0 px-0 py-0 text-[12px] font-semibold text-slate-900 focus:outline-none focus:ring-1 focus:ring-teal-300 rounded',
+                          !t.categoryId ? 'italic text-slate-500 font-normal' : '',
+                        ].join(' ')}
+                      />
                       {t.needsReview && (
-                        <span className="ml-1.5 text-[8.5px] font-bold uppercase tracking-[1.5px] bg-amber-100 text-amber-800 border border-amber-300 rounded px-1 py-0">needs review</span>
+                        <span className="text-[8.5px] font-bold uppercase tracking-[1.5px] bg-amber-100 text-amber-800 border border-amber-300 rounded px-1 py-0">needs review</span>
                       )}
                     </div>
                     <div className="text-[10.5px] text-slate-500 truncate">
