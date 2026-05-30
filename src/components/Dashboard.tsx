@@ -685,7 +685,7 @@ export function Dashboard({
         {activeTab === 'expense' && (
           <div role="tabpanel" id="tabpanel-expense" aria-labelledby="tab-expense" className="space-y-3">
             <Suspense fallback={<TabLoading />}>
-              <ExpenseTrackerPage />
+              <ExpenseTrackerPage profile={effectiveProfile} />
             </Suspense>
           </div>
         )}

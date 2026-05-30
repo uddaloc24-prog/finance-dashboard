@@ -14,8 +14,11 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import type { Account, Category, Direction, PaymentMode, Transaction } from '../../types/expense'
+import type { UserProfile } from '../../types'
 import { expenseStorage } from '../../lib/expense/expenseStorage'
 import { ImportPanel } from './ImportPanel'
+import { AnalyticsPanel } from './AnalyticsPanel'
+import { RulesManager } from './RulesManager'
 
 const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CARD', 'CASH', 'NET_BANKING', 'AUTO_DEBIT', 'OTHER']
 
@@ -35,7 +38,11 @@ function todayISO(): string {
   return `${yr}-${mo}-${dy}`
 }
 
-export function ExpenseTrackerPage() {
+interface Props {
+  profile: UserProfile
+}
+
+export function ExpenseTrackerPage({ profile }: Props) {
   const [accounts]   = useState<Account[]>(() => expenseStorage.getAccounts())
   const [categories] = useState<Category[]>(() => expenseStorage.getCategories())
   const [transactions, setTransactions] = useState<Transaction[]>(() => expenseStorage.getTransactions())
@@ -122,22 +129,33 @@ export function ExpenseTrackerPage() {
         <div className="flex items-baseline gap-3 mb-2">
           <span className="text-[10px] font-bold tracking-[4px] uppercase text-teal-700">Expense Tracker</span>
           <span className="h-px flex-1 bg-gradient-to-r from-teal-500/60 to-transparent" aria-hidden="true" />
-          <span className="text-[10px] font-bold uppercase tracking-[2px] text-teal-800 bg-teal-100 border border-teal-300 rounded px-2 py-0.5">Phase 2 — ingestion</span>
+          <span className="text-[10px] font-bold uppercase tracking-[2px] text-teal-800 bg-teal-100 border border-teal-300 rounded px-2 py-0.5">Phase 3 — analytics</span>
         </div>
         <h2 className="font-serif text-2xl sm:text-3xl font-extralight tracking-tight text-slate-900 leading-[1.1]">
-          Where every <em className="font-extrabold not-italic text-teal-700">rupee</em> went.
+          Where every <em className="font-extrabold not-italic text-teal-700">rupee</em> went — and how it stacked up.
         </h2>
         <p className="text-[12.5px] sm:text-[13px] text-slate-700 mt-2.5 leading-relaxed max-w-3xl">
-          Paste a bank SMS, paste a CSV statement, or log manually — every row is auto-categorised against your budget structure and lives on this device only.
-          Phase 3 will add the analytics dashboard and a written monthly narrative.
+          Each row is paired to your Plan-tab Monthly Budget. The Analytics card below surfaces a discipline score, your biggest overshoots
+          and under-spends, a 6-month trend, and a written monthly narrative. Everything lives on this device.
         </p>
       </header>
 
-      {/* Import — Phase 2 ingestion (paste SMS / paste CSV) */}
+      {/* Analytics — budget vs actual + narrative + breakdown + trends */}
+      <AnalyticsPanel
+        profile={profile}
+        accounts={accounts}
+        categories={categories}
+        transactions={transactions}
+      />
+
+      {/* Import — paste SMS / paste CSV */}
       <ImportPanel
         accounts={accounts}
         onImported={(added) => setTransactions((prev) => [...prev, ...added])}
       />
+
+      {/* Rules — CRUD over deterministic categorisation rules */}
+      <RulesManager categories={categories} />
 
       {/* Month-to-date strip */}
       <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border-2 border-slate-200 bg-white p-3">
