@@ -20,6 +20,7 @@ import { ImportPanel } from './ImportPanel'
 import { AnalyticsPanel } from './AnalyticsPanel'
 import { RulesManager } from './RulesManager'
 import { CategorySelect } from './CategorySelect'
+import { Modal } from '../ui/Modal'
 import { suggestRuleFromManualOverride, type RuleSuggestion } from '../../lib/expense/categorization'
 
 const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CARD', 'CASH', 'NET_BANKING', 'AUTO_DEBIT', 'OTHER']
@@ -134,6 +135,7 @@ export function ExpenseTrackerPage({ profile }: Props) {
   }
 
   const [ruleSuggestion, setRuleSuggestion] = useState<{ txnId: string; suggestion: RuleSuggestion } | null>(null)
+  const [analyticsOpen,  setAnalyticsOpen]  = useState(false)
 
   function acceptRuleSuggestion() {
     if (!ruleSuggestion) return
@@ -229,13 +231,26 @@ export function ExpenseTrackerPage({ profile }: Props) {
         </p>
       </header>
 
-      {/* Analytics — budget vs actual + narrative + breakdown + trends */}
-      <AnalyticsPanel
-        profile={profile}
-        accounts={accounts}
-        categories={categories}
-        transactions={transactions}
-      />
+      {/* Analytics — behind a 3D button so the page stays focused on logging */}
+      <div className="flex justify-center">
+        <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
+      </div>
+
+      <Modal
+        open={analyticsOpen}
+        title="Analytics"
+        subtitle="Budget vs actual · monthly narrative · category breakdown · 6-month trend"
+        accent="emerald"
+        size="5xl"
+        onClose={() => setAnalyticsOpen(false)}
+      >
+        <AnalyticsPanel
+          profile={profile}
+          accounts={accounts}
+          categories={categories}
+          transactions={transactions}
+        />
+      </Modal>
 
       {/* Import — paste SMS / paste CSV */}
       <ImportPanel
@@ -254,8 +269,8 @@ export function ExpenseTrackerPage({ profile }: Props) {
         <KpiTile label="Transactions" value={mtd.count.toString()} tone="slate" />
       </section>
 
-      {/* Add transaction form */}
-      <section className="rounded-lg border-2 border-teal-200 bg-teal-50/30 p-4">
+      {/* Add transaction form — cozy panel, 2-column grid */}
+      <section className="rounded-2xl border-2 border-teal-300 ring-1 ring-inset ring-teal-100 bg-gradient-to-br from-teal-50/50 via-white to-amber-50/30 p-5 shadow-sm">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
           <div>
             <div className="text-[10px] font-bold tracking-[3px] uppercase text-teal-800">Add transaction</div>
@@ -264,7 +279,7 @@ export function ExpenseTrackerPage({ profile }: Props) {
           <span className="text-[10px] font-mono text-teal-700/70">structured · manual · MANUAL source tag</span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Date">
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
           </Field>
@@ -358,7 +373,7 @@ export function ExpenseTrackerPage({ profile }: Props) {
         {/* Filter bar */}
         {transactions.length > 0 && (
           <div className="px-4 py-2.5 border-b border-slate-100 bg-slate-50/50">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <FilterField label="From">
                 <input type="date" value={filterFrom} onChange={(e) => setFilterFrom(e.target.value)} className={filterInputCls} />
               </FilterField>
@@ -503,13 +518,27 @@ export function ExpenseTrackerPage({ profile }: Props) {
 
 // ─── Small UI primitives ─────────────────────────────────────────────
 
-const inputCls = 'w-full bg-white border border-slate-300 rounded px-2 py-1.5 text-[12.5px] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-200'
-const filterInputCls = 'w-full bg-white border border-slate-300 rounded px-1.5 py-1 text-[11px] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-200'
+// Cozy, thick-bordered, elegant input style — used by the add-transaction
+// form, the filter bar, and any other inline editors on this page.
+const inputCls = [
+  'w-full bg-white border-2 border-slate-300 rounded-lg',
+  'px-3 py-2 text-[13px] text-slate-900 shadow-sm',
+  'placeholder:text-slate-400',
+  'focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100',
+  'transition-colors',
+].join(' ')
+
+const filterInputCls = [
+  'w-full bg-white border-2 border-slate-300 rounded-lg',
+  'px-2.5 py-1.5 text-[12px] text-slate-900',
+  'focus:outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100',
+  'transition-colors',
+].join(' ')
 
 function Field({ label, wide, children }: { label: string; wide?: boolean; children: React.ReactNode }) {
   return (
-    <label className={`block ${wide ? 'sm:col-span-2 lg:col-span-4' : ''}`}>
-      <span className="block text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-1">{label}</span>
+    <label className={`block ${wide ? 'sm:col-span-2' : ''}`}>
+      <span className="block text-[10px] font-bold uppercase tracking-[1.5px] text-slate-600 mb-1.5">{label}</span>
       {children}
     </label>
   )
@@ -518,9 +547,29 @@ function Field({ label, wide, children }: { label: string; wide?: boolean; child
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-[8.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-0.5">{label}</span>
+      <span className="block text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-600 mb-1">{label}</span>
       {children}
     </label>
+  )
+}
+
+// 3D button that opens the Analytics modal — matches the Playbook/Guide
+// button language used elsewhere in the app.
+function AnalyticsButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title="View analytics — budget vs actual · narrative · breakdown · trend"
+      className="inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-[12px] font-bold uppercase tracking-[2px] text-white bg-gradient-to-b from-teal-300 via-teal-500 to-teal-700 hover:from-teal-200 hover:via-teal-400 hover:to-teal-600 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      style={{
+        boxShadow: '0 4px 0 0 rgb(15,118,110), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 0 rgba(0,0,0,0.20)',
+        textShadow: '0 1px 1px rgba(0,0,0,0.45)',
+      }}
+    >
+      <span aria-hidden="true" className="text-[14px] leading-none">📊</span>
+      <span>View Analytics</span>
+    </button>
   )
 }
 
