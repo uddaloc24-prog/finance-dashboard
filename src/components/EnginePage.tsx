@@ -56,8 +56,12 @@ export function EnginePage({ profile, buckets }: Props) {
   const [overrides, setOverrides] = useState<PreemptOverrides>(
     () => storage.getPreemptOverrides() ?? {},
   )
+  // Memo §2.2 — user-tunable MCDA criterion weights.
+  const [weightOverrides, setWeightOverrides] = useState<Partial<CriterionWeights>>(
+    () => storage.getWeightOverrides() ?? {},
+  )
   const { input, ranked: output, fit, strategies, productPlan, monitoring } =
-    useFittedStrategy(profile, buckets, overrides)
+    useFittedStrategy(profile, buckets, overrides, weightOverrides)
 
   function updateOverride<K extends keyof PreemptOverrides>(field: K, value: PreemptOverrides[K] | undefined) {
     const next: PreemptOverrides = { ...overrides }
@@ -71,6 +75,20 @@ export function EnginePage({ profile, buckets }: Props) {
   function resetOverrides() {
     setOverrides({})
     storage.clearPreemptOverrides()
+  }
+
+  function updateWeight(k: keyof CriterionWeights, v: number | undefined) {
+    const next: Partial<CriterionWeights> = { ...weightOverrides }
+    if (v === undefined) delete next[k]
+    else next[k] = v
+    setWeightOverrides(next)
+    if (Object.keys(next).length === 0) storage.clearWeightOverrides()
+    else                                 storage.setWeightOverrides(next)
+  }
+
+  function resetWeightOverrides() {
+    setWeightOverrides({})
+    storage.clearWeightOverrides()
   }
 
   return (
@@ -122,6 +140,15 @@ export function EnginePage({ profile, buckets }: Props) {
       <StrategiesView strategies={strategies} output={output} />
       <ProductPlanView productPlan={productPlan} output={output} />
       <MonitoringView monitoring={monitoring} />
+
+      {/* §2.2 — user-tunable criterion weights */}
+      <WeightOverridesPanel
+        weightsUsed={output.weightsUsed}
+        overrides={weightOverrides}
+        onChange={updateWeight}
+        onReset={resetWeightOverrides}
+        derivation={output.trace.weightDerivation}
+      />
 
       {/* §11 Q2 — pre-emption threshold overrides */}
       <PreemptOverridesPanel
@@ -709,6 +736,117 @@ function ReviewItemRow({ item }: { item: ReviewItem }) {
         <div className="text-[10px] font-mono text-rose-700 mt-0.5">Next: {item.nextDate.slice(0, 10)} · responsibility: {item.responsibility}</div>
       )}
     </li>
+  )
+}
+
+// ─── Criterion weight overrides panel (memo §2.2) ────────────────────
+
+const CRITERIA: Array<keyof CriterionWeights> = ['importance', 'urgency', 'affordability', 'riskFit']
+const CRIT_LABEL: Record<keyof CriterionWeights, string> = {
+  importance:    'Importance',
+  urgency:       'Urgency',
+  affordability: 'Affordability',
+  riskFit:       'Risk-fit',
+}
+const CRIT_HINT: Record<keyof CriterionWeights, string> = {
+  importance:    'How fundamental this goal is to your life vision.',
+  urgency:       'How time-sensitive — overdue or near-term goals score higher.',
+  affordability: 'How fundable the goal is from current SIP + surplus capacity.',
+  riskFit:       'Alignment with the user\'s appetite + bias profile.',
+}
+
+function WeightOverridesPanel({
+  weightsUsed, overrides, onChange, onReset, derivation,
+}: {
+  weightsUsed: CriterionWeights
+  overrides: Partial<CriterionWeights>
+  onChange: (k: keyof CriterionWeights, v: number | undefined) => void
+  onReset: () => void
+  derivation: 'persona-default' | 'user-override' | 'mixed'
+}) {
+  const dirty = Object.keys(overrides).length > 0
+  return (
+    <details className="rounded-md border-2 border-slate-200 bg-white" open={dirty}>
+      <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-slate-700 hover:bg-slate-50 transition-colors flex items-baseline justify-between">
+        <span>What matters most — tune the 4 weights</span>
+        <span className="text-[10px] font-normal normal-case tracking-normal text-slate-500 italic">
+          {derivation === 'persona-default' ? 'using persona defaults'
+            : derivation === 'user-override' ? 'fully overridden'
+            : 'mixed (some overridden)'}
+        </span>
+      </summary>
+      <div className="px-4 pb-4 pt-1 space-y-3">
+        <p className="text-[11px] text-slate-600 leading-snug max-w-2xl">
+          The engine ranks every goal on these four criteria, then weighted-sums them.
+          Persona defaults are loaded from the §5 table; any number you enter here
+          overrides that criterion. Weights re-normalise to sum 1.0 automatically — so a
+          raw 0.50 against three blanks does not over-count.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {CRITERIA.map((k) => (
+            <WeightField
+              key={k}
+              label={CRIT_LABEL[k]}
+              hint={CRIT_HINT[k]}
+              defaultPct={weightsUsed[k]}
+              value={overrides[k]}
+              onChange={(v) => onChange(k, v)}
+            />
+          ))}
+        </div>
+        <div className="rounded border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] text-slate-700">
+          <strong>Currently using (after re-normalisation):</strong>
+          <span className="inline-block ml-2 font-mono tabular-nums">
+            I {weightsUsed.importance.toFixed(2)} · U {weightsUsed.urgency.toFixed(2)} ·
+            A {weightsUsed.affordability.toFixed(2)} · R {weightsUsed.riskFit.toFixed(2)}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onReset}
+            disabled={!dirty}
+            className="text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-1 border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Reset to persona defaults
+          </button>
+          <span className="text-[10px] text-slate-500 italic">
+            Engine recomputes immediately. Snapshot is refreshed on every change.
+          </span>
+        </div>
+      </div>
+    </details>
+  )
+}
+
+function WeightField({ label, hint, defaultPct, value, onChange }: {
+  label: string
+  hint: string
+  defaultPct: number
+  value: number | undefined
+  onChange: (v: number | undefined) => void
+}) {
+  return (
+    <label className="block">
+      <span className="block text-[9.5px] font-bold uppercase tracking-[1.5px] text-slate-500 mb-1">{label}</span>
+      <input
+        type="number"
+        step="0.05"
+        min={0}
+        max={1}
+        placeholder={`${defaultPct.toFixed(2)} (default)`}
+        value={value ?? ''}
+        onChange={(e) => {
+          const raw = e.target.value
+          if (raw === '') { onChange(undefined); return }
+          const n = parseFloat(raw)
+          if (!Number.isFinite(n) || n < 0 || n > 1) return
+          onChange(n)
+        }}
+        className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-[12px] tabular-nums focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+      />
+      <span className="block text-[9.5px] text-slate-500 italic mt-0.5 leading-snug">{hint}</span>
+    </label>
   )
 }
 

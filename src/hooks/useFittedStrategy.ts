@@ -7,10 +7,11 @@
 
 import { useMemo, useEffect, useRef } from 'react'
 import type { UserProfile, BucketState } from '../types'
-import type { EngineInput, EngineOutput, StrategyFit, StrategySelection, ProductPlan, MonitoringFramework } from '../types/orchestration'
-import { buildOrchestrationInputsFromStorage } from '../lib/orchestration/inputs'
+import type { EngineInput, EngineOutput, StrategyFit, StrategySelection, ProductPlan, MonitoringFramework, CriterionWeights } from '../types/orchestration'
+import { buildOrchestrationInputs } from '../lib/orchestration/inputs'
 import { rankGoals } from '../lib/orchestration/rankGoals'
 import type { PreemptOverrides } from '../lib/orchestration/preempt'
+import { storage } from '../lib/storage'
 import { fitStrategy } from '../lib/orchestration/fitStrategy'
 import { selectStrategies } from '../lib/orchestration/strategySelector'
 import { buildProductPlan } from '../lib/orchestration/productMap'
@@ -33,14 +34,28 @@ export function useFittedStrategy(
   profile: UserProfile,
   buckets: BucketState,
   preemptOverrides?: PreemptOverrides,
+  weightOverrides?: Partial<CriterionWeights>,
 ): OrchestrationResult {
   // Stringify the overrides so React's deps comparison is value-based —
   // a new {} literal every render wouldn't otherwise re-trigger.
   const overridesKey = JSON.stringify(preemptOverrides ?? {})
+  const weightsKey   = JSON.stringify(weightOverrides ?? {})
 
   const result = useMemo<OrchestrationResult>(() => {
     const now = new Date()
-    const input = buildOrchestrationInputsFromStorage(profile, buckets, now)
+    // Build inputs with both Plan-tab and Profile-tab data + explicit
+    // weight overrides (so storage.getWeightOverrides isn't read twice).
+    const input = buildOrchestrationInputs({
+      profile,
+      buckets,
+      gd:               storage.getGoalDiscovery() ?? null,
+      v10:              storage.getV10QuizState() ?? null,
+      manualGoals:      storage.getGoals() ?? [],
+      deepRiskPercent:  null,
+      quickQuiz:        storage.getQuizState() ?? null,
+      weightOverrides:  weightOverrides ?? null,
+      now,
+    })
     const ranked = rankGoals(input, now, preemptOverrides)
     const strategies = selectStrategies(input, now)
     // Phase 5: fitter receives `strategies` so per-goal bucket splits
@@ -54,18 +69,18 @@ export function useFittedStrategy(
     const monitoring = buildMonitoringFramework(input, fit.goals, strategies, productPlan, now)
     return { input, ranked, fit, strategies, productPlan, monitoring }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile, buckets, overridesKey])
+  }, [profile, buckets, overridesKey, weightsKey])
 
-  // Persist a snapshot when the engine input hash OR pre-emption
-  // overrides change — exporters need the fresh decision either way.
+  // Persist a snapshot when the engine input hash OR any override
+  // changes — exporters need the fresh decision either way.
   const lastHash = useRef<string | null>(null)
   useEffect(() => {
-    const composite = result.ranked.inputsHash + ':' + overridesKey
+    const composite = result.ranked.inputsHash + ':' + overridesKey + ':' + weightsKey
     if (composite !== lastHash.current) {
       lastHash.current = composite
       writeSnapshot(result.ranked, result.fit)
     }
-  }, [result, overridesKey])
+  }, [result, overridesKey, weightsKey])
 
   return result
 }

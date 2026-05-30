@@ -30,8 +30,10 @@ Given the user's **Plan facts** (corpus, debts, budget, demographics, inflation,
 
 ~~**Decision required:** confirm v1 = weighted sum.~~  →  **Confirmed 2026-05-24.**
 
-### 2.2 Where do criterion weights come from?   ✅ LOCKED — Persona-keyed defaults, user-overridable
+### 2.2 Where do criterion weights come from?   ✅ LOCKED — Persona-keyed defaults, user-overridable (UI shipped 2026-05-30)
 **Recommendation:** **persona-keyed default weight vectors** (P1–P9), tunable by a single "what matters most" 5-point slider per criterion. See §5 for the proposed default table.
+
+**Update 2026-05-30:** UI shipped on the Engine tab as the "What matters most" panel (4 number inputs · persona placeholders · re-normalisation explained · live effective-weight read-out). Persisted to `localStorage.rp_weight_overrides` and threaded through `useFittedStrategy → buildOrchestrationInputs → distilPreferences → resolveWeights`.
 
 Alternatives considered:
 - Hard-coded global weights: ignores user preferences entirely.
@@ -65,6 +67,8 @@ Reasoning: Nash bargaining is conceptually clean but needs a separately-complete
 At < 50 goals + 8 criteria + weighted sum + greedy allocation, this is trivially achievable. Setting it as a contract now means we'll notice if someone later adds a quadratic step.
 
 ~~**Decision required:** confirm 50 ms / 100 ms budgets, enforce via test.~~  →  **Confirmed 2026-05-24.** Budget enforced by `latency.test.ts` (50 goals × 100 runs, p95 < 50 ms).
+
+**Update 2026-05-30:** `latency.test.ts` extended with a third case asserting the **full Phase 1-8 pipeline** (rankGoals + selectStrategies + fitStrategy + buildProductPlan + buildMonitoringFramework) stays under the 100 ms p95 envelope — leaving headroom for React render. Re-measured p95 ≈ 0.7 ms locally; the contract holds with comfortable margin.
 
 ---
 

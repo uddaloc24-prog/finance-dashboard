@@ -4,6 +4,7 @@ import type { QuizState, RiskProfileId } from '../types/profiles'
 import type { UserIdentity } from '../types/identity'
 import type { V10QuizState, GoalDiscoveryState } from '../types/psychometric'
 import type { PreemptOverrides } from './orchestration/preempt'
+import type { CriterionWeights } from '../types/orchestration'
 import { V10_SCHEMA_VERSION } from '../types/psychometric'
 import { SCHEMA_VERSION } from '../types/v2'
 import { DEFAULT_RETURN_ASSUMPTIONS, BUCKET_ALLOCATION } from '../constants'
@@ -31,6 +32,7 @@ const KEYS = {
   GUIDE_SEEN: 'rp_guide_seen',
   WELCOME_SEEN: 'rp_welcome_seen',
   PREEMPT_OVERRIDES: 'rp_preempt_overrides',   // memo §11 Q2 — user-tunable floors
+  WEIGHT_OVERRIDES:  'rp_weight_overrides',    // memo §2.2 — user-tunable MCDA weights
 } as const
 
 export function migrateV1toV2(profile: UserProfile): { goals: Goal[] } {
@@ -187,6 +189,12 @@ export const storage = {
   getPreemptOverrides: () => get<PreemptOverrides>(KEYS.PREEMPT_OVERRIDES),
   setPreemptOverrides: (o: PreemptOverrides) => set(KEYS.PREEMPT_OVERRIDES, o),
   clearPreemptOverrides: () => remove(KEYS.PREEMPT_OVERRIDES),
+
+  // memo §2.2 — user-tunable MCDA criterion weights. Partial object
+  // re-normalises against the persona default inside resolveWeights().
+  getWeightOverrides: () => get<Partial<CriterionWeights>>(KEYS.WEIGHT_OVERRIDES),
+  setWeightOverrides: (o: Partial<CriterionWeights>) => set(KEYS.WEIGHT_OVERRIDES, o),
+  clearWeightOverrides: () => remove(KEYS.WEIGHT_OVERRIDES),
 
   clearAll: () => Object.values(KEYS).forEach(remove),
 }

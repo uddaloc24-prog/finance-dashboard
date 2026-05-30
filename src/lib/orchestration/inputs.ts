@@ -10,7 +10,7 @@ import type { GoalDiscoveryState, V10QuizState } from '../../types/psychometric'
 import type { QuizState } from '../../types/profiles'
 import type { Goal } from '../../types/v2'
 import type {
-  EngineInput, PlanFacts, Preferences,
+  EngineInput, PlanFacts, Preferences, CriterionWeights,
 } from '../../types/orchestration'
 import { totalCorpus } from '../calculations'
 import { blendedReturn } from '../blendedReturn'
@@ -29,6 +29,9 @@ export interface BuildArgs {
   deepRiskPercent?: number | null
   /** Quick 10-Q quiz state for `totalScore`. Null if not taken. */
   quickQuiz?: QuizState | null
+  /** Memo §2.2 — user-tunable MCDA weight overrides; merged with persona
+   *  defaults inside resolveWeights() at engine run-time. */
+  weightOverrides?: Partial<CriterionWeights> | null
   /** Defaults to `new Date()`. Override for deterministic tests. */
   now?: Date
 }
@@ -45,6 +48,7 @@ export function buildOrchestrationInputs(args: BuildArgs): EngineInput {
       args.v10 ?? null,
       args.deepRiskPercent ?? null,
       args.quickQuiz ?? null,
+      args.weightOverrides ?? null,
     ),
     goals: mergeGoals(
       goalsFromManual(args.manualGoals ?? []),
@@ -66,6 +70,7 @@ export function buildOrchestrationInputsFromStorage(profile: UserProfile, bucket
     // component state). When it gets stored, plumb it here.
     deepRiskPercent:  null,
     quickQuiz:        storage.getQuizState() ?? null,
+    weightOverrides:  storage.getWeightOverrides() ?? null,
     now,
   })
 }
@@ -141,6 +146,7 @@ function distilPreferences(
   v10: V10QuizState | null,
   deepRiskPercent: number | null,
   quickQuiz: QuizState | null,
+  weightOverrides: Partial<CriterionWeights> | null,
 ): Preferences {
   const persona = gd?.inference?.persona
   const fusedRisk = fuseRisk({
@@ -157,8 +163,10 @@ function distilPreferences(
     fusedRisk,
     bias:              deriveBiasProfile(v10, gd),
     moneyScript:       v10?.composites?.dominantMoneyScript ?? null,
-    // weightOverrides intentionally absent in v1 — UI surface comes in
-    // Phase 7 after engine ships. Engine treats absence as "use persona
-    // defaults" (memo §6 step 1).
+    // Memo §2.2 — weightOverrides surfaced 2026-05-30. Empty object is
+    // treated as "no override" by resolveWeights().
+    weightOverrides:   weightOverrides && Object.keys(weightOverrides).length > 0
+                         ? weightOverrides
+                         : undefined,
   }
 }

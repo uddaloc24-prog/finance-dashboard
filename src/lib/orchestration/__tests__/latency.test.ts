@@ -1,9 +1,15 @@
-// Latency contract from memo §2.5: engine p95 < 50ms, fitter inclusive
-// p95 < 50ms at 50 goals × 100 runs.
+// Latency contract from memo §2.5: engine p95 < 50ms, engine+fitter p95
+// < 75ms at 50 goals × 100 runs. Extended 2026-05-30: full Phase 1-8
+// pipeline (selectStrategies + strategyAwareBuckets + glidePath +
+// buildProductPlan + buildMonitoringFramework) must stay under the
+// memo's overall 100 ms p95 envelope so React render still has budget.
 
 import { describe, expect, it } from 'vitest'
 import { rankGoals } from '../rankGoals'
 import { fitStrategy } from '../fitStrategy'
+import { selectStrategies } from '../strategySelector'
+import { buildProductPlan } from '../productMap'
+import { buildMonitoringFramework } from '../monitoringFramework'
 import { plan50, prefP5 } from './__fixtures__'
 import type { RawGoal } from '../../../types/orchestration'
 
@@ -61,5 +67,31 @@ describe('engine latency budget', () => {
     }
     const p = p95(samples)
     expect(p, `engine+fitter p95 was ${p.toFixed(2)} ms`).toBeLessThan(75)
+  })
+
+  it('50 goals × 100 runs — full Phase 1-8 pipeline p95 under 100ms', () => {
+    const goals = makeGoals(50)
+    const input = { plan: plan50, preferences: prefP5, goals }
+    const now = new Date('2026-05-24T10:00:00.000Z')
+    const samples: number[] = []
+    // Warm-up — every function once so JIT primes.
+    {
+      const r0 = rankGoals(input, now)
+      const s0 = selectStrategies(input, now)
+      const f0 = fitStrategy(input, r0, now, s0)
+      const p0 = buildProductPlan(input, f0.goals, s0, now)
+      buildMonitoringFramework(input, f0.goals, s0, p0, now)
+    }
+    for (let i = 0; i < 100; i++) {
+      const t0 = performance.now()
+      const ranked = rankGoals(input, now)
+      const strategies = selectStrategies(input, now)
+      const fit = fitStrategy(input, ranked, now, strategies)
+      const productPlan = buildProductPlan(input, fit.goals, strategies, now)
+      buildMonitoringFramework(input, fit.goals, strategies, productPlan, now)
+      samples.push(performance.now() - t0)
+    }
+    const p = p95(samples)
+    expect(p, `full pipeline p95 was ${p.toFixed(2)} ms`).toBeLessThan(100)
   })
 })
