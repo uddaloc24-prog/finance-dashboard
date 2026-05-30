@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import type { UserProfile, BucketState } from '../types'
 import { MarkdownView } from './admin/MarkdownView'
+import { Modal } from './ui/Modal'
 import { useFittedStrategy } from '../hooks/useFittedStrategy'
 import type {
   EngineInput, EngineOutput, RankedGoal, CriterionWeights, StrategyFit, FittedGoal, FitAction,
@@ -92,6 +93,10 @@ export function EnginePage({ profile, buckets }: Props) {
     storage.clearWeightOverrides()
   }
 
+  // Developer-details modal — holds the EngineInput preview + Design memo
+  // (moved out of the page flow to keep the user-facing surface focused).
+  const [devOpen, setDevOpen] = useState(false)
+
   return (
     <section className="space-y-3">
       {/* Hero band */}
@@ -161,24 +166,45 @@ export function EnginePage({ profile, buckets }: Props) {
         onReset={resetOverrides}
       />
 
-      {/* Phase 4 input preview (collapsible) */}
-      <details className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 overflow-hidden">
-        <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-emerald-800 hover:bg-emerald-100/40 transition-colors">
-          Phase 4 · EngineInput preview (what the engine consumed)
-        </summary>
-        <div className="p-4 pt-2">
-          <EngineInputPreview input={input} />
-        </div>
-      </details>
+      {/* Footer — small button to open developer details (input preview + memo) */}
+      <div className="flex justify-end pt-1">
+        <button
+          type="button"
+          onClick={() => setDevOpen(true)}
+          title="Engine input preview + design memo"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-[1.5px] text-slate-700 bg-white border border-slate-300 hover:border-slate-500 hover:bg-slate-50 transition-colors"
+        >
+          <span aria-hidden="true" className="text-[12px] leading-none">⌥</span>
+          <span>Developer details</span>
+        </button>
+      </div>
 
-      {/* Design memo */}
-      <section className="rounded-md border-2 border-slate-200 bg-white p-4 sm:p-5">
-        <div className="mb-3 pb-2 border-b border-slate-200 flex items-baseline justify-between flex-wrap gap-2">
-          <h3 className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">Design memo</h3>
-          <span className="text-[10px] font-mono text-slate-400">tasks/engine-design-memo-2026-05-24.md</span>
+      {/* Developer-details modal — moved here from the inline page flow */}
+      <Modal
+        open={devOpen}
+        title="Engine — Developer details"
+        subtitle="Input preview · Design memo"
+        accent="slate"
+        size="4xl"
+        onClose={() => setDevOpen(false)}
+      >
+        <div className="space-y-3">
+          <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
+            <div className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-2">
+              Phase 4 · EngineInput preview (what the engine consumed)
+            </div>
+            <EngineInputPreview input={input} />
+          </section>
+
+          <section className="rounded-md border-2 border-slate-200 bg-white p-4 sm:p-5">
+            <div className="mb-3 pb-2 border-b border-slate-200 flex items-baseline justify-between flex-wrap gap-2">
+              <h3 className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">Design memo</h3>
+              <span className="text-[10px] font-mono text-slate-400">tasks/engine-design-memo-2026-05-24.md</span>
+            </div>
+            <MarkdownView source={engineMemo} />
+          </section>
         </div>
-        <MarkdownView source={engineMemo} />
-      </section>
+      </Modal>
     </section>
   )
 }
