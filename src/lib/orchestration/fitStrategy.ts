@@ -14,8 +14,12 @@
 import type {
   EngineInput, EngineOutput, RawGoal,
   StrategyFit, FittedGoal, FitTotals, BucketTargets, FitAction,
+  StrategySelection,
 } from '../../types/orchestration'
 import { hashInput } from './hash'
+import { strategyAwareBuckets } from './strategyBuckets'
+import { buildGlidePath } from './glidePath'
+import { strategyById } from './strategyCatalogue'
 
 const STATUS_FUNDED_THRESHOLD = 0.05    // shortfall < 5% of cost → funded
 const STATUS_PARTIAL_THRESHOLD = 0.50   // shortfall < 50% → partial; else unfunded
@@ -24,6 +28,7 @@ export function fitStrategy(
   input: EngineInput,
   engineOut: EngineOutput,
   now: Date = new Date(),
+  strategies?: StrategySelection,
 ): StrategyFit {
   const { plan } = input
 
@@ -33,7 +38,8 @@ export function fitStrategy(
   let sipRemaining = sipCapacity
 
   const goals: FittedGoal[] = engineOut.ranked.map((r, idx) => {
-    const f = fitOneGoal(r.goal, plan, corpusRemaining, sipRemaining, idx + 1)
+    const goalStrategy = strategies?.byGoal.find((g) => g.goalId === r.goal.id)
+    const f = fitOneGoal(r.goal, plan, corpusRemaining, sipRemaining, idx + 1, input, goalStrategy)
     corpusRemaining = Math.max(0, corpusRemaining - f.corpusAllocated)
     sipRemaining = Math.max(0, sipRemaining - f.monthlySipAffordable)
     return f
@@ -61,6 +67,8 @@ function fitOneGoal(
   corpusRemaining: number,
   sipRemaining: number,
   rank: number,
+  input?: EngineInput,
+  goalStrategy?: import('../../types/orchestration').GoalStrategy,
 ): FittedGoal {
   const targetYear = goal.startYear ?? plan.currentYear + 5
   const yrs = Math.max(0.5, targetYear - plan.currentYear)
@@ -102,17 +110,35 @@ function fitOneGoal(
     shortfallRatio < STATUS_PARTIAL_THRESHOLD ? 'partial' :
                                                 'unfunded'
 
+  // Bucket split — strategy-aware when input + strategy are provided,
+  // falls back to horizon-only otherwise (used by legacy callers).
+  const bucketSplit = input
+    ? strategyAwareBuckets(goal, input, goalStrategy).buckets
+    : bucketSplitFor(yrs)
+
+  // Glide path — only when the recommended strategy has glideDown: true.
+  // Falls back to empty array for static-allocation strategies.
+  const glidePath = input
+    ? buildGlidePath({
+        goal,
+        input,
+        strategy: strategyById(goalStrategy?.recommended ?? ''),
+        initialBuckets: bucketSplit,
+      })
+    : []
+
   return {
     goalId: goal.id,
     rank,
     corpusAllocated: round(corpusAllocated),
     monthlySipNeeded: round(monthlySipNeeded),
     monthlySipAffordable: round(monthlySipAffordable),
-    bucketSplit: bucketSplitFor(yrs),
+    bucketSplit,
     inflatedCost: round(inflatedCost),
     projectedAtTarget: round(projectedAtTarget),
     shortfall: round(shortfall),
     status,
+    glidePath,
   }
 }
 

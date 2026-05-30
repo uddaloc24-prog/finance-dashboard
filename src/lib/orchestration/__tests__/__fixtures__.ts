@@ -69,21 +69,48 @@ export const planUnderProtected: PlanFacts = {
 
 // ─── Preferences variants ─────────────────────────────────────────────
 
+/** Build a deterministic FusedRiskProfile that matches the v10-only
+ *  `riskProfile` legacy field — so existing fixtures stay self-consistent
+ *  without depending on the precision constants. */
+function fixedFusedRisk(score: number): import('../../../types/orchestration').FusedRiskProfile {
+  return {
+    score,
+    confidence: 0.632,
+    sources: [{ name: 'plan', value: score, weight: 1 }],
+    derivation: 'plan-only',
+  }
+}
+
+/** Default flat BiasProfile — equal scripts, neutral signals, no guardrails.
+ *  Engine snapshots use this so behavioural tests can mutate just one field. */
+function neutralBias(): import('../../../types/orchestration').BiasProfile {
+  return {
+    scripts: { avoidance: 0.25, worship: 0.25, status: 0.25, vigilance: 0.25 },
+    dominantScript: null,
+    signals: {
+      lossAversion: 25, presentBias: 35, statusSeeking: 25, herding: 35,
+      overconfidence: 50, scamVulnerability: 50, acquiescence: 50,
+    },
+    guardrails: [],
+    confidence: 0.4,
+  }
+}
+
 export const prefP1: Preferences = {
   personaPrimary: 'P1', personaConfidence: 'high',
-  riskProfile: 25, moneyScript: 'vigilance',
+  riskProfile: 25, fusedRisk: fixedFusedRisk(25), bias: neutralBias(), moneyScript: 'vigilance',
 }
 export const prefP5: Preferences = {
   personaPrimary: 'P5', personaConfidence: 'medium',
-  riskProfile: 50, moneyScript: null,
+  riskProfile: 50, fusedRisk: fixedFusedRisk(50), bias: neutralBias(), moneyScript: null,
 }
 export const prefP7: Preferences = {
   personaPrimary: 'P7', personaConfidence: 'high',
-  riskProfile: 75, moneyScript: 'worship',
+  riskProfile: 75, fusedRisk: fixedFusedRisk(75), bias: neutralBias(), moneyScript: 'worship',
 }
 export const prefDefault: Preferences = {
   personaPrimary: null, personaConfidence: 'unclassified',
-  riskProfile: null, moneyScript: null,
+  riskProfile: null, fusedRisk: fixedFusedRisk(50), bias: neutralBias(), moneyScript: null,
 }
 
 // ─── Goal pile — fixed 5 goals exercising every kind ──────────────────

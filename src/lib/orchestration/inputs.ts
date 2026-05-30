@@ -7,6 +7,7 @@
 
 import type { UserProfile, BucketState, AssetEntry, LoanEntry, InsuranceEntry } from '../../types'
 import type { GoalDiscoveryState, V10QuizState } from '../../types/psychometric'
+import type { QuizState } from '../../types/profiles'
 import type { Goal } from '../../types/v2'
 import type {
   EngineInput, PlanFacts, Preferences,
@@ -15,6 +16,8 @@ import { totalCorpus } from '../calculations'
 import { blendedReturn } from '../blendedReturn'
 import { storage } from '../storage'
 import { goalsFromGd, goalsFromManual, mergeGoals } from './goalsFromGd'
+import { fuseRisk } from './riskFusion'
+import { deriveBiasProfile } from './biasProfile'
 
 export interface BuildArgs {
   profile: UserProfile
@@ -22,6 +25,10 @@ export interface BuildArgs {
   gd?: GoalDiscoveryState | null
   v10?: V10QuizState | null
   manualGoals?: Goal[]
+  /** Risk Profile & Assessment — Deep quiz percent (0..100). Null if not taken. */
+  deepRiskPercent?: number | null
+  /** Quick 10-Q quiz state for `totalScore`. Null if not taken. */
+  quickQuiz?: QuizState | null
   /** Defaults to `new Date()`. Override for deterministic tests. */
   now?: Date
 }
@@ -32,7 +39,13 @@ export function buildOrchestrationInputs(args: BuildArgs): EngineInput {
   const now = args.now ?? new Date()
   return {
     plan: distilPlanFacts(args.profile, args.buckets, now),
-    preferences: distilPreferences(args.gd ?? null, args.v10 ?? null),
+    preferences: distilPreferences(
+      args.profile,
+      args.gd  ?? null,
+      args.v10 ?? null,
+      args.deepRiskPercent ?? null,
+      args.quickQuiz ?? null,
+    ),
     goals: mergeGoals(
       goalsFromManual(args.manualGoals ?? []),
       goalsFromGd(args.gd ?? null, now),
@@ -46,9 +59,13 @@ export function buildOrchestrationInputsFromStorage(profile: UserProfile, bucket
   return buildOrchestrationInputs({
     profile,
     buckets,
-    gd:           storage.getGoalDiscovery() ?? null,
-    v10:          storage.getV10QuizState() ?? null,
-    manualGoals:  storage.getGoals() ?? [],
+    gd:               storage.getGoalDiscovery() ?? null,
+    v10:              storage.getV10QuizState() ?? null,
+    manualGoals:      storage.getGoals() ?? [],
+    // Deep risk percent isn't persisted today (lives only in ProfilesPanel
+    // component state). When it gets stored, plumb it here.
+    deepRiskPercent:  null,
+    quickQuiz:        storage.getQuizState() ?? null,
     now,
   })
 }
@@ -118,12 +135,27 @@ function distilPlanFacts(profile: UserProfile, buckets: BucketState, now: Date):
 
 // ─── Preferences distillation ──────────────────────────────────────────
 
-function distilPreferences(gd: GoalDiscoveryState | null, v10: V10QuizState | null): Preferences {
+function distilPreferences(
+  profile: UserProfile,
+  gd: GoalDiscoveryState | null,
+  v10: V10QuizState | null,
+  deepRiskPercent: number | null,
+  quickQuiz: QuizState | null,
+): Preferences {
   const persona = gd?.inference?.persona
+  const fusedRisk = fuseRisk({
+    planRiskAppetite: profile.riskAppetite,
+    v10RiskProfile:   v10?.composites?.riskProfile ?? null,
+    deepRiskPercent,
+    quickQuizScore:   quickQuiz?.totalScore ?? null,
+  })
   return {
     personaPrimary:    persona?.primary?.id ?? null,
     personaConfidence: persona?.confidence ?? 'unclassified',
+    // Legacy: still v10-only. Downstream code reads fusedRisk.score now.
     riskProfile:       v10?.composites?.riskProfile ?? null,
+    fusedRisk,
+    bias:              deriveBiasProfile(v10, gd),
     moneyScript:       v10?.composites?.dominantMoneyScript ?? null,
     // weightOverrides intentionally absent in v1 — UI surface comes in
     // Phase 7 after engine ships. Engine treats absence as "use persona
