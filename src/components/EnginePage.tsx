@@ -1,9 +1,7 @@
-// Engine tab — surface for the Plan + Profile orchestration engine.
-//   • Phase tracker
-//   • Phase 4 live preview — what `buildOrchestrationInputs` produces
-//   • Design memo (Phase 5) rendered inline
-// Post-Phase-6 will additionally render: live ranked-goal list, per-
-// criterion score breakdown, strategy-fitter output.
+// Engine tab — user-facing surface for the Plan + Profile orchestration
+// engine. Reads as a narrative: prioritised goals → funding plan →
+// recommended strategy → product breakdown → review calendar → tunable
+// settings → (modal) developer details.
 
 import { useState } from 'react'
 import type { UserProfile, BucketState } from '../types'
@@ -99,58 +97,54 @@ export function EnginePage({ profile, buckets }: Props) {
 
   return (
     <section className="space-y-3">
-      {/* Hero band */}
-      <div className="rounded-xl p-4 sm:p-5" style={{ background: 'linear-gradient(135deg, #f59e0b22, #f59e0b05)', border: '2px solid #f59e0b40' }}>
-        <div className="flex items-baseline gap-3 mb-1">
-          <span className="text-[10px] font-bold tracking-[3px] uppercase text-amber-700">Orchestration</span>
+      {/* Hero — user-facing intro */}
+      <header
+        className="rounded-xl p-5 sm:p-6 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #f59e0b22 0%, #f59e0b08 40%, #ffffff 100%)',
+          border: '2px solid #f59e0b40',
+        }}
+      >
+        <div className="flex items-baseline gap-3 mb-2">
+          <span className="text-[10px] font-bold tracking-[4px] uppercase text-amber-700">Your plan, computed</span>
           <span className="h-px flex-1 bg-gradient-to-r from-amber-500/60 to-transparent" aria-hidden="true" />
-          <span className="text-[10px] font-bold uppercase tracking-[2px] text-amber-800 bg-amber-100 border border-amber-300 rounded px-2 py-0.5">Phase 5 — design</span>
         </div>
-        <h2 className="font-serif text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
-          The <em className="not-italic font-extrabold text-amber-700">Engine</em>.
+        <h2 className="font-serif text-2xl sm:text-3xl font-extralight tracking-tight text-slate-900 leading-[1.1]">
+          One <em className="font-extrabold not-italic text-amber-700">picture</em> of where to put every rupee, and when to review it.
         </h2>
-        <p className="text-[12px] sm:text-[13px] text-slate-700 mt-2 leading-snug max-w-3xl">
-          The orchestration engine takes every Plan input (constraints) and every Profile input (preferences) and produces a
-          single ranked list of goals with priority weights, plus the trace data a downstream Strategy Fitter needs to
-          allocate corpus &amp; SIP. It does not exist yet — this tab will show its live output once Phase 6 ships. Today it
-          carries the design memo so the contract is fully visible before code lands.
+        <p className="text-[12.5px] sm:text-[13px] text-slate-700 mt-2.5 leading-relaxed max-w-3xl">
+          Every input from your Plan and Profile is fed into a deterministic engine that produces five concrete answers below:
+          {' '}<strong className="text-amber-800">which goals to fund first</strong>, the
+          {' '}<strong className="text-amber-800">funding plan</strong> for each,
+          {' '}<strong className="text-amber-800">the recommended strategy</strong>,
+          {' '}<strong className="text-amber-800">which products to buy</strong>,
+          {' '}and a <strong className="text-amber-800">review calendar</strong>. Scroll once.
         </p>
-      </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-bold tracking-[1.5px] uppercase">
+          <span className="rounded bg-indigo-100 text-indigo-800 border border-indigo-300 px-1.5 py-0.5">Goals</span>
+          <span aria-hidden="true" className="text-amber-700">·</span>
+          <span className="rounded bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5">Funding</span>
+          <span aria-hidden="true" className="text-amber-700">·</span>
+          <span className="rounded bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5">Strategy</span>
+          <span aria-hidden="true" className="text-amber-700">·</span>
+          <span className="rounded bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5">Products</span>
+          <span aria-hidden="true" className="text-amber-700">·</span>
+          <span className="rounded bg-rose-100 text-rose-800 border border-rose-300 px-1.5 py-0.5">Calendar</span>
+        </div>
+      </header>
 
-      {/* Phase tracker */}
-      <section className="rounded-md border-2 border-slate-200 bg-white p-3">
-        <h3 className="text-[10px] font-bold tracking-[2px] uppercase text-slate-700 mb-2">Roadmap</h3>
-        <ol className="space-y-1.5 text-[12px]">
-          {PHASES.map((p) => {
-            const dot = p.status === 'done' ? '#16a34a' : p.status === 'active' ? '#f59e0b' : '#cbd5e1'
-            const fg  = p.status === 'done' ? 'text-emerald-700' : p.status === 'active' ? 'text-amber-800' : 'text-slate-600'
-            return (
-              <li key={p.id} className="grid grid-cols-[18px_56px_1fr_auto] gap-2 items-baseline">
-                <span aria-hidden="true" className="inline-block w-2.5 h-2.5 rounded-full mt-1" style={{ background: dot }} />
-                <span className="font-mono text-[10px] font-bold text-slate-500 tabular-nums">{p.id}</span>
-                <span className={`font-semibold ${fg}`}>{p.title}</span>
-                <span className={`text-[9px] font-bold uppercase tracking-[2px] ${fg}`}>{p.status}</span>
-              </li>
-            )
-          })}
-        </ol>
-      </section>
-
-      {/* Phase 5 live ranking — engine output */}
+      {/* The five engine surfaces — scroll once to read */}
       <RankedGoalsView output={output} fit={fit} />
-
-      {/* Phase 6 live fitted strategy */}
       <FittedStrategyView fit={fit} output={output} />
-
-      {/* Strategy pipeline (Phases 4–7 of this session) */}
       <StrategiesView strategies={strategies} output={output} />
       <ProductPlanView productPlan={productPlan} output={output} />
       <MonitoringView monitoring={monitoring} />
 
-      {/* §2.3 — spouse-profile usage metric */}
+      {/* Settings divider */}
+      <SectionDivider title="Settings" subtitle="Tune the engine — everything below persists and recomputes immediately." />
+
       <DecisionMakerCard metric={spouseMetric} />
 
-      {/* §2.2 — user-tunable criterion weights */}
       <WeightOverridesPanel
         weightsUsed={output.weightsUsed}
         overrides={weightOverrides}
@@ -159,7 +153,6 @@ export function EnginePage({ profile, buckets }: Props) {
         derivation={output.trace.weightDerivation}
       />
 
-      {/* §11 Q2 — pre-emption threshold overrides */}
       <PreemptOverridesPanel
         overrides={overrides}
         onChange={updateOverride}
@@ -183,15 +176,34 @@ export function EnginePage({ profile, buckets }: Props) {
       <Modal
         open={devOpen}
         title="Engine — Developer details"
-        subtitle="Input preview · Design memo"
+        subtitle="Roadmap · Input preview · Design memo"
         accent="slate"
         size="4xl"
         onClose={() => setDevOpen(false)}
       >
         <div className="space-y-3">
+          {/* Roadmap (was inline on the page; demoted to dev surface) */}
+          <section className="rounded-md border-2 border-slate-200 bg-white p-3">
+            <h3 className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700 mb-2">Roadmap</h3>
+            <ol className="space-y-1.5 text-[12px]">
+              {PHASES.map((p) => {
+                const dot = p.status === 'done' ? '#16a34a' : p.status === 'active' ? '#f59e0b' : '#cbd5e1'
+                const fg  = p.status === 'done' ? 'text-emerald-700' : p.status === 'active' ? 'text-amber-800' : 'text-slate-600'
+                return (
+                  <li key={p.id} className="grid grid-cols-[18px_56px_1fr_auto] gap-2 items-baseline">
+                    <span aria-hidden="true" className="inline-block w-2.5 h-2.5 rounded-full mt-1" style={{ background: dot }} />
+                    <span className="font-mono text-[10px] font-bold text-slate-500 tabular-nums">{p.id}</span>
+                    <span className={`font-semibold ${fg}`}>{p.title}</span>
+                    <span className={`text-[9px] font-bold uppercase tracking-[2px] ${fg}`}>{p.status}</span>
+                  </li>
+                )
+              })}
+            </ol>
+          </section>
+
           <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
             <div className="text-[10px] font-bold tracking-[2px] uppercase text-emerald-800 mb-2">
-              Phase 4 · EngineInput preview (what the engine consumed)
+              EngineInput preview — what the engine consumed
             </div>
             <EngineInputPreview input={input} />
           </section>
@@ -209,6 +221,20 @@ export function EnginePage({ profile, buckets }: Props) {
   )
 }
 
+// ─── Section divider used between the five surfaces and the settings ──
+
+function SectionDivider({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="pt-4 pb-1">
+      <div className="flex items-baseline gap-3">
+        <span className="text-[10px] font-bold tracking-[4px] uppercase text-slate-500">{title}</span>
+        <span className="h-px flex-1 bg-gradient-to-r from-slate-300 to-transparent" aria-hidden="true" />
+      </div>
+      {subtitle && <p className="text-[11px] text-slate-600 italic mt-1 leading-snug">{subtitle}</p>}
+    </div>
+  )
+}
+
 // ─── Ranked goals view (Phase 5 — live engine output) ────────────────
 
 function RankedGoalsView({ output, fit }: { output: EngineOutput; fit: StrategyFit }) {
@@ -219,7 +245,7 @@ function RankedGoalsView({ output, fit }: { output: EngineOutput; fit: StrategyF
     <section className="rounded-md border-2 border-indigo-200 bg-indigo-50/30 p-4">
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-800">Phase 5 · live engine</div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-indigo-800">Goal priority</div>
           <div className="font-serif italic text-lg font-extrabold text-slate-900 leading-tight">Ranked goals</div>
         </div>
         <span className="text-[10px] text-slate-500 italic">{ranked.length} total · persona <strong>{trace.personaUsed}</strong> · weights <strong>{trace.weightDerivation}</strong></span>
@@ -380,7 +406,7 @@ function FittedStrategyView({ fit, output }: { fit: StrategyFit; output: EngineO
     <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Phase 6 · live fitter</div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Funding plan</div>
           <div className="font-serif italic text-lg font-extrabold text-slate-900 leading-tight">Fitted strategy</div>
         </div>
         <span className="text-[10px] text-slate-500 italic">
@@ -564,10 +590,10 @@ function StrategiesView({ strategies, output }: { strategies: StrategySelection;
     <section className="rounded-md border-2 border-amber-200 bg-amber-50/30 p-4">
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-amber-800">Phase 4 · TOPSIS</div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-amber-800">Strategy</div>
           <h3 className="font-serif text-base font-extrabold text-slate-900">Recommended strategy per goal.</h3>
         </div>
-        <span className="text-[10px] font-mono text-amber-700/70">closeness-to-ideal · top of 12 catalogue entries</span>
+        <span className="text-[10px] font-mono text-amber-700/70">closeness-to-ideal · top of 12 strategies</span>
       </div>
       <div className="space-y-2.5">
         {strategies.byGoal.map((gs) => {
@@ -636,7 +662,7 @@ function ProductPlanView({ productPlan, output }: { productPlan: ProductPlan; ou
     <section className="rounded-md border-2 border-emerald-200 bg-emerald-50/30 p-4">
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Phase 7 · Product plan</div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-emerald-800">Products</div>
           <h3 className="font-serif text-base font-extrabold text-slate-900">What to actually buy.</h3>
         </div>
         <span className="text-[10px] font-mono text-emerald-700/70">India-tax-aware · age-eligible · top-3 per bucket</span>
@@ -709,8 +735,8 @@ function MonitoringView({ monitoring }: { monitoring: MonitoringFramework }) {
     <section className="rounded-md border-2 border-rose-200 bg-rose-50/30 p-4">
       <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-rose-800">Phase 8 · Monitoring</div>
-          <h3 className="font-serif text-base font-extrabold text-slate-900">Review calendar.</h3>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-rose-800">Calendar</div>
+          <h3 className="font-serif text-base font-extrabold text-slate-900">Review schedule.</h3>
         </div>
         <span className="text-[10px] font-mono text-rose-700/70">{monitoring.items.length} items · {monitoring.upcoming.length} upcoming</span>
       </div>
@@ -778,10 +804,10 @@ function DecisionMakerCard({ metric }: { metric: import('../types/orchestration'
     <section className="rounded-md border-2 border-slate-200 bg-white p-3">
       <div className="flex items-baseline justify-between flex-wrap gap-2">
         <div>
-          <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">§2.3 · Decision-maker mode</div>
+          <div className="text-[10px] font-bold tracking-[3px] uppercase text-slate-700">Decision-maker mode</div>
           <h3 className="font-serif text-[14px] font-extrabold text-slate-900 leading-tight">{mode}</h3>
         </div>
-        <span className="text-[10px] font-mono text-slate-500">v1 · Nash bargaining deferred</span>
+        <span className="text-[10px] font-mono text-slate-500">single-user mode</span>
       </div>
       <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
         <div className="rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
@@ -798,9 +824,9 @@ function DecisionMakerCard({ metric }: { metric: import('../types/orchestration'
         </div>
       </div>
       <p className="text-[10.5px] text-slate-600 italic mt-2 leading-snug">
-        v1 treats every plan as a single decision-maker. The memo's gating rule for v2 Nash-bargaining mode is &gt; 30 % of active users with a complete spouse profile.
-        This card emits the per-user metric so a future telemetry layer can aggregate it without a schema bump.
-        {metric.hasCompleteSpouseProfile && ' · ✓ your profile would count toward the cohort.'}
+        Every plan is currently treated as a single decision-maker. Joint planning (with explicit spousal trade-off resolution)
+        will land once a meaningful share of users complete their spouse profile.
+        {metric.hasCompleteSpouseProfile && ' · ✓ your profile is complete.'}
       </p>
     </section>
   )
@@ -845,8 +871,8 @@ function WeightOverridesPanel({
       <div className="px-4 pb-4 pt-1 space-y-3">
         <p className="text-[11px] text-slate-600 leading-snug max-w-2xl">
           The engine ranks every goal on these four criteria, then weighted-sums them.
-          Persona defaults are loaded from the §5 table; any number you enter here
-          overrides that criterion. Weights re-normalise to sum 1.0 automatically — so a
+          Persona-derived defaults sit in each field as the placeholder; type any number
+          to override that criterion. Weights re-normalise to sum 1.0 automatically — so a
           raw 0.50 against three blanks does not over-count.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -930,15 +956,16 @@ function PreemptOverridesPanel({
   return (
     <details className="rounded-md border-2 border-slate-200 bg-white" open={dirty}>
       <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-slate-700 hover:bg-slate-50 transition-colors flex items-baseline justify-between">
-        <span>Pre-emption thresholds — advanced</span>
+        <span>Protection floors — advanced</span>
         <span className="text-[10px] font-normal normal-case tracking-normal text-slate-500 italic">
           {dirty ? `${Object.keys(overrides).length} field${Object.keys(overrides).length > 1 ? 's' : ''} overridden` : 'using defaults'}
         </span>
       </summary>
       <div className="px-4 pb-4 pt-1 space-y-3">
         <p className="text-[11px] text-slate-600 leading-snug max-w-2xl">
-          Tunable floors used by <code className="text-[10px] bg-slate-100 px-1 rounded">preempt()</code> when the engine
-          decides which system goals to inject (term cover, health cover, emergency fund). Defaults match the design memo §7.
+          Below these thresholds, the engine treats the gap as <strong>non-negotiable</strong>: term cover, health cover,
+          emergency fund and high-rate-debt clearance are injected at the top of the ranked list before any discretionary goal.
+          Defaults are calibrated for an Indian retiree but every value is overridable.
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <OverrideField
