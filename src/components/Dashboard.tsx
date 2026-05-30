@@ -54,6 +54,7 @@ const TaxPanel = lazy(() => import('./tax/TaxPanel').then(m => ({ default: m.Tax
 const BucketFundsExplorer = lazy(() => import('./buckets/BucketFundsExplorer').then(m => ({ default: m.BucketFundsExplorer })))
 const InsightsPage = lazy(() => import('./InsightsPage').then(m => ({ default: m.InsightsPage })))
 const GuideFlipBook = lazy(() => import('./GuideFlipBook').then(m => ({ default: m.GuideFlipBook })))
+const ExpenseTrackerPage = lazy(() => import('./expense/ExpenseTrackerPage').then(m => ({ default: m.ExpenseTrackerPage })))
 
 function TabLoading() {
   return (
@@ -678,6 +679,14 @@ export function Dashboard({
         {activeTab === 'engine' && (
           <div role="tabpanel" id="tabpanel-engine" aria-labelledby="tab-engine" className="space-y-3">
             <EnginePage profile={effectiveProfile} buckets={buckets} />
+          </div>
+        )}
+
+        {activeTab === 'expense' && (
+          <div role="tabpanel" id="tabpanel-expense" aria-labelledby="tab-expense" className="space-y-3">
+            <Suspense fallback={<TabLoading />}>
+              <ExpenseTrackerPage />
+            </Suspense>
           </div>
         )}
 

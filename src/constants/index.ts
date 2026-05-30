@@ -226,6 +226,7 @@ export const TAB_ITEMS = [
   { id: 'tax', label: 'Tax', icon: '🧾' },
   { id: 'insights', label: 'Insights', icon: '◆' },
   { id: 'ai', label: 'AI', icon: '🤖' },
+  { id: 'expense', label: 'Expense', icon: '💸' },
 ] as const
 
 export type TabId = typeof TAB_ITEMS[number]['id']

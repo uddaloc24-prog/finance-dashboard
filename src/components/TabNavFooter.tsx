@@ -18,6 +18,7 @@ const TAB_DESCRIPTIONS: Record<TabId, string> = {
   tax: 'Indian tax breakdown, LTCG optimizer, and reshuffle advice',
   insights: 'The full editorial report — verdict, all sections, take-home, and download',
   ai: 'AI-powered fund picks based on your profile and live market data',
+  expense: 'Track every rupee — manual entry today, CSV + SMS auto-parse + monthly narrative next',
 }
 
 export function TabNavFooter({ activeTab, onChange }: Props) {
