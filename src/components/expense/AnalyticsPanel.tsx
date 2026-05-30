@@ -8,6 +8,10 @@ import { monthlySummary, trends } from '../../lib/expense/analytics'
 import { reconcileWithBudget } from '../../lib/expense/budgetReconciler'
 import { buildTemplatedNarrative } from '../../lib/expense/narrative'
 import { llmMonthlyNarrative, llmRuntime } from '../../lib/expense/parsing/llmHook'
+import {
+  download, transactionsCsv, budgetVsActualCsv,
+} from '../../lib/expense/exporters/csv'
+import { exportExpensePdf } from '../../lib/expense/exporters/pdf'
 import { BudgetVsActualCard } from './BudgetVsActualCard'
 
 interface Props {
@@ -146,6 +150,13 @@ export function AnalyticsPanel({ profile, accounts, categories, transactions }: 
             value={yearMonth}
             onChange={(e) => setYearMonth(e.target.value)}
             className="bg-white border border-slate-300 rounded px-2 py-1 text-[12px] focus:outline-none focus:border-teal-500"
+          />
+          <ExportButtons
+            yearMonth={yearMonth}
+            disabled={summary.totals.count === 0}
+            onCsvTxns={() => download(`expense-txns-${yearMonth}.csv`, transactionsCsv(drillFilteredTxns, accounts, categories))}
+            onCsvBudget={() => download(`expense-budget-vs-actual-${yearMonth}.csv`, budgetVsActualCsv(recon))}
+            onPdf={() => exportExpensePdf({ profile, accounts, categories, transactions: drillFilteredTxns, yearMonth })}
           />
         </div>
       </div>
@@ -306,6 +317,51 @@ function TrendChart({ points }: { points: ReturnType<typeof trends> }) {
         <Legend color="#2563eb" label="Savings" />
       </div>
     </div>
+  )
+}
+
+function ExportButtons({ yearMonth, disabled, onCsvTxns, onCsvBudget, onPdf }: {
+  yearMonth: string
+  disabled: boolean
+  onCsvTxns: () => void
+  onCsvBudget: () => void
+  onPdf: () => void
+}) {
+  return (
+    <details className="relative">
+      <summary
+        aria-label={`Export options for ${yearMonth}`}
+        className="cursor-pointer text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-1 text-slate-700 border border-slate-300 hover:bg-slate-50 transition-colors list-none"
+      >
+        Export ▾
+      </summary>
+      <div className="absolute right-0 mt-1 bg-white border border-slate-300 rounded-md shadow-lg z-10 min-w-[180px] overflow-hidden">
+        <button
+          type="button"
+          onClick={onCsvTxns}
+          disabled={disabled}
+          className="block w-full text-left px-3 py-1.5 text-[11px] text-slate-800 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          ⤓ Transactions (CSV)
+        </button>
+        <button
+          type="button"
+          onClick={onCsvBudget}
+          disabled={disabled}
+          className="block w-full text-left px-3 py-1.5 text-[11px] text-slate-800 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
+        >
+          ⤓ Budget vs actual (CSV)
+        </button>
+        <button
+          type="button"
+          onClick={onPdf}
+          disabled={disabled}
+          className="block w-full text-left px-3 py-1.5 text-[11px] text-slate-800 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed border-t border-slate-100"
+        >
+          ⤓ Monthly summary (PDF)
+        </button>
+      </div>
+    </details>
   )
 }
 
