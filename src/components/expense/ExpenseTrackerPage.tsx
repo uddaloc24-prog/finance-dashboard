@@ -20,6 +20,7 @@ import { ImportPanel } from './ImportPanel'
 import { AnalyticsPanel } from './AnalyticsPanel'
 import { RulesManager } from './RulesManager'
 import { CategorySelect } from './CategorySelect'
+import { suggestRuleFromManualOverride, type RuleSuggestion } from '../../lib/expense/categorization'
 
 const PAYMENT_MODES: PaymentMode[] = ['UPI', 'CARD', 'CASH', 'NET_BANKING', 'AUTO_DEBIT', 'OTHER']
 
@@ -119,6 +120,38 @@ export function ExpenseTrackerPage({ profile }: Props) {
     const updated = expenseStorage.updateTransaction(id, patch)
     if (!updated) return
     setTransactions((prev) => prev.map((t) => (t.id === id ? updated : t)))
+
+    // Suggest a categorisation rule from this override, if the txn has a
+    // recoverable merchant and no existing rule covers it.
+    if (newCategoryId) {
+      const existingRules = expenseStorage.getRules()
+      const suggestion = suggestRuleFromManualOverride(updated, newCategoryId, existingRules)
+      if (suggestion) setRuleSuggestion({ txnId: id, suggestion })
+    } else {
+      // Clearing back to "uncategorised" — nothing to suggest.
+      if (ruleSuggestion?.txnId === id) setRuleSuggestion(null)
+    }
+  }
+
+  const [ruleSuggestion, setRuleSuggestion] = useState<{ txnId: string; suggestion: RuleSuggestion } | null>(null)
+
+  function acceptRuleSuggestion() {
+    if (!ruleSuggestion) return
+    const list = expenseStorage.getRules()
+    const next = [
+      ...list,
+      {
+        id: `rule_${Date.now().toString(36)}`,
+        matchType: ruleSuggestion.suggestion.matchType,
+        pattern: ruleSuggestion.suggestion.pattern,
+        suggestedCategoryId: ruleSuggestion.suggestion.suggestedCategoryId,
+        suggestedTags: [],
+        priority: ruleSuggestion.suggestion.priority,
+        isActive: true,
+      },
+    ]
+    expenseStorage.setRules(next)
+    setRuleSuggestion(null)
   }
 
   // ─── Filters ──────────────────────────────────────────────────────
@@ -433,6 +466,31 @@ export function ExpenseTrackerPage({ profile }: Props) {
                       ×
                     </button>
                   </div>
+
+                  {/* "Save as rule?" strip — fires once after an inline override. */}
+                  {ruleSuggestion && ruleSuggestion.txnId === t.id && (
+                    <div className="col-span-3 mt-1.5 -mb-0.5 grid grid-cols-[1fr_auto] gap-2 items-baseline px-2 py-1.5 rounded bg-teal-50 border border-teal-200">
+                      <span className="text-[10.5px] text-teal-900">
+                        Save as a rule? Categorise future <strong className="font-bold">"{ruleSuggestion.suggestion.pattern}"</strong> transactions the same way automatically.
+                      </span>
+                      <span className="flex items-baseline gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={acceptRuleSuggestion}
+                          className="text-[10px] font-bold uppercase tracking-[1.5px] rounded px-2 py-0.5 text-white bg-teal-700 hover:bg-teal-600 transition-colors"
+                        >
+                          + Save rule
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setRuleSuggestion(null)}
+                          className="text-[10px] text-slate-500 hover:text-slate-900 px-1 rounded transition-colors"
+                        >
+                          dismiss
+                        </button>
+                      </span>
+                    </div>
+                  )}
                 </li>
               )
             })}
