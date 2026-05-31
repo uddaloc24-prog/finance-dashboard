@@ -211,29 +211,47 @@ export function ExpenseTrackerPage({ profile }: Props) {
   const catById  = useMemo(() => Object.fromEntries(categories.map((c) => [c.id, c])) as Record<string, Category>, [categories])
 
   return (
-    <section className="space-y-3">
-      {/* Hero */}
+    <section className="space-y-4 sm:space-y-5">
+      {/* Hero — elegant */}
       <header
-        className="rounded-xl p-5 sm:p-6"
-        style={{ background: 'linear-gradient(135deg, #14b8a622 0%, #14b8a608 40%, #ffffff 100%)', border: '2px solid #14b8a640' }}
+        className="relative overflow-hidden rounded-3xl border-2 border-teal-300 ring-1 ring-inset ring-teal-100 shadow-sm p-5 sm:p-7"
+        style={{
+          backgroundImage:
+            'radial-gradient(circle at 20px 20px, rgba(13,148,136,0.10) 1.5px, transparent 2px),' +
+            'radial-gradient(ellipse 40% 80% at 12% 80%, rgba(20,184,166,0.25), transparent 70%),' +
+            'linear-gradient(115deg, #ccfbf1 0%, #f0fdfa 45%, #fffbeb 100%)',
+          backgroundSize: '40px 40px, 100% 100%, 100% 100%',
+        }}
       >
-        <div className="flex items-baseline gap-3 mb-2">
-          <span className="text-[10px] font-bold tracking-[4px] uppercase text-teal-700">Expense Tracker</span>
-          <span className="h-px flex-1 bg-gradient-to-r from-teal-500/60 to-transparent" aria-hidden="true" />
-          <span className="text-[10px] font-bold uppercase tracking-[2px] text-teal-800 bg-teal-100 border border-teal-300 rounded px-2 py-0.5">Phase 3 — analytics</span>
+        <CornerOrnament className="absolute top-2 left-2 w-10 h-10 sm:w-12 sm:h-12 opacity-60" />
+        <CornerOrnament className="absolute top-2 right-2 w-10 h-10 sm:w-12 sm:h-12 opacity-60 -scale-x-100" />
+
+        <div className="relative text-center">
+          <div className="text-[10px] font-bold tracking-[4px] uppercase text-teal-800 mb-2">
+            Expense Tracker
+          </div>
+          <h2 className="font-serif text-2xl sm:text-3xl lg:text-[2.25rem] font-extralight tracking-tight text-slate-900 leading-[1.08]">
+            Where every <em className="font-extrabold not-italic text-teal-700">rupee</em> went —
+            <br className="sm:hidden" /> <span className="sm:inline">and how it stacked up.</span>
+          </h2>
+          <p className="text-[12px] sm:text-[13px] text-slate-700 mt-3 leading-relaxed max-w-2xl mx-auto">
+            Every row pairs to your Plan-tab Monthly Budget. A discipline score, your biggest overshoots and under-spends,
+            a 6-month trend and a written monthly narrative live one tap away.
+          </p>
         </div>
-        <h2 className="font-serif text-2xl sm:text-3xl font-extralight tracking-tight text-slate-900 leading-[1.1]">
-          Where every <em className="font-extrabold not-italic text-teal-700">rupee</em> went — and how it stacked up.
-        </h2>
-        <p className="text-[12.5px] sm:text-[13px] text-slate-700 mt-2.5 leading-relaxed max-w-3xl">
-          Each row is paired to your Plan-tab Monthly Budget. The Analytics card below surfaces a discipline score, your biggest overshoots
-          and under-spends, a 6-month trend, and a written monthly narrative. Everything lives on this device.
-        </p>
       </header>
 
-      {/* Analytics — behind a 3D button so the page stays focused on logging */}
-      <div className="flex justify-center">
+      {/* Insights eyebrow + 3D analytics button */}
+      <div className="relative text-center pt-1">
+        <div className="flex items-center justify-center gap-3 mb-2.5">
+          <span className="h-px flex-1 max-w-[120px] bg-gradient-to-l from-teal-400/60 to-transparent" aria-hidden="true" />
+          <span className="text-[10px] font-bold tracking-[4px] uppercase text-teal-800">Insights</span>
+          <span className="h-px flex-1 max-w-[120px] bg-gradient-to-r from-teal-400/60 to-transparent" aria-hidden="true" />
+        </div>
         <AnalyticsButton onClick={() => setAnalyticsOpen(true)} />
+        <p className="text-[10.5px] sm:text-[11px] text-slate-500 italic mt-2">
+          Budget · narrative · trends · breakdowns · export — all in one window.
+        </p>
       </div>
 
       <Modal
@@ -270,13 +288,11 @@ export function ExpenseTrackerPage({ profile }: Props) {
       </section>
 
       {/* Add transaction form — cozy panel, 2-column grid */}
-      <section className="rounded-2xl border-2 border-teal-300 ring-1 ring-inset ring-teal-100 bg-gradient-to-br from-teal-50/50 via-white to-amber-50/30 p-5 shadow-sm">
-        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
-          <div>
-            <div className="text-[10px] font-bold tracking-[3px] uppercase text-teal-800">Add transaction</div>
-            <h3 className="font-serif text-base font-extrabold text-slate-900">One row at a time — for now.</h3>
-          </div>
-          <span className="text-[10px] font-mono text-teal-700/70">structured · manual · MANUAL source tag</span>
+      <section className="rounded-2xl border-2 border-teal-300 ring-1 ring-inset ring-teal-100 bg-gradient-to-br from-teal-50/50 via-white to-amber-50/30 p-5 sm:p-6 shadow-sm">
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="text-[10px] font-bold tracking-[3px] uppercase text-teal-800 shrink-0">Add transaction</span>
+          <span className="h-px flex-1 bg-gradient-to-r from-teal-400/60 to-transparent" aria-hidden="true" />
+          <span className="hidden sm:inline text-[10px] font-mono text-teal-700/70 shrink-0">structured · manual</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -363,11 +379,17 @@ export function ExpenseTrackerPage({ profile }: Props) {
 
       {/* Transactions list — cozy panel */}
       <section className="rounded-2xl border-2 border-slate-300 ring-1 ring-inset ring-slate-50 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-baseline justify-between px-4 py-3 border-b border-slate-200 flex-wrap gap-2">
-          <h3 className="font-serif text-base font-extrabold text-slate-900">All transactions</h3>
-          <span className="text-[10px] font-mono text-slate-500">
-            {anyFilterActive ? `${filteredTxns.length} of ${transactions.length} shown` : `${transactions.length} total`}
-          </span>
+        <div className="px-4 sm:px-5 pt-4 pb-3 border-b border-slate-200">
+          <div className="flex items-baseline gap-3">
+            <span className="text-[10px] font-bold tracking-[3px] uppercase text-slate-600 shrink-0">Ledger</span>
+            <span className="h-px flex-1 bg-gradient-to-r from-slate-300 to-transparent" aria-hidden="true" />
+            <span className="text-[10px] font-mono text-slate-500 shrink-0">
+              {anyFilterActive ? `${filteredTxns.length} / ${transactions.length}` : `${transactions.length} total`}
+            </span>
+          </div>
+          <h3 className="font-serif text-lg sm:text-xl font-extralight tracking-tight text-slate-900 mt-1 leading-tight">
+            All transactions.
+          </h3>
         </div>
 
         {/* Filter bar */}
@@ -561,15 +583,34 @@ function AnalyticsButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       title="View analytics — budget vs actual · narrative · breakdown · trend"
-      className="inline-flex items-center gap-2 rounded-md px-5 py-2.5 text-[12px] font-bold uppercase tracking-[2px] text-white bg-gradient-to-b from-teal-300 via-teal-500 to-teal-700 hover:from-teal-200 hover:via-teal-400 hover:to-teal-600 border border-black/15 select-none active:translate-y-[2px] transition-all"
+      className="inline-flex items-center justify-center gap-2 rounded-lg px-6 py-3 text-[12px] sm:text-[13px] font-bold uppercase tracking-[2.5px] text-white bg-gradient-to-b from-teal-300 via-teal-500 to-teal-700 hover:from-teal-200 hover:via-teal-400 hover:to-teal-600 border border-black/15 select-none active:translate-y-[2px] transition-all min-w-[14rem]"
       style={{
-        boxShadow: '0 4px 0 0 rgb(15,118,110), 0 8px 14px -4px rgba(15,23,42,0.40), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 0 rgba(0,0,0,0.20)',
-        textShadow: '0 1px 1px rgba(0,0,0,0.45)',
+        boxShadow: '0 5px 0 0 rgb(15,118,110), 0 10px 18px -4px rgba(15,23,42,0.45), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -2px 0 rgba(0,0,0,0.20)',
+        textShadow: '0 1px 1px rgba(0,0,0,0.50)',
       }}
     >
-      <span aria-hidden="true" className="text-[14px] leading-none">📊</span>
+      <span aria-hidden="true" className="text-[15px] leading-none">📊</span>
       <span>View Analytics</span>
     </button>
+  )
+}
+
+// Subtle four-quadrant arc ornament — same family as the Welcome cards.
+function CornerOrnament({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 64 64" aria-hidden="true">
+      <g fill="none" stroke="#0d9488" strokeWidth="1.2" strokeLinecap="round">
+        <path d="M2 62 A 60 60 0 0 1 62 2" />
+        <path d="M2 54 A 52 52 0 0 1 54 2" />
+        <path d="M2 42 A 40 40 0 0 1 42 2" />
+        <path d="M2 28 A 26 26 0 0 1 28 2" />
+      </g>
+      <g fill="#0d9488">
+        <circle cx="10" cy="10" r="2.5" />
+        <circle cx="22" cy="6"  r="1.5" />
+        <circle cx="6"  cy="22" r="1.5" />
+      </g>
+    </svg>
   )
 }
 
@@ -595,10 +636,17 @@ function KpiTile({ label, value, tone }: { label: string; value: string; tone: '
     tone === 'rose'    ? 'text-rose-700' :
     tone === 'navy'    ? 'text-blue-700' :
                           'text-slate-700'
+  const bg =
+    tone === 'emerald' ? 'from-emerald-50 to-white' :
+    tone === 'rose'    ? 'from-rose-50    to-white' :
+    tone === 'navy'    ? 'from-blue-50    to-white' :
+                          'from-slate-50   to-white'
   return (
-    <div className="px-3 py-2">
-      <div className="text-[9px] font-bold tracking-[1.5px] uppercase text-slate-500">{label}</div>
-      <div className={`font-mono font-extrabold text-[16px] tabular-nums ${fg} mt-0.5`}>{value}</div>
+    <div className={`rounded-xl border border-slate-200 bg-gradient-to-b ${bg} px-3 py-2.5`}>
+      <div className="text-[9px] font-bold tracking-[2px] uppercase text-slate-500">{label}</div>
+      <div className={`font-serif italic font-extrabold text-[20px] sm:text-[22px] tabular-nums ${fg} mt-0.5 leading-tight`}>
+        {value}
+      </div>
     </div>
   )
 }
