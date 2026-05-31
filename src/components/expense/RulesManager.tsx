@@ -70,10 +70,10 @@ export function RulesManager({ categories }: Props) {
   const catNameById = Object.fromEntries(categories.map((c) => [c.id, c.name])) as Record<string, string>
 
   return (
-    <details className="rounded-lg border-2 border-slate-200 bg-white">
-      <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-slate-700 hover:bg-slate-50 transition-colors flex items-baseline justify-between">
+    <details className="rounded-2xl border-2 border-amber-300 ring-1 ring-inset ring-amber-100 bg-gradient-to-br from-amber-50/40 via-white to-teal-50/20 shadow-sm h-full">
+      <summary className="cursor-pointer px-4 py-3 text-[11px] font-bold tracking-[2px] uppercase text-amber-800 hover:bg-amber-50/60 transition-colors flex items-baseline justify-between rounded-2xl">
         <span>Rules — categorise without thinking</span>
-        <span className="text-[10px] font-normal normal-case tracking-normal text-slate-500 italic">
+        <span className="text-[10px] font-normal normal-case tracking-normal text-slate-600 italic">
           {rules.length} {rules.length === 1 ? 'rule' : 'rules'}
         </span>
       </summary>

@@ -252,17 +252,17 @@ export function ExpenseTrackerPage({ profile }: Props) {
         />
       </Modal>
 
-      {/* Import — paste SMS / paste CSV */}
-      <ImportPanel
-        accounts={accounts}
-        onImported={(added) => setTransactions((prev) => [...prev, ...added])}
-      />
+      {/* Import + Rules — two cozy boxes side-by-side on sm+ */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        <ImportPanel
+          accounts={accounts}
+          onImported={(added) => setTransactions((prev) => [...prev, ...added])}
+        />
+        <RulesManager categories={categories} />
+      </div>
 
-      {/* Rules — CRUD over deterministic categorisation rules */}
-      <RulesManager categories={categories} />
-
-      {/* Month-to-date strip */}
-      <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-lg border-2 border-slate-200 bg-white p-3">
+      {/* Month-to-date strip — cozy panel */}
+      <section className="grid grid-cols-2 sm:grid-cols-4 gap-2 rounded-2xl border-2 border-slate-300 ring-1 ring-inset ring-slate-50 bg-white p-3 shadow-sm">
         <KpiTile label="MTD income"   value={fmtINR(mtd.income)}  tone="emerald" />
         <KpiTile label="MTD spend"    value={fmtINR(mtd.expense)} tone="rose" />
         <KpiTile label="MTD savings"  value={fmtINR(mtd.savings)} tone="navy" />
@@ -361,8 +361,8 @@ export function ExpenseTrackerPage({ profile }: Props) {
         </div>
       </section>
 
-      {/* Transactions list */}
-      <section className="rounded-lg border-2 border-slate-200 bg-white">
+      {/* Transactions list — cozy panel */}
+      <section className="rounded-2xl border-2 border-slate-300 ring-1 ring-inset ring-slate-50 bg-white shadow-sm overflow-hidden">
         <div className="flex items-baseline justify-between px-4 py-3 border-b border-slate-200 flex-wrap gap-2">
           <h3 className="font-serif text-base font-extrabold text-slate-900">All transactions</h3>
           <span className="text-[10px] font-mono text-slate-500">

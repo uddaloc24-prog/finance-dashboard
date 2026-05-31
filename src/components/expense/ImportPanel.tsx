@@ -24,8 +24,8 @@ interface Props {
 
 export function ImportPanel({ accounts, onImported }: Props) {
   return (
-    <details className="rounded-lg border-2 border-teal-200 bg-white">
-      <summary className="cursor-pointer px-4 py-2.5 text-[11px] font-bold tracking-[2px] uppercase text-teal-800 hover:bg-teal-50 transition-colors flex items-baseline justify-between">
+    <details className="rounded-2xl border-2 border-teal-300 ring-1 ring-inset ring-teal-100 bg-gradient-to-br from-teal-50/40 via-white to-amber-50/20 shadow-sm h-full">
+      <summary className="cursor-pointer px-4 py-3 text-[11px] font-bold tracking-[2px] uppercase text-teal-800 hover:bg-teal-50/60 transition-colors flex items-baseline justify-between rounded-2xl">
         <span>Import — SMS · CSV</span>
         <span className="text-[10px] font-normal normal-case tracking-normal text-slate-500 italic">
           paste a bank SMS or CSV statement
